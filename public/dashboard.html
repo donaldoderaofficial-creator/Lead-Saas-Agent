@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Leads Dashboard</title>
+<style>
+  :root {
+    --bg: #0b0d12; --surface: #151822; --surface-2: #1c202c; --border: #262b38;
+    --text: #e7e9ee; --text-dim: #9aa1b1; --accent: #6c8cff; --hot: #ff6c6c; --nurture: #6cffa3;
+    --won: #6cffa3; --lost: #ff6c6c; --contacted: #ffd166; --new: #9aa1b1;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 32px 20px; }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  p.sub { color: var(--text-dim); font-size: 14px; margin: 0 0 24px; }
+
+  .auth-card { max-width: 380px; margin: 60px auto; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; }
+  .auth-card h2 { font-size: 16px; margin: 0 0 4px; }
+  .auth-card p.hint { color: var(--text-dim); font-size: 13px; margin: 0 0 14px; }
+  .auth-card input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-size: 14px; margin: 8px 0; }
+  .auth-card button {
+    width: 100%; padding: 11px; border-radius: 8px; border: none;
+    background: var(--accent); color: #fff; font-weight: 500; font-size: 14px;
+    cursor: pointer; margin-top: 6px; transition: transform 0.1s ease, opacity 0.15s ease, background 0.15s ease;
+  }
+  .auth-card button:hover:not(:disabled) { transform: translateY(-1px); }
+  .auth-card button:active:not(:disabled) { transform: translateY(0); }
+  .auth-card button:disabled { background: var(--surface-2); color: var(--text-dim); cursor: not-allowed; transform: none; }
+  .auth-card button.secondary { background: var(--surface-2); color: var(--text); }
+  .auth-error { color: var(--hot); font-size: 13px; min-height: 16px; margin-top: 6px; }
+  .auth-switch { text-align: center; font-size: 13px; color: var(--text-dim); margin-top: 14px; }
+  .auth-switch a { color: var(--accent); cursor: pointer; text-decoration: underline; }
+  .back-link { display: inline-flex; align-items: center; gap: 4px; color: var(--text-dim); font-size: 13px; cursor: pointer; margin-bottom: 14px; }
+  .back-link:hover { color: var(--text); }
+  .qr-wrap { text-align: center; margin: 10px 0; }
+  .qr-wrap img { width: 180px; height: 180px; border-radius: 8px; background: #fff; padding: 8px; }
+  .manual-key { font-size: 11px; color: var(--text-dim); word-break: break-all; text-align: center; margin: 8px 0; }
+
+  /* Setup stepper (register -> verify 2FA) */
+  .auth-steps { display: flex; align-items: center; margin-bottom: 20px; }
+  .auth-step { display: flex; align-items: center; gap: 7px; }
+  .auth-step .dot {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--text-dim); font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.25s ease; flex: none;
+  }
+  .auth-step.active .dot { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .auth-step.done .dot { background: var(--nurture); border-color: var(--nurture); color: #06210f; }
+  .auth-step .lbl2 { font-size: 11px; color: var(--text-dim); }
+  .auth-step.active .lbl2, .auth-step.done .lbl2 { color: var(--text); }
+  .auth-step-line { flex: 1; height: 1px; background: var(--border); margin: 0 8px; }
+
+  #app { display: none; }
+  .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  #logoutBtn { background: none; border: 1px solid var(--border); color: var(--text-dim); font-size: 12px; padding: 6px 12px; border-radius: 7px; cursor: pointer; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0 22px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .stat .num { font-size: 22px; font-weight: 700; }
+  .stat .lbl { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+
+  .toolbar { display: flex; gap: 10px; margin-bottom: 16px; }
+  #search { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; color: var(--text); font-size: 14px; }
+  #filterStatus { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; color: var(--text); font-size: 14px; }
+
+  .lead-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 10px; }
+  .lead-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .lead-name { font-weight: 600; font-size: 15px; }
+  .lead-email { color: var(--text-dim); font-size: 13px; }
+  .badges { display: flex; gap: 6px; align-items: center; }
+  .badge { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .badge.hot { background: rgba(255,108,108,0.15); color: var(--hot); }
+  .badge.nurture { background: rgba(108,255,163,0.15); color: var(--nurture); }
+  .score { font-size: 13px; color: var(--text-dim); }
+
+  .lead-mid { display: flex; gap: 10px; margin: 12px 0 8px; align-items: center; }
+  select.status-select { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; color: var(--text); font-size: 13px; }
+
+  textarea.notes { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; padding: 8px 10px; resize: vertical; min-height: 42px; font-family: inherit; }
+  .save-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+  .save-btn { background: var(--accent); color: #fff; border: none; border-radius: 7px; padding: 6px 14px; font-size: 12px; cursor: pointer; }
+  .save-btn:disabled { opacity: 0.5; cursor: default; }
+  .saved-flash { font-size: 12px; color: var(--nurture); align-self: center; opacity: 0; transition: opacity 0.3s; }
+  .saved-flash.show { opacity: 1; }
+
+  #empty { text-align: center; color: var(--text-dim); padding: 60px 0; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div class="auth-card" id="loginCard">
+  <h2>Dashboard login</h2>
+  <p class="hint">Username, password, and your 2FA code.</p>
+  <input id="loginUsername" placeholder="Username" autocomplete="username" />
+  <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" />
+  <input id="loginTotp" placeholder="6-digit code from your authenticator app" inputmode="numeric" maxlength="6" />
+  <button id="loginBtn" disabled>Log in</button>
+  <div class="auth-error" id="loginError"></div>
+  <div class="auth-switch">No account yet? <a id="showRegister">Create the first account</a></div>
+</div>
+
+<!-- Register -->
+<div class="auth-card" id="registerCard" style="display:none;">
+  <span class="back-link" id="backFromRegister">&larr; Back to login</span>
+  <div class="auth-steps">
+    <div class="auth-step active" id="stepAccount"><div class="dot">1</div><div class="lbl2">Account</div></div>
+    <div class="auth-step-line"></div>
+    <div class="auth-step" id="stepVerify"><div class="dot">2</div><div class="lbl2">Verify 2FA</div></div>
+  </div>
+  <h2>Create account</h2>
+  <p class="hint">Choose a username and password (8+ characters).</p>
+  <input id="regUsername" placeholder="Username" autocomplete="username" />
+  <input id="regPassword" type="password" placeholder="Password" autocomplete="new-password" />
+  <button id="registerBtn" disabled>Continue</button>
+  <div class="auth-error" id="registerError"></div>
+  <div class="auth-switch">Already have an account? <a id="showLogin">Log in</a></div>
+</div>
+
+<!-- 2FA setup -->
+<div class="auth-card" id="setupCard" style="display:none;">
+  <span class="back-link" id="backFromSetup">&larr; Back to login</span>
+  <div class="auth-steps">
+    <div class="auth-step done" id="stepAccount2"><div class="dot">✓</div><div class="lbl2">Account</div></div>
+    <div class="auth-step-line"></div>
+    <div class="auth-step active" id="stepVerify2"><div class="dot">2</div><div class="lbl2">Verify 2FA</div></div>
+  </div>
+  <h2>Set up 2FA</h2>
+  <p class="hint">Scan this with Google Authenticator, Authy, or similar.</p>
+  <div class="qr-wrap"><img id="qrImg" alt="2FA QR code" /></div>
+  <p class="hint" style="margin-bottom:2px;">Can't scan? Enter this key manually:</p>
+  <div class="manual-key" id="manualKey"></div>
+  <input id="setupCode" placeholder="Enter the 6-digit code to confirm" inputmode="numeric" maxlength="6" />
+  <button id="setupBtn">Confirm and finish setup</button>
+  <div class="auth-error" id="setupError"></div>
+</div>
+
+<!-- Dashboard -->
+<div class="wrap" id="app">
+  <div class="top-bar">
+    <div>
+      <h1>Leads Dashboard</h1>
+      <p class="sub" style="margin-bottom:0;">Every lead that's completed payment, ready to follow up on.</p>
+    </div>
+    <button id="logoutBtn">Log out</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="num" id="statTotal">0</div><div class="lbl">Total leads</div></div>
+    <div class="stat"><div class="num" id="statHot">0</div><div class="lbl">Hot leads</div></div>
+    <div class="stat"><div class="num" id="statContacted">0</div><div class="lbl">Contacted</div></div>
+    <div class="stat"><div class="num" id="statWon">0</div><div class="lbl">Won</div></div>
+  </div>
+
+  <div class="toolbar">
+    <input id="search" placeholder="Search by name, email, or company…" />
+    <select id="filterStatus">
+      <option value="">All statuses</option>
+      <option value="new">New</option>
+      <option value="contacted">Contacted</option>
+      <option value="won">Won</option>
+      <option value="lost">Lost</option>
+    </select>
+  </div>
+
+  <div id="list"></div>
+  <div id="empty" style="display:none;">No leads yet — they'll show up here once someone pays for a report.</div>
+</div>
+
+<script>
+const el = (id) => document.getElementById(id);
+let allLeads = [];
+let pendingRegUsername = '';
+
+// If this file was opened directly (file://...) instead of through the running
+// server, every fetch() call fails instantly with a generic "Failed to fetch" —
+// catch that specific case up front with a message that actually explains it.
+if (window.location.protocol === 'file:') {
+  document.body.innerHTML = `
+    <div style="max-width:420px; margin:80px auto; background:#151822; border:1px solid #262b38;
+                border-radius:14px; padding:24px; color:#e7e9ee; font-family:-apple-system,sans-serif;">
+      <h2 style="font-size:16px; margin:0 0 10px;">This page needs to run through the server</h2>
+      <p style="font-size:14px; color:#9aa1b1; line-height:1.6;">
+        You opened this file directly (${window.location.href}), so it can't talk to the API.
+        With your server running (<code>node server.js</code>), open
+        <b style="color:#e7e9ee;">http://localhost:3000/dashboard.html</b> instead.
+      </p>
+    </div>`;
+  throw new Error('Stopped: dashboard.html opened via file:// instead of through the server.');
+}
+
+function showCard(id) {
+  ['loginCard', 'registerCard', 'setupCard', 'app'].forEach((c) => { el(c).style.display = c === id ? (c === 'app' ? 'block' : 'block') : 'none'; });
+}
+
+el('showRegister').addEventListener('click', () => showCard('registerCard'));
+el('showLogin').addEventListener('click', () => showCard('loginCard'));
+
+async function api(path, opts = {}) {
+  let res;
+  try {
+    res = await fetch(path, {
+      ...opts,
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    });
+  } catch {
+    // fetch() itself threw — the request never reached a server at all.
+    throw new Error(`Can't reach the server at ${window.location.origin}. Is it still running?`);
+  }
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+// Buttons only become clickable once the stage's inputs are actually valid —
+// makes it obvious at a glance whether you can proceed.
+function wireValidation(inputIds, buttonId, validate) {
+  const btn = el(buttonId);
+  const check = () => { btn.disabled = !validate(...inputIds.map(id => el(id).value)); };
+  inputIds.forEach(id => el(id).addEventListener('input', check));
+  check();
+}
+wireValidation(['regUsername', 'regPassword'], 'registerBtn', (u, p) => u.trim().length > 0 && p.length >= 8);
+wireValidation(['setupCode'], 'setupBtn', (c) => /^\d{6}$/.test(c.trim()));
+wireValidation(['loginUsername', 'loginPassword', 'loginTotp'], 'loginBtn', (u, p, t) => u.trim() && p && /^\d{6}$/.test(t.trim()));
+
+el('backFromRegister').addEventListener('click', () => showCard('loginCard'));
+el('backFromSetup').addEventListener('click', () => showCard('loginCard'));
+
+el('registerBtn').addEventListener('click', async () => {
+  const username = el('regUsername').value.trim();
+  const password = el('regPassword').value;
+  el('registerError').textContent = '';
+  const btn = el('registerBtn');
+  btn.disabled = true;
+  try {
+    const data = await api('/auth/register', { method: 'POST', body: JSON.stringify({ username, password }) });
+    pendingRegUsername = data.username;
+    el('qrImg').src = data.qrCodeDataUrl;
+    el('manualKey').textContent = data.manualEntryKey;
+    showCard('setupCard');
+  } catch (err) {
+    el('registerError').textContent = err.message;
+    btn.disabled = false;
+  }
+});
+
+el('setupBtn').addEventListener('click', async () => {
+  const code = el('setupCode').value.trim();
+  el('setupError').textContent = '';
+  const btn = el('setupBtn');
+  btn.disabled = true;
+  try {
+    await api('/auth/verify-setup', { method: 'POST', body: JSON.stringify({ username: pendingRegUsername, code }) });
+    el('loginUsername').value = pendingRegUsername;
+    showCard('loginCard');
+  } catch (err) {
+    el('setupError').textContent = err.message;
+    btn.disabled = false;
+  }
+});
+
+el('loginBtn').addEventListener('click', async () => {
+  const username = el('loginUsername').value.trim();
+  const password = el('loginPassword').value;
+  const totpCode = el('loginTotp').value.trim();
+  el('loginError').textContent = '';
+  const btn = el('loginBtn');
+  btn.disabled = true;
+  try {
+    await api('/auth/login', { method: 'POST', body: JSON.stringify({ username, password, totpCode }) });
+    await loadDashboard();
+  } catch (err) {
+    btn.disabled = false;
+    el('loginError').textContent = err.message;
+  }
+});
+
+el('logoutBtn').addEventListener('click', async () => {
+  await api('/auth/logout', { method: 'POST' });
+  location.reload();
+});
+
+async function loadDashboard() {
+  const data = await api('/api/leads');
+  allLeads = data.leads;
+  showCard('app');
+  render();
+}
+
+// Try to resume an existing session on load
+(async function checkSession() {
+  try {
+    await api('/auth/me');
+    await loadDashboard();
+  } catch {
+    showCard('loginCard');
+  }
+})();
+
+function statusLabel(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+function renderStats(list) {
+  el('statTotal').textContent = list.length;
+  el('statHot').textContent = list.filter(l => l.path === 'priority-outreach').length;
+  el('statContacted').textContent = list.filter(l => l.followupStatus === 'contacted').length;
+  el('statWon').textContent = list.filter(l => l.followupStatus === 'won').length;
+}
+
+function render() {
+  const q = el('search').value.trim().toLowerCase();
+  const statusFilter = el('filterStatus').value;
+  const filtered = allLeads.filter((l) => {
+    const matchesQ = !q || [l.name, l.email, l.company].some(v => (v || '').toLowerCase().includes(q));
+    const matchesStatus = !statusFilter || l.followupStatus === statusFilter;
+    return matchesQ && matchesStatus;
+  });
+
+  renderStats(allLeads);
+
+  const list = el('list');
+  list.innerHTML = '';
+  el('empty').style.display = filtered.length ? 'none' : 'block';
+
+  filtered.forEach((l) => {
+    const card = document.createElement('div');
+    card.className = 'lead-card';
+    card.innerHTML = `
+      <div class="lead-top">
+        <div>
+          <div class="lead-name">${escapeHtml(l.name)}</div>
+          <div class="lead-email">${escapeHtml(l.email)}${l.company ? ' · ' + escapeHtml(l.company) : ''}</div>
+        </div>
+        <div class="badges">
+          <span class="score">${l.score}/100</span>
+          <span class="badge ${l.path === 'priority-outreach' ? 'hot' : 'nurture'}">${l.path === 'priority-outreach' ? 'Hot' : 'Nurture'}</span>
+        </div>
+      </div>
+      <div class="lead-mid">
+        <select class="status-select" data-ref="${l.ref}">
+          ${['new','contacted','won','lost'].map(s => `<option value="${s}" ${s === l.followupStatus ? 'selected' : ''}>${statusLabel(s)}</option>`).join('')}
+        </select>
+      </div>
+      <textarea class="notes" data-ref="${l.ref}" placeholder="Follow-up notes…">${escapeHtml(l.followupNotes || '')}</textarea>
+      <div class="save-row">
+        <span class="saved-flash">Saved</span>
+        <button class="save-btn" data-ref="${l.ref}">Save</button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+
+  list.querySelectorAll('.save-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const ref = btn.dataset.ref;
+      const status = list.querySelector(`select[data-ref="${ref}"]`).value;
+      const notes = list.querySelector(`textarea[data-ref="${ref}"]`).value;
+      btn.disabled = true;
+      try {
+        await api(`/api/leads/${ref}/followup`, { method: 'PATCH', body: JSON.stringify({ status, notes }) });
+        const lead = allLeads.find(l => l.ref === ref);
+        if (lead) { lead.followupStatus = status; lead.followupNotes = notes; }
+        const flash = btn.parentElement.querySelector('.saved-flash');
+        flash.classList.add('show');
+        setTimeout(() => flash.classList.remove('show'), 1500);
+        renderStats(allLeads);
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+el('search').addEventListener('input', render);
+el('filterStatus').addEventListener('change', render);
+</script>
+</body>
+</html>

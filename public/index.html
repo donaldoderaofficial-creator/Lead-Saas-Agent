@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lead Agent — Premium Report</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --surface: #151822;
+    --surface-2: #1c202c;
+    --border: #262b38;
+    --text: #e7e9ee;
+    --text-dim: #9aa1b1;
+    --accent: #6c8cff;
+    --hot: #ff6c6c;
+    --nurture: #6cffa3;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(108,140,255,0.10), transparent 40%),
+      radial-gradient(circle at 85% 100%, rgba(108,255,163,0.08), transparent 40%),
+      var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 48px 16px;
+  }
+  .card {
+    width: 100%;
+    max-width: 480px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    animation: rise 0.4s ease;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.sub { color: var(--text-dim); font-size: 14px; margin: 0 0 20px; }
+
+  .steps { display: flex; align-items: center; margin-bottom: 24px; }
+  .step { display: flex; align-items: center; gap: 8px; }
+  .step .dot {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--text-dim); font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.25s ease;
+  }
+  .step.active .dot { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .step.done .dot { background: var(--nurture); border-color: var(--nurture); color: #06210f; }
+  .step .label { font-size: 12px; color: var(--text-dim); }
+  .step.active .label, .step.done .label { color: var(--text); }
+  .step-line { flex: 1; height: 1px; background: var(--border); margin: 0 8px; }
+
+  label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 6px; }
+  input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-size: 14px;
+    transition: border-color 0.15s ease;
+  }
+  input:focus { outline: none; border-color: var(--accent); }
+  input.invalid { border-color: var(--hot); }
+
+  .row { display: flex; gap: 10px; margin-top: 22px; }
+  button {
+    flex: 1;
+    padding: 11px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform 0.1s ease, opacity 0.15s ease;
+  }
+  button:hover:not(:disabled) { transform: translateY(-1px); }
+  button:active:not(:disabled) { transform: translateY(0); }
+  #payPaypal { background: #ffc439; color: #1a1a1a; }
+  #payMpesa { background: var(--nurture); color: #06210f; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+  #status {
+    margin-top: 16px; font-size: 13px; color: var(--text-dim); min-height: 18px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .spinner {
+    width: 13px; height: 13px; border-radius: 50%;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    animation: spin 0.7s linear infinite; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #report {
+    margin-top: 20px;
+    border-top: 1px solid var(--border);
+    padding-top: 18px;
+    display: none;
+    animation: rise 0.35s ease;
+  }
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge.hot { background: rgba(255,108,108,0.15); color: var(--hot); }
+  .badge.nurture { background: rgba(108,255,163,0.15); color: var(--nurture); }
+  #report .row2 { display: flex; justify-content: space-between; font-size: 14px; margin: 10px 0; }
+  #report .label2 { color: var(--text-dim); }
+
+  #assistantToggle {
+    position: fixed; bottom: 20px; right: 20px;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--accent); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 24px rgba(108,140,255,0.4);
+    font-size: 22px; z-index: 50;
+    transition: transform 0.15s ease;
+  }
+  #assistantToggle:hover { transform: scale(1.06); }
+
+  #assistantPanel {
+    position: fixed; bottom: 84px; right: 20px;
+    width: 320px; max-width: calc(100vw - 40px);
+    height: 420px; max-height: calc(100vh - 140px);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+    display: none; flex-direction: column; overflow: hidden; z-index: 50;
+    animation: rise 0.25s ease;
+  }
+  #assistantPanel.open { display: flex; }
+  #assistantHeader {
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    font-size: 14px; font-weight: 600; display: flex; justify-content: space-between; align-items: center;
+  }
+  #assistantHeader span.dot2 { width: 7px; height: 7px; border-radius: 50%; background: var(--nurture); display: inline-block; margin-right: 6px; }
+  #assistantClose { background: none; border: none; color: var(--text-dim); font-size: 16px; cursor: pointer; flex: none; padding: 4px; }
+  #assistantMessages { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { font-size: 13px; line-height: 1.5; padding: 9px 12px; border-radius: 10px; max-width: 85%; }
+  .msg.bot { background: var(--surface-2); align-self: flex-start; }
+  .msg.user { background: var(--accent); color: #fff; align-self: flex-end; }
+  #assistantQuick { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 12px; }
+  .quick-btn {
+    flex: none; background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--text); font-size: 12px; padding: 6px 10px; border-radius: 999px; cursor: pointer;
+  }
+  .quick-btn:hover { border-color: var(--accent); }
+  #assistantInputRow { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
+  #assistantInput {
+    flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; color: var(--text); font-size: 13px;
+  }
+  #assistantSend { flex: none; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Premium Lead Report</h1>
+    <p class="sub">Submit a lead, pay to unlock the full scored report.</p>
+
+    <div class="steps">
+      <div class="step active" id="stepDetails"><div class="dot">1</div><div class="label">Details</div></div>
+      <div class="step-line"></div>
+      <div class="step" id="stepPay"><div class="dot">2</div><div class="label">Pay</div></div>
+      <div class="step-line"></div>
+      <div class="step" id="stepReport"><div class="dot">3</div><div class="label">Report</div></div>
+    </div>
+
+    <label for="name">Name</label>
+    <input id="name" placeholder="Ada K." />
+
+    <label for="email">Email</label>
+    <input id="email" placeholder="ada@bigcorp.com" />
+
+    <label for="phone">M-Pesa phone (for STK Push, format 2547XXXXXXXX)</label>
+    <input id="phone" placeholder="254112217747" />
+
+    <div class="row">
+      <button id="payPaypal">Pay with PayPal</button>
+      <button id="payMpesa">Pay with M-Pesa</button>
+    </div>
+
+    <div id="status"></div>
+
+    <div id="report">
+      <div class="row2"><span class="label2">Company</span><span id="rCompany"></span></div>
+      <div class="row2"><span class="label2">Score</span><span id="rScore"></span>/100</div>
+      <div class="row2"><span class="label2">Path</span><span id="rPath" class="badge"></span></div>
+      <div class="row2"><span class="label2">Recommendation</span><span id="rRec" style="text-align:right; max-width:60%;"></span></div>
+    </div>
+  </div>
+
+  <button id="assistantToggle" aria-label="Open assistant">💬</button>
+  <div id="assistantPanel">
+    <div id="assistantHeader"><span><span class="dot2"></span>Assistant</span><button id="assistantClose">✕</button></div>
+    <div id="assistantMessages"></div>
+    <div id="assistantQuick"></div>
+    <div id="assistantInputRow">
+      <input id="assistantInput" placeholder="Ask a question…" />
+      <button id="assistantSend">Send</button>
+    </div>
+  </div>
+
+<script>
+const el = (id) => document.getElementById(id);
+const statusEl = el('status');
+const reportEl = el('report');
+
+function setStep(n) {
+  ['stepDetails', 'stepPay', 'stepReport'].forEach((id, i) => {
+    const stepEl = el(id);
+    stepEl.classList.remove('active', 'done');
+    if (i + 1 < n) stepEl.classList.add('done');
+    else if (i + 1 === n) stepEl.classList.add('active');
+  });
+}
+
+function setStatus(msg, isError, showSpinner) {
+  statusEl.innerHTML = '';
+  if (showSpinner) {
+    const s = document.createElement('div');
+    s.className = 'spinner';
+    statusEl.appendChild(s);
+  }
+  const t = document.createElement('span');
+  t.textContent = msg;
+  t.style.color = isError ? '#ff6c6c' : '#9aa1b1';
+  statusEl.appendChild(t);
+}
+
+function getLead() {
+  return { name: el('name').value.trim(), email: el('email').value.trim() };
+}
+
+function validateFields() {
+  const lead = getLead();
+  let ok = true;
+  el('name').classList.toggle('invalid', !lead.name);
+  el('email').classList.toggle('invalid', !lead.email.includes('@'));
+  if (!lead.name || !lead.email.includes('@')) ok = false;
+  return ok;
+}
+
+function renderReport(report) {
+  const r = report.result;
+  el('rCompany').textContent = r.company || '—';
+  el('rScore').textContent = r.score;
+  const pathEl = el('rPath');
+  pathEl.textContent = r.path;
+  pathEl.className = 'badge ' + (r.path === 'priority-outreach' ? 'hot' : 'nurture');
+  el('rRec').textContent = report.premium?.recommendedNextStep || '—';
+  reportEl.style.display = 'block';
+  setStep(3);
+}
+
+async function pollReport(ref, { onPending } = {}) {
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+    const tick = async () => {
+      attempts += 1;
+      try {
+        const res = await fetch(`/leads/report/${ref}`);
+        const data = await res.json();
+        if (res.status === 200) return resolve(data);
+        if (res.status === 202) {
+          onPending?.(attempts);
+          if (attempts >= 15) return reject(new Error('Still waiting on payment confirmation.'));
+          setTimeout(tick, 4000);
+        } else {
+          reject(new Error(data.error || 'Report lookup failed'));
+        }
+      } catch (err) {
+        reject(err);
+      }
+    };
+    tick();
+  });
+}
+
+el('payPaypal').addEventListener('click', async () => {
+  if (!validateFields()) return setStatus('Enter a valid name and email first.', true);
+  const lead = getLead();
+
+  try {
+    setStatus('Creating PayPal order…', false, true);
+    const res = await fetch('/api/lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...lead, method: 'paypal' }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    sessionStorage.setItem('leadRef', data.orderId);
+    setStep(2);
+    setStatus('Redirecting to PayPal…', false, true);
+    window.location.href = data.approveUrl;
+  } catch (err) {
+    setStatus(err.message, true);
+  }
+});
+
+el('payMpesa').addEventListener('click', async () => {
+  if (!validateFields()) return setStatus('Enter a valid name and email first.', true);
+  const lead = getLead();
+  const phone = el('phone').value.trim();
+  const phoneOk = /^254\d{9}$/.test(phone);
+  el('phone').classList.toggle('invalid', !phoneOk);
+  if (!phoneOk) return setStatus('Phone must be in 2547XXXXXXXX format.', true);
+
+  try {
+    setStep(2);
+    setStatus('Sending STK Push to your phone…', false, true);
+    const res = await fetch('/api/lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...lead, phone, method: 'mpesa' }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    setStatus('Enter your M-Pesa PIN on your phone. Waiting…', false, true);
+    const report = await pollReport(data.checkoutRequestId);
+    renderReport(report);
+    setStatus('Report ready.');
+  } catch (err) {
+    setStatus(err.message, true);
+  }
+});
+
+(async function handlePaypalReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const orderId = params.get('token');
+  if (params.has('paypal_cancel')) {
+    setStatus('PayPal checkout was cancelled.', true);
+    return;
+  }
+  if (!orderId) return;
+
+  setStep(2);
+  setStatus('Confirming payment with PayPal…', false, true);
+  try {
+    const captureRes = await fetch(`/payments/capture-order/${orderId}`, { method: 'POST' });
+    const capture = await captureRes.json();
+    if (!captureRes.ok || capture.status !== 'COMPLETED') {
+      throw new Error(capture.error || 'Payment not completed');
+    }
+    setStatus('Payment confirmed — generating report…', false, true);
+    const report = await pollReport(orderId);
+    renderReport(report);
+    setStatus('Report ready.');
+  } catch (err) {
+    setStatus(err.message, true);
+  }
+})();
+
+const FAQ = [
+  { q: ['price', 'cost', 'how much', 'fee'], a: 'The premium report is $9.99 via PayPal, or KSh 1,300 via M-Pesa STK Push.' },
+  { q: ['mpesa', 'stk', 'm-pesa'], a: "Enter your phone as 2547XXXXXXXX (no '+', no leading 0), then approve the prompt that appears on your phone." },
+  { q: ['paypal'], a: "You'll be redirected to PayPal to approve the payment, then brought back here automatically once it's confirmed." },
+  { q: ['report', 'what do i get', 'include'], a: 'The report includes a lead score out of 100, a hot/nurture classification, and a recommended next step.' },
+  { q: ['refund'], a: "For refund requests, reach out to the account this site is registered under — that's handled outside this automated flow." },
+  { q: ['how long', 'wait', 'time'], a: "PayPal reports appear within a few seconds of payment. M-Pesa reports appear once you approve the STK prompt — usually under 30 seconds." },
+  { q: ['score', 'scoring'], a: 'Leads are scored 0-100 based on company signals. 70+ is routed as a hot lead for priority outreach; below that goes to a nurture sequence.' },
+];
+
+function findAnswer(text) {
+  const lower = text.toLowerCase();
+  const hit = FAQ.find((f) => f.q.some((kw) => lower.includes(kw)));
+  return hit ? hit.a : "I don't have an answer for that specific question — try asking about pricing, payment methods, or what's in the report.";
+}
+
+const messagesEl = el('assistantMessages');
+function addMessage(text, from) {
+  const m = document.createElement('div');
+  m.className = 'msg ' + from;
+  m.textContent = text;
+  messagesEl.appendChild(m);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function botReply(text) {
+  const typing = document.createElement('div');
+  typing.className = 'msg bot';
+  typing.textContent = '…';
+  messagesEl.appendChild(typing);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  setTimeout(() => {
+    typing.textContent = text;
+  }, 450);
+}
+
+const QUICK = ['How much does it cost?', 'How does M-Pesa payment work?', "What's in the report?"];
+const quickEl = el('assistantQuick');
+QUICK.forEach((q) => {
+  const b = document.createElement('button');
+  b.className = 'quick-btn';
+  b.textContent = q;
+  b.addEventListener('click', () => handleUserMessage(q));
+  quickEl.appendChild(b);
+});
+
+function handleUserMessage(text) {
+  if (!text.trim()) return;
+  addMessage(text, 'user');
+  botReply(findAnswer(text));
+}
+
+el('assistantSend').addEventListener('click', () => {
+  const input = el('assistantInput');
+  handleUserMessage(input.value);
+  input.value = '';
+});
+el('assistantInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') el('assistantSend').click();
+});
+
+let assistantOpened = false;
+el('assistantToggle').addEventListener('click', () => {
+  const panel = el('assistantPanel');
+  panel.classList.toggle('open');
+  if (!assistantOpened && panel.classList.contains('open')) {
+    assistantOpened = true;
+    botReply("Hi! I can answer questions about pricing, payment methods, or what's in the report.");
+  }
+});
+el('assistantClose').addEventListener('click', () => el('assistantPanel').classList.remove('open'));
+</script>
+</body>
+</html>
