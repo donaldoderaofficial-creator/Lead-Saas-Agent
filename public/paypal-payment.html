@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pay with PayPal — Lead Agent</title>
+  <style>
+    :root { --bg:#0b0d12; --surface:#151822; --border:#262b38; --text:#e7e9ee; --dim:#9aa1b1; --paypal:#ffc439; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    .card { width:min(100%,440px); background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; box-shadow:0 20px 60px rgba(0,0,0,.35); }
+    h1 { margin:0 0 6px; font-size:22px; }
+    p { color:var(--dim); line-height:1.5; }
+    label { display:block; margin:16px 0 6px; font-size:13px; color:var(--dim); }
+    input { width:100%; padding:11px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:14px; }
+    button { width:100%; margin-top:20px; padding:12px; border:0; border-radius:8px; background:var(--paypal); color:#1a1a1a; font-weight:700; cursor:pointer; font-size:15px; }
+    button:disabled { opacity:.55; cursor:not-allowed; }
+    .email { margin-top:18px; padding:12px; border:1px solid var(--border); border-radius:8px; font-size:14px; }
+    .email strong { color:var(--text); }
+    #status { margin-top:14px; font-size:13px; min-height:18px; color:var(--dim); }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Pay with PayPal</h1>
+    <p>Use the secure PayPal checkout to unlock the Premium Lead Report.</p>
+
+    <label for="name">Name</label>
+    <input id="name" autocomplete="name" placeholder="Your name" />
+
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="email" placeholder="you@example.com" />
+
+    <button id="payButton" type="button">Pay with PayPal</button>
+
+    <div class="email">PayPal payment account: <strong>Donaldoderaofficial@icloud.com</strong></div>
+    <div id="status" role="status" aria-live="polite"></div>
+  </main>
+
+  <script>
+    const nameEl = document.getElementById('name');
+    const emailEl = document.getElementById('email');
+    const button = document.getElementById('payButton');
+    const status = document.getElementById('status');
+
+    button.addEventListener('click', async () => {
+      const name = nameEl.value.trim();
+      const email = emailEl.value.trim();
+      if (!name || !email.includes('@')) {
+        status.textContent = 'Enter your name and a valid email address.';
+        return;
+      }
+
+      button.disabled = true;
+      status.textContent = 'Creating secure PayPal checkout…';
+      try {
+        const response = await fetch('/api/lead', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, method: 'paypal' })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.approveUrl) throw new Error(data.error || 'Unable to create PayPal checkout.');
+        sessionStorage.setItem('leadRef', data.orderId);
+        window.location.href = data.approveUrl;
+      } catch (error) {
+        status.textContent = error.message;
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
