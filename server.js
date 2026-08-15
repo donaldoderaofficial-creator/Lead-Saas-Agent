@@ -18,7 +18,7 @@ const session = require('express-session');
 const { client, checkoutNodeJssdk, verifyWebhookSignature } = require('./paypal-client');
 const { initiateSTKPush } = require('./mpesa-client');
 const { processLead } = require('./lead-pipeline');
-const { pendingLeads, completedReports, leads, users } = require('./store');
+const { pendingLeads, completedReports, leads, users, compliance, createSessionStore, backupDatabase } = require('./store');
 const { assess, preferredPenaltyPaymentMethods } = require('./compliance');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateQrCode } = require('./auth');
 
@@ -34,6 +34,7 @@ app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
+  store: createSessionStore(session),
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -54,6 +55,18 @@ function recordFailedAttempt(username) {
   const attempts = loginAttempts.get(username) || [];
   attempts.push(Date.now());
   loginAttempts.set(username, attempts);
+}
+
+const complianceRequests = new Map();
+function complianceRateLimit(req, res, next) {
+  const key = req.session?.userId || req.ip;
+  const now = Date.now();
+  const windowMs = 5 * 60 * 1000;
+  const entries = (complianceRequests.get(key) || []).filter((time) => now - time < windowMs);
+  if (entries.length >= 30) return res.status(429).json({ error: 'Too many compliance requests. Try again later.' });
+  entries.push(now);
+  complianceRequests.set(key, entries);
+  next();
 }
 
 const PREMIUM_REPORT_PRICE_USD = '9.99';
@@ -226,9 +239,17 @@ function requireAuth(req, res, next) {
   if (!req.session?.userId) return res.status(401).json({ error: 'Not logged in' });
   next();
 }
+function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!req.session?.userId) return res.status(401).json({ error: 'Not logged in' });
+    const user = users.findById(req.session.userId);
+    if (!user || !roles.includes(user.role)) return res.status(403).json({ error: 'Administrator access required' });
+    next();
+  };
+}
 
 app.post('/auth/register', async (req, res) => {
-  const { username, password } = req.body || {};
+  const { username, password, role } = req.body || {};
   if (!username || !password || password.length < 8) {
     return res.status(400).json({ error: 'Username and a password of at least 8 characters are required' });
   }
@@ -236,6 +257,15 @@ app.post('/auth/register', async (req, res) => {
   const isFirstUser = users.count() === 0;
   if (!isFirstUser && !req.session?.userId) {
     return res.status(401).json({ error: 'Only an existing logged-in user can create new accounts' });
+  }
+  const creator = isFirstUser ? null : users.findById(req.session.userId);
+  if (!isFirstUser && !creator) return res.status(401).json({ error: 'Unknown account' });
+  const accountRole = isFirstUser ? 'owner' : (role || 'analyst');
+  if (!['analyst', 'admin'].includes(accountRole) && !isFirstUser) {
+    return res.status(400).json({ error: 'role must be analyst or admin' });
+  }
+  if (accountRole === 'admin' && creator?.role !== 'owner') {
+    return res.status(403).json({ error: 'Only the owner can create administrators' });
   }
 
   if (users.findByUsername(username)) {
@@ -245,9 +275,9 @@ app.post('/auth/register', async (req, res) => {
   try {
     const passwordHash = await hashPassword(password);
     const totpSecret = generateTotpSecret();
-    const userId = users.create(username, passwordHash, totpSecret);
+    const userId = users.create(username, passwordHash, totpSecret, accountRole);
     const qrCodeDataUrl = await generateQrCode(username, totpSecret);
-    res.json({ userId, username, qrCodeDataUrl, manualEntryKey: totpSecret });
+    res.json({ userId, username, role: accountRole, qrCodeDataUrl, manualEntryKey: totpSecret });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -295,7 +325,8 @@ app.post('/auth/login', async (req, res) => {
 
   req.session.userId = user.id;
   req.session.username = user.username;
-  res.json({ status: 'ok', username: user.username });
+  req.session.role = user.role;
+  res.json({ status: 'ok', username: user.username, role: user.role });
 });
 
 app.post('/auth/logout', (req, res) => {
@@ -304,7 +335,7 @@ app.post('/auth/logout', (req, res) => {
 
 app.get('/auth/me', (req, res) => {
   if (!req.session?.userId) return res.status(401).json({ error: 'Not logged in' });
-  res.json({ username: req.session.username });
+  res.json({ username: req.session.username, role: req.session.role });
 });
 
 app.get('/api/leads', requireAuth, (req, res) => {
@@ -313,7 +344,7 @@ app.get('/api/leads', requireAuth, (req, res) => {
 
 // Preferred payment destinations for an administrative penalty. A payment
 // reference is never accepted automatically; an administrator must verify it.
-app.get('/api/compliance/payment-options', (req, res) => {
+app.get('/api/compliance/payment-options', complianceRateLimit, (req, res) => {
   res.json({
     paymentMethods: preferredPenaltyPaymentMethods,
     verificationRequired: true,
@@ -323,29 +354,30 @@ app.get('/api/compliance/payment-options', (req, res) => {
 
 // Compliance administration: review internal flags and reinstate accounts.
 // These routes intentionally do not contact outside agencies.
-app.get('/api/compliance/incidents', requireAuth, (req, res) => {
-  const { compliance } = require('./store');
+app.get('/api/compliance/incidents', complianceRateLimit, requireRole('owner', 'admin'), (req, res) => {
   res.json({ incidents: compliance.listIncidents() });
 });
 
-app.patch('/api/compliance/incidents/:id/review', requireAuth, (req, res) => {
+app.get('/api/compliance/audit', complianceRateLimit, requireRole('owner', 'admin'), (req, res) => {
+  res.json({ audit: compliance.listAudit() });
+});
+
+app.patch('/api/compliance/incidents/:id/review', complianceRateLimit, requireRole('owner', 'admin'), (req, res) => {
   const { status, notes } = req.body || {};
   if (!['cleared', 'confirmed'].includes(status)) {
     return res.status(400).json({ error: 'status must be cleared or confirmed' });
   }
-  const { compliance } = require('./store');
   const incident = compliance.getIncident(Number(req.params.id));
   if (!incident) return res.status(404).json({ error: 'Unknown incident' });
   compliance.reviewIncident(incident.id, status, req.session.userId, notes);
   res.json({ status: 'saved' });
 });
 
-app.post('/api/compliance/clients/:clientKey/verify-payment', requireAuth, (req, res) => {
+app.post('/api/compliance/clients/:clientKey/verify-payment', complianceRateLimit, requireRole('owner', 'admin'), (req, res) => {
   const { paymentReference } = req.body || {};
   if (!paymentReference || String(paymentReference).trim().length < 3) {
     return res.status(400).json({ error: 'A verified payment reference is required' });
   }
-  const { compliance } = require('./store');
   if (!compliance.getClient(req.params.clientKey)) {
     return res.status(404).json({ error: 'Unknown client' });
   }
@@ -354,8 +386,7 @@ app.post('/api/compliance/clients/:clientKey/verify-payment', requireAuth, (req,
   res.json({ status: 'payment-verified' });
 });
 
-app.post('/api/compliance/clients/:clientKey/reinstate', requireAuth, (req, res) => {
-  const { compliance } = require('./store');
+app.post('/api/compliance/clients/:clientKey/reinstate', complianceRateLimit, requireRole('owner', 'admin'), (req, res) => {
   const result = compliance.reinstate(req.params.clientKey);
   if (!result.ok) {
     const error = result.reason === 'payment-not-verified'
@@ -363,7 +394,29 @@ app.post('/api/compliance/clients/:clientKey/reinstate', requireAuth, (req, res)
       : 'Unknown client';
     return res.status(result.reason === 'payment-not-verified' ? 409 : 404).json({ error });
   }
+  compliance.audit(req.session.userId, 'client-reinstated', req.params.clientKey, null);
   res.json({ status: 'active' });
+});
+
+app.post('/api/compliance/incidents/:id/legal-review', complianceRateLimit, requireRole('owner', 'admin'), (req, res) => {
+  const { decision, legalReference, notes } = req.body || {};
+  if (!['approved', 'declined'].includes(decision) || !legalReference) {
+    return res.status(400).json({ error: 'decision (approved or declined) and legalReference are required' });
+  }
+  const incident = compliance.getIncident(Number(req.params.id));
+  if (!incident) return res.status(404).json({ error: 'Unknown incident' });
+  compliance.recordLegalReview(incident.id, decision, req.session.userId, String(legalReference), notes);
+  res.json({ status: 'legal-review-recorded' });
+});
+
+app.patch('/api/users/:id/role', complianceRateLimit, requireRole('owner'), (req, res) => {
+  const { role } = req.body || {};
+  if (!['analyst', 'admin'].includes(role)) return res.status(400).json({ error: 'role must be analyst or admin' });
+  const user = users.findById(Number(req.params.id));
+  if (!user) return res.status(404).json({ error: 'Unknown user' });
+  users.setRole(user.id, role);
+  compliance.audit(req.session.userId, 'role-updated', null, null, { userId: user.id, role });
+  res.json({ status: 'saved' });
 });
 
 app.patch('/api/leads/:ref/followup', requireAuth, (req, res) => {
@@ -379,4 +432,13 @@ app.patch('/api/leads/:ref/followup', requireAuth, (req, res) => {
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Lead agent API listening on port ${PORT}`));
+if (require.main === module) {
+  const runBackup = () => backupDatabase(process.env.BACKUP_DIR)
+    .then((filename) => filename && console.log(`Database backup written to ${filename}`))
+    .catch((err) => console.error('Database backup failed:', err.message));
+  runBackup();
+  setInterval(runBackup, 24 * 60 * 60 * 1000).unref();
+  app.listen(PORT, () => console.log(`Lead agent API listening on port ${PORT}`));
+}
+
+module.exports = app;
