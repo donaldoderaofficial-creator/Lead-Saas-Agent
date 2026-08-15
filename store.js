@@ -42,6 +42,26 @@ db.exec(`
     totp_enabled INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS compliance_clients (
+    client_key TEXT PRIMARY KEY,
+    violation_count INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'active',
+    suspension_reason TEXT,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS compliance_incidents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_key TEXT NOT NULL,
+    categories_json TEXT NOT NULL,
+    excerpt TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'open',
+    reviewer_id INTEGER,
+    review_notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    reviewed_at TEXT
+  );
 `);
 
 const stmts = {
@@ -69,6 +89,28 @@ const stmts = {
   getUserById: db.prepare('SELECT id, username, totp_enabled FROM users WHERE id = ?'),
   countUsers: db.prepare('SELECT COUNT(*) AS n FROM users'),
   enableTotp: db.prepare('UPDATE users SET totp_enabled = 1 WHERE id = ?'),
+  getComplianceClient: db.prepare('SELECT * FROM compliance_clients WHERE client_key = ?'),
+  upsertComplianceClient: db.prepare(`
+    INSERT INTO compliance_clients (client_key, violation_count, status, suspension_reason, updated_at)
+    VALUES (?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(client_key) DO UPDATE SET
+      violation_count = excluded.violation_count,
+      status = excluded.status,
+      suspension_reason = excluded.suspension_reason,
+      updated_at = excluded.updated_at
+  `),
+  insertComplianceIncident: db.prepare(
+    'INSERT INTO compliance_incidents (client_key, categories_json, excerpt) VALUES (?, ?, ?)'
+  ),
+  listComplianceIncidents: db.prepare(
+    'SELECT * FROM compliance_incidents ORDER BY created_at DESC LIMIT 100'
+  ),
+  getComplianceIncident: db.prepare('SELECT * FROM compliance_incidents WHERE id = ?'),
+  reviewComplianceIncident: db.prepare(`
+    UPDATE compliance_incidents
+    SET status = ?, reviewer_id = ?, review_notes = ?, reviewed_at = datetime('now')
+    WHERE id = ?
+  `),
 };
 
 const pendingLeads = {
@@ -101,6 +143,40 @@ const completedReports = {
   },
 };
 
+const compliance = {
+  getClient(clientKey) {
+    return stmts.getComplianceClient.get(clientKey);
+  },
+  recordViolation(clientKey, categories, excerpt) {
+    const existing = stmts.getComplianceClient.get(clientKey);
+    const violationCount = (existing?.violation_count || 0) + 1;
+    const status = violationCount >= 2 ? 'suspended' : 'warning';
+    const reason = status === 'suspended' ? 'Repeated safety-policy violations require administrator review.' : null;
+    stmts.upsertComplianceClient.run(clientKey, violationCount, status, reason);
+    const incident = stmts.insertComplianceIncident.run(clientKey, JSON.stringify(categories), excerpt);
+    return { incidentId: Number(incident.lastInsertRowid), violationCount, status };
+  },
+  listIncidents() {
+    return stmts.listComplianceIncidents.all().map((row) => ({
+      ...row,
+      categories: JSON.parse(row.categories_json),
+    }));
+  },
+  getIncident(id) {
+    const row = stmts.getComplianceIncident.get(id);
+    return row ? { ...row, categories: JSON.parse(row.categories_json) } : undefined;
+  },
+  reviewIncident(id, status, reviewerId, notes) {
+    stmts.reviewComplianceIncident.run(status, reviewerId, notes || '', id);
+  },
+  reinstate(clientKey) {
+    const existing = stmts.getComplianceClient.get(clientKey);
+    if (!existing) return false;
+    stmts.upsertComplianceClient.run(clientKey, existing.violation_count, 'active', null);
+    return true;
+  },
+};
+
 const leads = {
   // All completed leads, most recent first, merged with follow-up status/notes.
   listAll() {
@@ -127,7 +203,7 @@ const leads = {
   },
 };
 
-module.exports = { pendingLeads, completedReports, leads, users: {
+module.exports = { pendingLeads, completedReports, leads, compliance, users: {
   create(username, passwordHash, totpSecret) {
     const info = stmts.insertUser.run(username, passwordHash, totpSecret);
     return info.lastInsertRowid;
