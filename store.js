@@ -7,10 +7,20 @@
  * Postgres only if you outgrow a single file (e.g. multiple app instances).
  */
 
+const fs = require('fs');
+const path = require('path');
 const Database = require('better-sqlite3');
 
 const db = new Database(process.env.DB_PATH || './data.db');
 db.pragma('journal_mode = WAL');
+
+function addColumnIfMissing(table, definition) {
+  try {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${definition}`);
+  } catch (err) {
+    if (!/duplicate column name/i.test(err.message)) throw err;
+  }
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS pending_leads (
@@ -69,7 +79,41 @@ db.exec(`
     verified_by INTEGER NOT NULL,
     verified_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS app_sessions (
+    sid TEXT PRIMARY KEY,
+    session_json TEXT NOT NULL,
+    expires_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS compliance_audit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    actor_id INTEGER,
+    event_type TEXT NOT NULL,
+    client_key TEXT,
+    incident_id INTEGER,
+    metadata_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS compliance_legal_reviews (
+    incident_id INTEGER PRIMARY KEY,
+    decision TEXT NOT NULL,
+    legal_reviewer_id INTEGER NOT NULL,
+    legal_reference TEXT NOT NULL,
+    notes TEXT NOT NULL DEFAULT '',
+    reviewed_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS schema_migrations (
+    version INTEGER PRIMARY KEY,
+    applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
+
+addColumnIfMissing('users', "role TEXT NOT NULL DEFAULT 'analyst'");
+db.prepare("UPDATE users SET role = 'owner' WHERE id = (SELECT MIN(id) FROM users) AND role = 'analyst'").run();
+db.prepare('INSERT OR IGNORE INTO schema_migrations (version) VALUES (1)').run();
 
 const stmts = {
   insertPending: db.prepare(
@@ -93,9 +137,10 @@ const stmts = {
     'INSERT INTO users (username, password_hash, totp_secret) VALUES (?, ?, ?)'
   ),
   getUserByUsername: db.prepare('SELECT * FROM users WHERE username = ?'),
-  getUserById: db.prepare('SELECT id, username, totp_enabled FROM users WHERE id = ?'),
+  getUserById: db.prepare('SELECT id, username, totp_enabled, role FROM users WHERE id = ?'),
   countUsers: db.prepare('SELECT COUNT(*) AS n FROM users'),
   enableTotp: db.prepare('UPDATE users SET totp_enabled = 1 WHERE id = ?'),
+  updateUserRole: db.prepare('UPDATE users SET role = ? WHERE id = ?'),
   getComplianceClient: db.prepare('SELECT * FROM compliance_clients WHERE client_key = ?'),
   upsertComplianceClient: db.prepare(`
     INSERT INTO compliance_clients (client_key, violation_count, status, suspension_reason, updated_at)
@@ -127,6 +172,28 @@ const stmts = {
       verified_by = excluded.verified_by,
       verified_at = excluded.verified_at
   `),
+  insertAudit: db.prepare(
+    'INSERT INTO compliance_audit_log (actor_id, event_type, client_key, incident_id, metadata_json) VALUES (?, ?, ?, ?, ?)'
+  ),
+  listAudit: db.prepare('SELECT * FROM compliance_audit_log ORDER BY created_at DESC LIMIT 200'),
+  getLegalReview: db.prepare('SELECT * FROM compliance_legal_reviews WHERE incident_id = ?'),
+  upsertLegalReview: db.prepare(`
+    INSERT INTO compliance_legal_reviews (incident_id, decision, legal_reviewer_id, legal_reference, notes, reviewed_at)
+    VALUES (?, ?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(incident_id) DO UPDATE SET
+      decision = excluded.decision,
+      legal_reviewer_id = excluded.legal_reviewer_id,
+      legal_reference = excluded.legal_reference,
+      notes = excluded.notes,
+      reviewed_at = excluded.reviewed_at
+  `),
+  getSession: db.prepare('SELECT session_json FROM app_sessions WHERE sid = ? AND expires_at > ?'),
+  setSession: db.prepare(`
+    INSERT INTO app_sessions (sid, session_json, expires_at) VALUES (?, ?, ?)
+    ON CONFLICT(sid) DO UPDATE SET session_json = excluded.session_json, expires_at = excluded.expires_at
+  `),
+  deleteSession: db.prepare('DELETE FROM app_sessions WHERE sid = ?'),
+  deleteExpiredSessions: db.prepare('DELETE FROM app_sessions WHERE expires_at <= ?'),
 };
 
 const pendingLeads = {
@@ -170,7 +237,9 @@ const compliance = {
     const reason = status === 'suspended' ? 'Repeated safety-policy violations require administrator review.' : null;
     stmts.upsertComplianceClient.run(clientKey, violationCount, status, reason);
     const incident = stmts.insertComplianceIncident.run(clientKey, JSON.stringify(categories), excerpt);
-    return { incidentId: Number(incident.lastInsertRowid), violationCount, status };
+    const incidentId = Number(incident.lastInsertRowid);
+    stmts.insertAudit.run(null, 'violation-recorded', clientKey, incidentId, JSON.stringify({ categories, violationCount, status }));
+    return { incidentId, violationCount, status };
   },
   listIncidents() {
     return stmts.listComplianceIncidents.all().map((row) => ({
@@ -184,9 +253,15 @@ const compliance = {
   },
   reviewIncident(id, status, reviewerId, notes) {
     stmts.reviewComplianceIncident.run(status, reviewerId, notes || '', id);
+    stmts.insertAudit.run(reviewerId, 'incident-reviewed', null, id, JSON.stringify({ status, notes: notes || '' }));
+  },
+  recordLegalReview(incidentId, decision, reviewerId, legalReference, notes) {
+    stmts.upsertLegalReview.run(incidentId, decision, reviewerId, legalReference, notes || '');
+    stmts.insertAudit.run(reviewerId, 'legal-review-recorded', null, incidentId, JSON.stringify({ decision, legalReference }));
   },
   recordVerifiedPayment(clientKey, paymentReference, verifiedBy) {
     stmts.upsertCompliancePayment.run(clientKey, paymentReference, verifiedBy);
+    stmts.insertAudit.run(verifiedBy, 'payment-verified', clientKey, null, JSON.stringify({ paymentReference }));
   },
   reinstate(clientKey) {
     const existing = stmts.getComplianceClient.get(clientKey);
@@ -196,6 +271,15 @@ const compliance = {
     }
     stmts.upsertComplianceClient.run(clientKey, existing.violation_count, 'active', null);
     return { ok: true };
+  },
+  audit(actorId, eventType, clientKey, incidentId, metadata = {}) {
+    stmts.insertAudit.run(actorId || null, eventType, clientKey || null, incidentId || null, JSON.stringify(metadata));
+  },
+  listAudit() {
+    return stmts.listAudit.all().map((row) => ({ ...row, metadata: JSON.parse(row.metadata_json) }));
+  },
+  getLegalReview(incidentId) {
+    return stmts.getLegalReview.get(incidentId);
   },
 };
 
@@ -225,9 +309,40 @@ const leads = {
   },
 };
 
-module.exports = { pendingLeads, completedReports, leads, compliance, users: {
-  create(username, passwordHash, totpSecret) {
-    const info = stmts.insertUser.run(username, passwordHash, totpSecret);
+function createSessionStore(session) {
+  return new class SqliteSessionStore extends session.Store {
+    get(sid, callback) {
+      try {
+        const row = stmts.getSession.get(sid, Date.now());
+        callback(null, row ? JSON.parse(row.session_json) : null);
+      } catch (err) { callback(err); }
+    }
+    set(sid, value, callback = () => {}) {
+      try {
+        const expiresAt = value.cookie?.expires ? new Date(value.cookie.expires).getTime() : Date.now() + 8 * 60 * 60 * 1000;
+        stmts.setSession.run(sid, JSON.stringify(value), expiresAt);
+        stmts.deleteExpiredSessions.run(Date.now());
+        callback(null);
+      } catch (err) { callback(err); }
+    }
+    destroy(sid, callback = () => {}) {
+      try { stmts.deleteSession.run(sid); callback(null); } catch (err) { callback(err); }
+    }
+    touch(sid, value, callback = () => {}) { this.set(sid, value, callback); }
+  }();
+}
+
+async function backupDatabase(directory) {
+  if (!directory) return null;
+  fs.mkdirSync(directory, { recursive: true });
+  const filename = path.join(directory, `lead-agent-${new Date().toISOString().slice(0, 10)}.db`);
+  await db.backup(filename);
+  return filename;
+}
+
+module.exports = { pendingLeads, completedReports, leads, compliance, createSessionStore, backupDatabase, users: {
+  create(username, passwordHash, totpSecret, role) {
+    const info = db.prepare('INSERT INTO users (username, password_hash, totp_secret, role) VALUES (?, ?, ?, ?)').run(username, passwordHash, totpSecret, role);
     return info.lastInsertRowid;
   },
   findByUsername(username) {
@@ -241,5 +356,8 @@ module.exports = { pendingLeads, completedReports, leads, compliance, users: {
   },
   enableTotp(id) {
     stmts.enableTotp.run(id);
+  },
+  setRole(id, role) {
+    stmts.updateUserRole.run(role, id);
   },
 } };
