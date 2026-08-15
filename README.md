@@ -13,6 +13,15 @@ is confirmed via PayPal or M-Pesa, and every completed lead lands in a
 private dashboard for follow-up tracking — status, notes, and search across
 your whole lead history.
 
+## Safety and compliance controls
+
+Lead submissions may include optional campaign, description, message, notes, instructions, goal, or targeting fields. Requests that clearly indicate high-risk activity are blocked before processing and recorded in an internal review queue.
+
+- A first confirmed match creates a warning incident.
+- A second match suspends that client identifier until an administrator reviews it.
+- Authenticated administrators can inspect `GET /api/compliance/incidents`, mark an incident `cleared` or `confirmed`, and reinstate a client with `POST /api/compliance/clients/:clientKey/reinstate`.
+- The system does not automatically report clients to outside authorities or process fines or cryptocurrency payments. Escalations require a human administrator and appropriate legal process.
+
 ## Stack
 
 Node.js, Express, SQLite (`better-sqlite3`), PayPal Checkout SDK, Safaricom
