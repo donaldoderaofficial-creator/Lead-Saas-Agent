@@ -17,6 +17,8 @@ services:
         value: /data/data.db
       - key: TZ
         value: Africa/Nairobi
+      - key: BACKUP_DIR
+        value: /data/backups
       - key: SESSION_SECRET
         sync: false
       - key: PAYPAL_CLIENT_ID
@@ -38,4 +40,10 @@ services:
       - key: MPESA_ENV
         value: sandbox
       - key: MPESA_CALLBACK_URL
+        sync: false
+      - key: COMPLIANCE_MPESA_NUMBER
+        sync: false
+      - key: COMPLIANCE_BITCOIN_ADDRESS
+        sync: false
+      - key: COMPLIANCE_ETHEREUM_ADDRESS
         sync: false
