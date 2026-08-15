@@ -22,7 +22,19 @@ Lead submissions may include optional campaign, description, message, notes, ins
 - Authenticated administrators can inspect `GET /api/compliance/incidents`, mark an incident `cleared` or `confirmed`, and record a separately verified administrative-penalty payment with `POST /api/compliance/clients/:clientKey/verify-payment`.
 - Reinstatement through `POST /api/compliance/clients/:clientKey/reinstate` is rejected until that verified payment record exists. Payment references are entered only by an administrator after independent confirmation.
 - Preferred M-Pesa, Bitcoin, and Ethereum destinations are returned by `GET /api/compliance/payment-options`. The endpoint publishes collection details only; it does not validate transfers or automatically approve a receipt.
-- The system does not automatically report clients to outside authorities. Escalations require a human administrator and appropriate legal process.
+- Compliance review, payment verification, reinstatement, audit access, and legal-review recording are limited to `owner` and `admin` roles. Only the owner can create or promote an administrator.
+- Every safety flag, review, payment verification, role change, and reinstatement is retained in the compliance audit log.
+- No external-reporting endpoint exists. A human legal review must be recorded with `POST /api/compliance/incidents/:id/legal-review` before an administrator considers any external escalation.
+- Payment destinations are read from `COMPLIANCE_MPESA_NUMBER`, `COMPLIANCE_BITCOIN_ADDRESS`, and `COMPLIANCE_ETHEREUM_ADDRESS`; they are not stored in source code.
+- SQLite-backed sessions, schema migration tracking, and daily backups are enabled. Set `BACKUP_DIR` to persistent storage in production.
+
+## Verification
+
+```bash
+npm test
+```
+
+The automated suite covers permitted screening, repeat-violation suspension, payment verification, and reinstatement.
 
 ## Stack
 
