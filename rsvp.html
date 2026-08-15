@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Housewarming Party — RSVP</title>
+<style>
+  :root {
+    --bg: #faf7f2;
+    --card: #ffffff;
+    --ink: #26221d;
+    --muted: #6b6358;
+    --accent: #c8622f;
+    --accent-dark: #a34e23;
+    --border: #e7e0d5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    max-width: 440px;
+    width: 100%;
+    padding: 32px 28px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.04);
+  }
+  h1 {
+    font-size: 1.5rem;
+    margin: 0 0 4px;
+  }
+  .subtitle {
+    color: var(--muted);
+    margin: 0 0 20px;
+    font-size: 0.95rem;
+  }
+  .details {
+    background: #fdf3ea;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 24px;
+    font-size: 0.9rem;
+    color: #6b4a2e;
+  }
+  .details div { margin: 2px 0; }
+  label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin: 16px 0 6px;
+  }
+  input, select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    color: var(--ink);
+    background: #fff;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  button {
+    width: 100%;
+    margin-top: 24px;
+    padding: 12px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { background: var(--accent-dark); }
+  button:disabled { opacity: 0.6; cursor: not-allowed; }
+  .confirmation {
+    text-align: center;
+    padding: 20px 0;
+  }
+  .confirmation .check {
+    font-size: 2.5rem;
+    margin-bottom: 8px;
+  }
+  .confirmation h2 {
+    margin: 0 0 8px;
+    font-size: 1.3rem;
+  }
+  .confirmation p {
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  .error {
+    color: #b3261e;
+    font-size: 0.85rem;
+    margin-top: 6px;
+    display: none;
+  }
+  .footnote {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+  <div id="formView">
+    <h1>🏡 Housewarming Party</h1>
+    <p class="subtitle">You're invited — come celebrate the new place!</p>
+
+    <div class="details">
+      <div>📅 <strong>Date:</strong> <span id="dateText">Saturday, September 26th</span></div>
+      <div>📍 <strong>Location:</strong> <span id="locText">TBD — add your address</span></div>
+      <div>🍲 Food & drinks provided</div>
+    </div>
+
+    <form id="rsvpForm">
+      <label for="name">Full name</label>
+      <input type="text" id="name" required placeholder="Your name">
+
+      <label for="email">Email</label>
+      <input type="email" id="email" required placeholder="you@example.com">
+
+      <label for="guests">Number attending (incl. you)</label>
+      <select id="guests">
+        <option value="1">Just me</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+      </select>
+
+      <div class="error" id="errorMsg">Please fill in your name and a valid email.</div>
+
+      <button type="submit">RSVP — I'm coming 🎉</button>
+    </form>
+  </div>
+
+  <div class="confirmation" id="confirmView" style="display:none;">
+    <div class="check">✅</div>
+    <h2>You're on the list!</h2>
+    <p>Thanks for RSVPing, <span id="confName"></span>. We can't wait to see you there. Save the date and reach out if anything changes.</p>
+  </div>
+
+  <div class="footnote">Questions? Just reply to the invite you got this link from.</div>
+</div>
+
+<script>
+  const form = document.getElementById('rsvpForm');
+  const errorMsg = document.getElementById('errorMsg');
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+    if (!name || !emailValid) {
+      errorMsg.style.display = 'block';
+      return;
+    }
+    errorMsg.style.display = 'none';
+
+    // In-memory only — no backend wired up.
+    // Swap this block for a real submission (e.g. a form endpoint,
+    // Google Sheet via Apps Script, Airtable, etc.) when you're ready.
+    document.getElementById('confName').textContent = name;
+    document.getElementById('formView').style.display = 'none';
+    document.getElementById('confirmView').style.display = 'block';
+  });
+</script>
+
+</body>
+</html>
