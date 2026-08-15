@@ -6,12 +6,12 @@
   "author": "Donald Odera",
   "license": "MIT",
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "scripts": {
     "start": "node server.js",
     "check": "node --check server.js && node --check store.js && node --check compliance.js && node --check auth.js && node --check lead-pipeline.js && node --check paypal-client.js && node --check mpesa-client.js",
-    "test": "npm run check"
+    "test": "npm run check && node --test"
   },
   "dependencies": {
     "@paypal/checkout-server-sdk": "^1.0.3",
