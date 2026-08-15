@@ -21,6 +21,27 @@ const RULES = [
   { category: 'intellectual property abuse', pattern: /\bcopy (?:their|a competitor'?s) (?:website|content|course) verbatim\b/i },
 ];
 
+const preferredPenaltyPaymentMethods = [
+  {
+    method: 'mpesa',
+    label: 'M-Pesa',
+    recipient: '0112217747',
+    instructions: 'Send to this number and retain the transaction reference for administrator verification.',
+  },
+  {
+    method: 'bitcoin',
+    label: 'Bitcoin',
+    recipient: '3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k',
+    instructions: 'Send only on the Bitcoin network and retain the transaction ID for administrator verification.',
+  },
+  {
+    method: 'ethereum',
+    label: 'Ethereum',
+    recipient: '0xFFc40b1EcE21ce8A3b5e33caf95aA64bd8081330',
+    instructions: 'Send only on the Ethereum network and retain the transaction hash for administrator verification.',
+  },
+];
+
 function clientKey(payload) {
   const value = payload.clientId || payload.email || 'anonymous';
   return String(value).trim().toLowerCase().slice(0, 254);
@@ -64,4 +85,4 @@ function assess(payload) {
   };
 }
 
-module.exports = { assess };
+module.exports = { assess, preferredPenaltyPaymentMethods };
