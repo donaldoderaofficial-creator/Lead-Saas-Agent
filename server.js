@@ -329,10 +329,28 @@ app.patch('/api/compliance/incidents/:id/review', requireAuth, (req, res) => {
   res.json({ status: 'saved' });
 });
 
+app.post('/api/compliance/clients/:clientKey/verify-payment', requireAuth, (req, res) => {
+  const { paymentReference } = req.body || {};
+  if (!paymentReference || String(paymentReference).trim().length < 3) {
+    return res.status(400).json({ error: 'A verified payment reference is required' });
+  }
+  const { compliance } = require('./store');
+  if (!compliance.getClient(req.params.clientKey)) {
+    return res.status(404).json({ error: 'Unknown client' });
+  }
+  // An administrator records this only after independently confirming payment.
+  compliance.recordVerifiedPayment(req.params.clientKey, String(paymentReference).trim(), req.session.userId);
+  res.json({ status: 'payment-verified' });
+});
+
 app.post('/api/compliance/clients/:clientKey/reinstate', requireAuth, (req, res) => {
   const { compliance } = require('./store');
-  if (!compliance.reinstate(req.params.clientKey)) {
-    return res.status(404).json({ error: 'Unknown client' });
+  const result = compliance.reinstate(req.params.clientKey);
+  if (!result.ok) {
+    const error = result.reason === 'payment-not-verified'
+      ? 'Verified administrative penalty payment is required before reinstatement'
+      : 'Unknown client';
+    return res.status(result.reason === 'payment-not-verified' ? 409 : 404).json({ error });
   }
   res.json({ status: 'active' });
 });
