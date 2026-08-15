@@ -19,7 +19,7 @@ const { client, checkoutNodeJssdk, verifyWebhookSignature } = require('./paypal-
 const { initiateSTKPush } = require('./mpesa-client');
 const { processLead } = require('./lead-pipeline');
 const { pendingLeads, completedReports, leads, users } = require('./store');
-const { assess } = require('./compliance');
+const { assess, preferredPenaltyPaymentMethods } = require('./compliance');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateQrCode } = require('./auth');
 
 const app = express();
@@ -67,6 +67,7 @@ function enforceCompliance(req, res) {
     incidentId: assessment.incidentId,
     categories: assessment.categories,
     violationCount: assessment.violationCount,
+    paymentOptionsUrl: '/api/compliance/payment-options',
   });
   return null;
 }
@@ -310,8 +311,18 @@ app.get('/api/leads', requireAuth, (req, res) => {
   res.json({ leads: leads.listAll() });
 });
 
+// Preferred payment destinations for an administrative penalty. A payment
+// reference is never accepted automatically; an administrator must verify it.
+app.get('/api/compliance/payment-options', (req, res) => {
+  res.json({
+    paymentMethods: preferredPenaltyPaymentMethods,
+    verificationRequired: true,
+    message: 'Payment must be independently verified by an administrator before reinstatement.',
+  });
+});
+
 // Compliance administration: review internal flags and reinstate accounts.
-// These routes intentionally do not contact outside agencies or process fines.
+// These routes intentionally do not contact outside agencies.
 app.get('/api/compliance/incidents', requireAuth, (req, res) => {
   const { compliance } = require('./store');
   res.json({ incidents: compliance.listIncidents() });
