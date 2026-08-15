@@ -11,7 +11,7 @@ for (const suffix of ['', '-wal', '-shm']) {
 process.env.DB_PATH = dbPath;
 
 const { assess } = require('../compliance');
-const { compliance } = require('../store');
+const { compliance, users } = require('../store');
 
 test('allows an ordinary lead request', () => {
   const result = assess({
@@ -45,4 +45,12 @@ test('requires verified payment before reinstatement and records an audit event'
 
   const events = compliance.listAudit().map((event) => event.event_type);
   assert.ok(events.includes('payment-verified'));
+});
+
+
+test('retains role assignments for administrator access control', () => {
+  const id = users.create('owner@example.com', 'hash', 'totp-secret', 'owner');
+  assert.equal(users.findById(id).role, 'owner');
+  users.setRole(id, 'admin');
+  assert.equal(users.findById(id).role, 'admin');
 });
