@@ -21,7 +21,8 @@ Lead submissions may include optional campaign, description, message, notes, ins
 - A second match suspends that client identifier until an administrator reviews it.
 - Authenticated administrators can inspect `GET /api/compliance/incidents`, mark an incident `cleared` or `confirmed`, and record a separately verified administrative-penalty payment with `POST /api/compliance/clients/:clientKey/verify-payment`.
 - Reinstatement through `POST /api/compliance/clients/:clientKey/reinstate` is rejected until that verified payment record exists. Payment references are entered only by an administrator after independent confirmation.
-- The system does not automatically report clients to outside authorities or collect cryptocurrency payments. Escalations require a human administrator and appropriate legal process.
+- Preferred M-Pesa, Bitcoin, and Ethereum destinations are returned by `GET /api/compliance/payment-options`. The endpoint publishes collection details only; it does not validate transfers or automatically approve a receipt.
+- The system does not automatically report clients to outside authorities. Escalations require a human administrator and appropriate legal process.
 
 ## Stack
 
