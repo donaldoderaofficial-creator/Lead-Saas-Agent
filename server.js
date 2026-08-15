@@ -19,6 +19,7 @@ const { client, checkoutNodeJssdk, verifyWebhookSignature } = require('./paypal-
 const { initiateSTKPush } = require('./mpesa-client');
 const { processLead } = require('./lead-pipeline');
 const { pendingLeads, completedReports, leads, users } = require('./store');
+const { assess } = require('./compliance');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateQrCode } = require('./auth');
 
 const app = express();
@@ -58,6 +59,18 @@ function recordFailedAttempt(username) {
 const PREMIUM_REPORT_PRICE_USD = '9.99';
 const PREMIUM_REPORT_PRICE_KES = 1300; // adjust to your pricing
 
+function enforceCompliance(req, res) {
+  const assessment = assess(req.body || {});
+  if (assessment.allowed) return assessment;
+  res.status(403).json({
+    error: assessment.reason,
+    incidentId: assessment.incidentId,
+    categories: assessment.categories,
+    violationCount: assessment.violationCount,
+  });
+  return null;
+}
+
 async function finalizeLead(ref) {
   const lead = pendingLeads.get(ref);
   if (!lead || completedReports.has(ref)) return; // unknown ref, or already processed
@@ -76,6 +89,7 @@ async function finalizeLead(ref) {
 }
 // ---- Step 1: submit a lead, get a payment reference back ----
 app.post('/api/lead', async (req, res) => {
+  if (!enforceCompliance(req, res)) return;
   const { name, email, phone, method } = req.body || {};
   if (!name || !email) return res.status(400).json({ error: 'Missing name or email' });
 
@@ -194,6 +208,7 @@ app.get('/leads/report/:ref', (req, res) => {
 
 // ---- Free tier: run the pipeline without payment ----
 app.post('/leads', async (req, res) => {
+  if (!enforceCompliance(req, res)) return;
   try {
     const outcome = await processLead(req.body);
     res.json(outcome);
@@ -293,6 +308,33 @@ app.get('/auth/me', (req, res) => {
 
 app.get('/api/leads', requireAuth, (req, res) => {
   res.json({ leads: leads.listAll() });
+});
+
+// Compliance administration: review internal flags and reinstate accounts.
+// These routes intentionally do not contact outside agencies or process fines.
+app.get('/api/compliance/incidents', requireAuth, (req, res) => {
+  const { compliance } = require('./store');
+  res.json({ incidents: compliance.listIncidents() });
+});
+
+app.patch('/api/compliance/incidents/:id/review', requireAuth, (req, res) => {
+  const { status, notes } = req.body || {};
+  if (!['cleared', 'confirmed'].includes(status)) {
+    return res.status(400).json({ error: 'status must be cleared or confirmed' });
+  }
+  const { compliance } = require('./store');
+  const incident = compliance.getIncident(Number(req.params.id));
+  if (!incident) return res.status(404).json({ error: 'Unknown incident' });
+  compliance.reviewIncident(incident.id, status, req.session.userId, notes);
+  res.json({ status: 'saved' });
+});
+
+app.post('/api/compliance/clients/:clientKey/reinstate', requireAuth, (req, res) => {
+  const { compliance } = require('./store');
+  if (!compliance.reinstate(req.params.clientKey)) {
+    return res.status(404).json({ error: 'Unknown client' });
+  }
+  res.json({ status: 'active' });
 });
 
 app.patch('/api/leads/:ref/followup', requireAuth, (req, res) => {
