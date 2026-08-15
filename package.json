@@ -10,7 +10,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check store.js && node --check auth.js && node --check lead-pipeline.js && node --check paypal-client.js && node --check mpesa-client.js",
+    "check": "node --check server.js && node --check store.js && node --check compliance.js && node --check auth.js && node --check lead-pipeline.js && node --check paypal-client.js && node --check mpesa-client.js",
     "test": "npm run check"
   },
   "dependencies": {
