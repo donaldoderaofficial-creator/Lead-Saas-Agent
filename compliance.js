@@ -25,22 +25,22 @@ const preferredPenaltyPaymentMethods = [
   {
     method: 'mpesa',
     label: 'M-Pesa',
-    recipient: '0112217747',
+    recipient: process.env.COMPLIANCE_MPESA_NUMBER,
     instructions: 'Send to this number and retain the transaction reference for administrator verification.',
   },
   {
     method: 'bitcoin',
     label: 'Bitcoin',
-    recipient: '3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k',
+    recipient: process.env.COMPLIANCE_BITCOIN_ADDRESS,
     instructions: 'Send only on the Bitcoin network and retain the transaction ID for administrator verification.',
   },
   {
     method: 'ethereum',
     label: 'Ethereum',
-    recipient: '0xFFc40b1EcE21ce8A3b5e33caf95aA64bd8081330',
+    recipient: process.env.COMPLIANCE_ETHEREUM_ADDRESS,
     instructions: 'Send only on the Ethereum network and retain the transaction hash for administrator verification.',
   },
-];
+].filter((method) => Boolean(method.recipient));
 
 function clientKey(payload) {
   const value = payload.clientId || payload.email || 'anonymous';
