@@ -62,6 +62,13 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     reviewed_at TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS compliance_payments (
+    client_key TEXT PRIMARY KEY,
+    payment_reference TEXT NOT NULL,
+    verified_by INTEGER NOT NULL,
+    verified_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 const stmts = {
@@ -110,6 +117,15 @@ const stmts = {
     UPDATE compliance_incidents
     SET status = ?, reviewer_id = ?, review_notes = ?, reviewed_at = datetime('now')
     WHERE id = ?
+  `),
+  getCompliancePayment: db.prepare('SELECT * FROM compliance_payments WHERE client_key = ?'),
+  upsertCompliancePayment: db.prepare(`
+    INSERT INTO compliance_payments (client_key, payment_reference, verified_by, verified_at)
+    VALUES (?, ?, ?, datetime('now'))
+    ON CONFLICT(client_key) DO UPDATE SET
+      payment_reference = excluded.payment_reference,
+      verified_by = excluded.verified_by,
+      verified_at = excluded.verified_at
   `),
 };
 
@@ -169,11 +185,17 @@ const compliance = {
   reviewIncident(id, status, reviewerId, notes) {
     stmts.reviewComplianceIncident.run(status, reviewerId, notes || '', id);
   },
+  recordVerifiedPayment(clientKey, paymentReference, verifiedBy) {
+    stmts.upsertCompliancePayment.run(clientKey, paymentReference, verifiedBy);
+  },
   reinstate(clientKey) {
     const existing = stmts.getComplianceClient.get(clientKey);
-    if (!existing) return false;
+    if (!existing) return { ok: false, reason: 'unknown-client' };
+    if (!stmts.getCompliancePayment.get(clientKey)) {
+      return { ok: false, reason: 'payment-not-verified' };
+    }
     stmts.upsertComplianceClient.run(clientKey, existing.violation_count, 'active', null);
-    return true;
+    return { ok: true };
   },
 };
 
