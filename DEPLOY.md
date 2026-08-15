@@ -32,7 +32,9 @@ persistent disk mounted at `/data`.
    Fill in: `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`,
    `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_SHORTCODE`,
    `MPESA_PASSKEY`, `MPESA_CALLBACK_URL` (use the Render URL you're given +
-   `/payments/mpesa/callback`)
+   `/payments/mpesa/callback`), plus `COMPLIANCE_MPESA_NUMBER`,
+   `COMPLIANCE_BITCOIN_ADDRESS`, and `COMPLIANCE_ETHEREUM_ADDRESS`.
+   Keep those payment destinations in the provider dashboard, not in Git.
 4. Deploy — you'll get a permanent `https://lead-agent-saas.onrender.com` URL
 5. Update `MPESA_CALLBACK_URL` and your PayPal webhook to point at that real URL
 
