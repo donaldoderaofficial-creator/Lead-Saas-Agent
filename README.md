@@ -19,8 +19,9 @@ Lead submissions may include optional campaign, description, message, notes, ins
 
 - A first confirmed match creates a warning incident.
 - A second match suspends that client identifier until an administrator reviews it.
-- Authenticated administrators can inspect `GET /api/compliance/incidents`, mark an incident `cleared` or `confirmed`, and reinstate a client with `POST /api/compliance/clients/:clientKey/reinstate`.
-- The system does not automatically report clients to outside authorities or process fines or cryptocurrency payments. Escalations require a human administrator and appropriate legal process.
+- Authenticated administrators can inspect `GET /api/compliance/incidents`, mark an incident `cleared` or `confirmed`, and record a separately verified administrative-penalty payment with `POST /api/compliance/clients/:clientKey/verify-payment`.
+- Reinstatement through `POST /api/compliance/clients/:clientKey/reinstate` is rejected until that verified payment record exists. Payment references are entered only by an administrator after independent confirmation.
+- The system does not automatically report clients to outside authorities or collect cryptocurrency payments. Escalations require a human administrator and appropriate legal process.
 
 ## Stack
 
