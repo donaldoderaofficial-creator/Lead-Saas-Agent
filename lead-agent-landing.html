@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dispatch — Your AI Lead Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B1220;
+    --panel:#0F1830;
+    --panel-2:#121D3B;
+    --line:#22304F;
+    --text:#E7ECF5;
+    --muted:#8493B3;
+    --signal:#5EEAD4;
+    --signal-dim:#2A6E68;
+    --amber:#FFB454;
+    --danger:#FF6B6B;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    line-height:1.5;
+    overflow-x:hidden;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .display{font-family:'Space Grotesk',sans-serif;}
+
+  /* faint grid backdrop */
+  body::before{
+    content:"";
+    position:fixed;inset:0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size:64px 64px;
+    opacity:0.18;
+    pointer-events:none;
+    z-index:0;
+  }
+
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px;position:relative;z-index:1;}
+
+  /* NAV */
+  nav{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:22px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .logo{
+    display:flex;align-items:center;gap:10px;
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;letter-spacing:-0.02em;
+  }
+  .logo .dot{
+    width:9px;height:9px;border-radius:2px;background:var(--signal);
+    box-shadow:0 0 12px var(--signal);
+    animation:blink 2.2s infinite;
+  }
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.25;}}
+  nav .links{display:flex;gap:34px;align-items:center;}
+  nav a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:500;transition:color .15s;}
+  nav a:hover{color:var(--text);}
+  .nav-cta{
+    background:var(--signal);color:#062421;padding:9px 18px;border-radius:6px;
+    font-weight:600;font-size:14px;border:none;cursor:pointer;
+  }
+  .nav-cta:hover{background:#7FF3DE;}
+
+  /* HERO */
+  .hero{
+    padding:88px 0 70px;
+    display:grid;grid-template-columns:1.05fr 0.95fr;gap:56px;align-items:center;
+  }
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--signal);
+    border:1px solid var(--signal-dim);background:rgba(94,234,212,0.06);
+    padding:6px 12px;border-radius:20px;margin-bottom:22px;
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:clamp(36px,4.6vw,58px);
+    font-weight:600;
+    letter-spacing:-0.03em;
+    line-height:1.04;
+    margin-bottom:22px;
+  }
+  h1 .accent{color:var(--signal);}
+  .hero p.sub{
+    color:var(--muted);font-size:17px;max-width:480px;margin-bottom:32px;
+  }
+  .hero-ctas{display:flex;gap:14px;align-items:center;margin-bottom:34px;}
+  .btn-primary{
+    background:var(--signal);color:#062421;padding:14px 24px;border-radius:7px;
+    font-weight:600;font-size:15px;border:none;cursor:pointer;
+  }
+  .btn-primary:hover{background:#7FF3DE;}
+  .btn-ghost{
+    color:var(--text);padding:14px 22px;border-radius:7px;border:1px solid var(--line);
+    font-weight:500;font-size:15px;background:transparent;cursor:pointer;
+  }
+  .btn-ghost:hover{border-color:var(--signal-dim);}
+  .trust-line{color:var(--muted);font-size:13px;font-family:'JetBrains Mono',monospace;}
+  .trust-line b{color:var(--text);}
+
+  /* dispatch panel (signature element part 1) */
+  .panel{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .panel-head{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:14px 18px;border-bottom:1px solid var(--line);
+    font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);
+  }
+  .panel-head .live{color:var(--signal);display:flex;align-items:center;gap:6px;}
+  .panel-head .live .pulse{width:6px;height:6px;border-radius:50%;background:var(--signal);animation:blink 1.4s infinite;}
+  .lead-row{
+    display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;
+    padding:13px 18px;border-bottom:1px solid var(--line);font-size:13px;
+  }
+  .lead-row:last-child{border-bottom:none;}
+  .lead-row .name{font-weight:500;}
+  .lead-row .co{color:var(--muted);font-size:12px;display:block;}
+  .badge{
+    font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 9px;border-radius:20px;
+    white-space:nowrap;
+  }
+  .badge.new{background:rgba(132,147,179,0.15);color:var(--muted);}
+  .badge.qualified{background:rgba(255,180,84,0.12);color:var(--amber);}
+  .badge.booked{background:rgba(94,234,212,0.12);color:var(--signal);}
+  .lead-row .score{font-family:'JetBrains Mono',monospace;color:var(--muted);font-size:12px;}
+
+  /* PROOF STRIP */
+  .proof-strip{
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    padding:26px 0;
+  }
+  .proof-strip .wrap{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:24px;}
+  .proof-item{text-align:left;}
+  .proof-item .num{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:600;color:var(--signal);}
+  .proof-item .lbl{color:var(--muted);font-size:12px;font-family:'JetBrains Mono',monospace;margin-top:2px;}
+
+  /* SIGNATURE: pipeline conveyor */
+  .conveyor-section{padding:96px 0 90px;border-bottom:1px solid var(--line);}
+  .section-head{max-width:600px;margin-bottom:52px;}
+  .section-tag{
+    font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--signal);
+    text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;display:block;
+  }
+  h2{font-family:'Space Grotesk',sans-serif;font-size:clamp(26px,3vw,36px);font-weight:600;letter-spacing:-0.02em;margin-bottom:14px;}
+  .section-head p{color:var(--muted);font-size:16px;}
+
+  .conveyor{
+    position:relative;
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:0;overflow:hidden;
+  }
+  .conveyor-stations{
+    display:grid;grid-template-columns:repeat(4,1fr);
+    border-bottom:1px solid var(--line);
+  }
+  .station{
+    padding:18px 20px;border-right:1px solid var(--line);
+  }
+  .station:last-child{border-right:none;}
+  .station .st-name{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;}
+  .station .st-desc{font-size:13px;color:var(--text);margin-top:5px;}
+  .track{
+    position:relative;height:120px;overflow:hidden;
+    background:
+      linear-gradient(90deg, transparent 24.8%, var(--line) 25%, var(--line) 25.2%, transparent 25.4%),
+      linear-gradient(90deg, transparent 49.8%, var(--line) 50%, var(--line) 50.2%, transparent 50.4%),
+      linear-gradient(90deg, transparent 74.8%, var(--line) 75%, var(--line) 75.2%, transparent 75.4%);
+  }
+  .lead-card{
+    position:absolute;top:50%;transform:translateY(-50%);
+    background:var(--panel-2);border:1px solid var(--line);border-radius:7px;
+    padding:9px 13px;min-width:150px;
+    font-size:12px;
+    animation:travel 14s linear infinite;
+    white-space:nowrap;
+  }
+  .lead-card .who{font-weight:600;display:block;}
+  .lead-card .stage-tag{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
+  @keyframes travel{
+    0%{left:-180px;}
+    100%{left:105%;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .lead-card{animation:none;left:20%;}
+    .logo .dot,.panel-head .live .pulse{animation:none;}
+  }
+
+  /* HOW IT WORKS */
+  .how{padding:96px 0;border-bottom:1px solid var(--line);}
+  .how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+  .how-card{background:var(--bg);padding:32px 28px;}
+  .how-card .step-num{font-family:'JetBrains Mono',monospace;color:var(--signal-dim);font-size:13px;margin-bottom:16px;}
+  .how-card h3{font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:600;margin-bottom:10px;}
+  .how-card p{color:var(--muted);font-size:14px;}
+
+  /* LOG / testimonial */
+  .log-section{padding:96px 0;border-bottom:1px solid var(--line);}
+  .log{
+    background:#070C18;border:1px solid var(--line);border-radius:var(--radius);
+    padding:26px 28px;font-family:'JetBrains Mono',monospace;font-size:13px;
+  }
+  .log .line{padding:7px 0;color:var(--muted);border-bottom:1px dashed var(--line);}
+  .log .line:last-child{border-bottom:none;}
+  .log .ts{color:var(--signal-dim);margin-right:10px;}
+  .log .quote{color:var(--text);}
+  .log .who{color:var(--muted);margin-top:14px;font-size:12px;}
+
+  /* PRICING */
+  .pricing{padding:96px 0;border-bottom:1px solid var(--line);}
+  .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+  .price-card{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:30px 26px;display:flex;flex-direction:column;
+  }
+  .price-card.hi{border-color:var(--signal-dim);background:var(--panel-2);position:relative;}
+  .price-card.hi::before{
+    content:"MOST DEPLOYED";
+    position:absolute;top:-11px;left:26px;
+    background:var(--signal);color:#062421;font-family:'JetBrains Mono',monospace;
+    font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;letter-spacing:0.04em;
+  }
+  .price-card .tier{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;}
+  .price-card .amount{font-family:'Space Grotesk',sans-serif;font-size:34px;font-weight:600;margin:10px 0 4px;}
+  .price-card .amount span{font-size:14px;color:var(--muted);font-weight:400;font-family:'Inter',sans-serif;}
+  .price-card .desc{color:var(--muted);font-size:13px;margin-bottom:22px;}
+  .price-card ul{list-style:none;margin-bottom:26px;flex:1;}
+  .price-card li{font-size:13px;padding:7px 0;color:var(--text);display:flex;gap:9px;}
+  .price-card li::before{content:"—";color:var(--signal);}
+  .price-card button{
+    width:100%;padding:12px;border-radius:7px;font-weight:600;font-size:14px;cursor:pointer;
+    border:1px solid var(--line);background:transparent;color:var(--text);
+  }
+  .price-card.hi button{background:var(--signal);color:#062421;border:none;}
+
+  /* FOOTER CTA */
+  .final-cta{padding:100px 0;text-align:center;}
+  .final-cta h2{font-size:clamp(28px,4vw,42px);margin-bottom:16px;}
+  .final-cta p{color:var(--muted);margin-bottom:32px;font-size:16px;}
+  footer{border-top:1px solid var(--line);padding:28px 0;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;}
+
+  @media (max-width:860px){
+    .hero{grid-template-columns:1fr;padding-top:56px;}
+    .how-grid{grid-template-columns:1fr;}
+    .price-grid{grid-template-columns:1fr;}
+    .conveyor-stations{grid-template-columns:repeat(2,1fr);}
+    nav .links{display:none;}
+    .proof-strip .wrap{justify-content:flex-start;}
+  }
+  :focus-visible{outline:2px solid var(--signal);outline-offset:2px;}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <nav>
+    <div class="logo"><span class="dot"></span>Dispatch</div>
+    <div class="links">
+      <a href="#how">How it works</a>
+      <a href="#pipeline">Pipeline</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#log">Field notes</a>
+    </div>
+    <button class="nav-cta">Start dispatching</button>
+  </nav>
+
+  <section class="hero">
+    <div>
+      <span class="eyebrow"><span style="width:6px;height:6px;border-radius:50%;background:var(--signal);display:inline-block;"></span> ONLINE — WORKING 3 PIPELINES</span>
+      <h1>An agent that never lets a lead <span class="accent">go cold.</span></h1>
+      <p class="sub">Dispatch reads every inbound lead the moment it lands, qualifies it against your criteria, and books the call — before your team even sees the notification.</p>
+      <div class="hero-ctas">
+        <button class="btn-primary">Deploy your agent</button>
+        <button class="btn-ghost">Watch it work — 90s</button>
+      </div>
+      <div class="trust-line">Median response time: <b>11 seconds</b> · Leads qualified last 30 days: <b>48,209</b></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span>INBOUND_QUEUE</span>
+        <span class="live"><span class="pulse"></span>LIVE</span>
+      </div>
+      <div class="lead-row">
+        <div><span class="name">R. Alvarez</span><span class="co">Northwind Freight</span></div>
+        <span class="badge booked">booked</span>
+        <span class="score">92</span>
+      </div>
+      <div class="lead-row">
+        <div><span class="name">T. Okafor</span><span class="co">Vale Robotics</span></div>
+        <span class="badge qualified">qualified</span>
+        <span class="score">78</span>
+      </div>
+      <div class="lead-row">
+        <div><span class="name">S. Lindqvist</span><span class="co">Birchwood Capital</span></div>
+        <span class="badge new">new</span>
+        <span class="score">—</span>
+      </div>
+      <div class="lead-row">
+        <div><span class="name">M. Dube</span><span class="co">Kanu Retail Group</span></div>
+        <span class="badge qualified">qualified</span>
+        <span class="score">81</span>
+      </div>
+      <div class="lead-row">
+        <div><span class="name">A. Petrova</span><span class="co">Solenne Labs</span></div>
+        <span class="badge booked">booked</span>
+        <span class="score">95</span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="proof-strip">
+  <div class="wrap">
+    <div class="proof-item"><div class="num">11s</div><div class="lbl">MEDIAN_RESPONSE</div></div>
+    <div class="proof-item"><div class="num">3.4x</div><div class="lbl">BOOKED_CALL_RATE</div></div>
+    <div class="proof-item"><div class="num">24/7</div><div class="lbl">COVERAGE</div></div>
+    <div class="proof-item"><div class="num">0</div><div class="lbl">LEADS_LEFT_UNTOUCHED</div></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <section class="conveyor-section" id="pipeline">
+    <div class="section-head">
+      <span class="section-tag">The pipeline</span>
+      <h2>Every lead moves through four checkpoints — automatically.</h2>
+      <p>Watch leads travel the line the agent runs around the clock. No stage is skipped, nothing sits idle.</p>
+    </div>
+    <div class="conveyor">
+      <div class="conveyor-stations">
+        <div class="station"><span class="st-name">01 — Capture</span><div class="st-desc">Lead lands from form, chat, or inbox</div></div>
+        <div class="station"><span class="st-name">02 — Qualify</span><div class="st-desc">Scored against your ICP in real time</div></div>
+        <div class="station"><span class="st-name">03 — Engage</span><div class="st-desc">Personalized reply sent, objections handled</div></div>
+        <div class="station"><span class="st-name">04 — Book</span><div class="st-desc">Call lands directly on your calendar</div></div>
+      </div>
+      <div class="track">
+        <div class="lead-card" style="top:30%; animation-delay:0s;"><span class="who">R. Alvarez</span><span class="stage-tag">→ qualify</span></div>
+        <div class="lead-card" style="top:65%; animation-delay:-4s;"><span class="who">T. Okafor</span><span class="stage-tag">→ engage</span></div>
+        <div class="lead-card" style="top:45%; animation-delay:-8s;"><span class="who">S. Lindqvist</span><span class="stage-tag">→ book</span></div>
+        <div class="lead-card" style="top:80%; animation-delay:-11.5s;"><span class="who">M. Dube</span><span class="stage-tag">→ capture</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="how" id="how">
+    <div class="section-head">
+      <span class="section-tag">How it works</span>
+      <h2>Three moves, running in a loop.</h2>
+    </div>
+    <div class="how-grid">
+      <div class="how-card">
+        <div class="step-num">01</div>
+        <h3>Connect your sources</h3>
+        <p>Point Dispatch at your web forms, inbox, and chat widget. It starts reading inbound the same hour.</p>
+      </div>
+      <div class="how-card">
+        <div class="step-num">02</div>
+        <h3>Set your criteria</h3>
+        <p>Tell it who counts as qualified — company size, budget signals, urgency. It scores every lead the same way, every time.</p>
+      </div>
+      <div class="how-card">
+        <div class="step-num">03</div>
+        <h3>Let it work the queue</h3>
+        <p>It replies, answers questions, and books the call on your calendar. You show up to a warm conversation, not a cold list.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="log-section" id="log">
+    <div class="section-head">
+      <span class="section-tag">Field notes</span>
+      <h2>From teams running Dispatch this week.</h2>
+    </div>
+    <div class="log">
+      <div class="line"><span class="ts">MON 09:14</span><span class="quote">"It booked four calls before I'd finished my coffee. I used to lose the whole morning to inbox triage."</span><div class="who">— Head of Growth, logistics SaaS</div></div>
+      <div class="line"><span class="ts">WED 16:02</span><span class="quote">"Our old process meant weekend leads waited until Monday. Dispatch doesn't know what a weekend is."</span><div class="who">— Founder, B2B marketplace</div></div>
+      <div class="line"><span class="ts">FRI 11:47</span><span class="quote">"We stopped arguing about which leads were worth chasing. The scoring just settles it."</span><div class="who">— Sales Lead, fintech</div></div>
+    </div>
+  </section>
+
+  <section class="pricing" id="pricing">
+    <div class="section-head">
+      <span class="section-tag">Pricing</span>
+      <h2>Pick a coverage level. Change it anytime.</h2>
+    </div>
+    <div class="price-grid">
+      <div class="price-card">
+        <div class="tier">Starter</div>
+        <div class="amount">$79<span>/mo</span></div>
+        <div class="desc">For a single funnel finding its footing.</div>
+        <ul>
+          <li>1 connected source</li>
+          <li>Up to 500 leads/mo</li>
+          <li>Standard qualification rules</li>
+          <li>Email support</li>
+        </ul>
+        <button>Start dispatching</button>
+      </div>
+      <div class="price-card hi">
+        <div class="tier">Growth</div>
+        <div class="amount">$249<span>/mo</span></div>
+        <div class="desc">For teams who can't afford a slow reply.</div>
+        <ul>
+          <li>Unlimited sources</li>
+          <li>Up to 5,000 leads/mo</li>
+          <li>Custom qualification logic</li>
+          <li>Calendar booking built in</li>
+          <li>Priority support</li>
+        </ul>
+        <button>Start dispatching</button>
+      </div>
+      <div class="price-card">
+        <div class="tier">Scale</div>
+        <div class="amount">Custom</div>
+        <div class="desc">For multi-team, multi-pipeline operations.</div>
+        <ul>
+          <li>Everything in Growth</li>
+          <li>Dedicated pipeline per team</li>
+          <li>SSO & audit logs</li>
+          <li>Onboarding specialist</li>
+        </ul>
+        <button>Talk to us</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="final-cta">
+    <h2>Your next lead is already waiting.</h2>
+    <p>Deploy Dispatch in under ten minutes. No credit card to start.</p>
+    <button class="btn-primary">Deploy your agent</button>
+  </section>
+
+  <footer>
+    <span>© 2026 Dispatch</span>
+    <span class="mono">STATUS: ALL SYSTEMS OPERATIONAL</span>
+  </footer>
+</div>
+
+</body>
+</html>
