@@ -13,9 +13,8 @@
 require('dotenv').config();
 const checkoutNodeJssdk = require('@paypal/checkout-server-sdk');
 
-if (typeof globalThis.fetch !== 'function') {
-  throw new Error('Global fetch() is not available in this Node runtime. Use Node 18+ or add a fetch polyfill.');
-}
+// prefer native global fetch if present, otherwise use cross-fetch polyfill
+const fetch = globalThis.fetch || require('cross-fetch');
 
 function credentials() {
   const clientId = process.env.PAYPAL_CLIENT_ID;
