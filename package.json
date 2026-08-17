@@ -10,13 +10,14 @@
   },
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check store.js && node --check compliance.js && node --check auth.js && node --check lead-pipeline.js && node --check paypal-client.js && node --check mpesa-client.js",
+    "check": "node --check server.js && node --check store.js && node --check compliance.js && node --check auth.js && node --check lead-pipeline.js && node --check paypal-client.js && node --check mpesa-client.js && node --check explorium-client.js",
     "test": "npm run check && node --test"
   },
   "dependencies": {
     "@paypal/checkout-server-sdk": "^1.0.3",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
+    "cross-fetch": "^3.1.5",
     "dotenv": "^17.4.2",
     "express": "^4.19.2",
     "express-session": "^1.19.0",
