@@ -28,7 +28,7 @@ function credentials() {
 }
 
 function isLive() {
-  return process.env.PAYPAL_ENV === 'live';
+  return process.env.PAYPAL_ENV === 'live' || process.env.PAYPAL_MODE === 'live';
 }
 
 function environment() {

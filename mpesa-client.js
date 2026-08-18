@@ -8,7 +8,7 @@
  * .env additions:
  *   MPESA_CONSUMER_KEY=your-consumer-key
  *   MPESA_CONSUMER_SECRET=your-consumer-secret
- *   MPESA_SHORTCODE=174379          # sandbox default paybill, or your own
+ *   MPESA_SHORT_CODE=174379         # sandbox default paybill, or your own
  *   MPESA_PASSKEY=your-passkey
  *   MPESA_ENV=sandbox               # or 'production'
  *   MPESA_CALLBACK_URL=https://your-public-url/payments/mpesa/callback
@@ -30,7 +30,14 @@ function requireEnv(name) {
 }
 
 function baseUrl() {
-  return BASE_URL[process.env.MPESA_ENV === 'production' ? 'production' : 'sandbox'];
+  const environment = ['production', 'live'].includes(process.env.MPESA_ENV)
+    ? 'production'
+    : 'sandbox';
+  return BASE_URL[environment];
+}
+
+function shortCode() {
+  return requireEnv('MPESA_SHORT_CODE') || requireEnv('MPESA_SHORTCODE');
 }
 
 function timestamp() {
@@ -66,7 +73,8 @@ async function getAccessToken() {
  *   phone must be in 2547XXXXXXXX format (no '+', no leading 0).
  */
 async function initiateSTKPush({ phone, amount, accountReference, description }) {
-  const shortcode = requireEnv('MPESA_SHORTCODE');
+  const shortcode = process.env.MPESA_SHORT_CODE || process.env.MPESA_SHORTCODE;
+  if (!shortcode) throw new Error('Missing MPESA_SHORT_CODE. Set it in your .env file.');
   const passkey = requireEnv('MPESA_PASSKEY');
   const callbackUrl = requireEnv('MPESA_CALLBACK_URL');
   const ts = timestamp();
@@ -105,7 +113,7 @@ async function initiateSTKPush({ phone, amount, accountReference, description })
  * transactionCode is one of PB (Paybill) or BG (Buy Goods) for merchant payments.
  */
 async function generateDynamicQrCode({ merchantName, reference, amount, transactionCode, cpi, size = 300 }) {
-  const shortcode = cpi || requireEnv('MPESA_SHORT_CODE');
+  const shortcode = cpi || process.env.MPESA_SHORT_CODE || process.env.MPESA_SHORTCODE || shortCode();
   const normalizedCode = String(transactionCode || '').toUpperCase();
   const numericAmount = Number(amount);
 

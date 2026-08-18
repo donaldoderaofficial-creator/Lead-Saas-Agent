@@ -107,13 +107,14 @@ const config = {
       enabled: !!process.env.PAYPAL_CLIENT_ID,
       clientId: process.env.PAYPAL_CLIENT_ID,
       clientSecret: process.env.PAYPAL_CLIENT_SECRET,
-      live: process.env.PAYPAL_MODE === 'live',
+      live: [process.env.PAYPAL_ENV, process.env.PAYPAL_MODE].includes('live'),
     },
     mpesa: {
-      enabled: !!process.env.MPESA_CONSUMER_KEY,
+      enabled: !!(process.env.MPESA_CONSUMER_KEY && process.env.MPESA_CONSUMER_SECRET),
       consumerKey: process.env.MPESA_CONSUMER_KEY,
       consumerSecret: process.env.MPESA_CONSUMER_SECRET,
-      shortCode: process.env.MPESA_SHORT_CODE,
+      shortCode: process.env.MPESA_SHORT_CODE || process.env.MPESA_SHORTCODE,
+      environment: process.env.MPESA_ENV === 'live' ? 'production' : (process.env.MPESA_ENV || 'sandbox'),
     },
   },
 
