@@ -16,6 +16,15 @@ require('dotenv').config();
 const crypto = require('crypto');
 const express = require('express');
 const session = require('express-session');
+const compression = require('compression');
+
+// Scalability & Configuration
+const { config, isFeatureEnabled } = require('./config');
+const { logger, requestLogger, errorHandler, asyncHandler } = require('./logger');
+const { cache, withCache } = require('./cache');
+const { RateLimiter } = require('./rate-limiter');
+
+// Core modules
 const { client, checkoutNodeJssdk, verifyWebhookSignature } = require('./paypal-client');
 const { initiateSTKPush } = require('./mpesa-client');
 const { processLead } = require('./lead-pipeline');
@@ -24,47 +33,74 @@ const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, genera
 const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = require('./explorium-client');
 
 const app = express();
-const DISPATCH_PRO = {
-  brand: 'Dispatch Pro',
-  founder: 'Odera Donald Ombok, BSc',
-  title: 'Founder & CEO',
-};
-app.set('trust proxy', 1); // needed for secure cookies behind Render/Railway's proxy
+const DISPATCH_PRO = config.company;
+
+// ---- Middleware: Performance & Scalability ----
+if (config.performance.enableCompression) {
+  app.use(compression()); // GZIP compression for efficient data transfer
+}
+
+app.use(requestLogger); // Request logging for monitoring
+app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.static('public'));
 
-if (!process.env.SESSION_SECRET) {
+// ---- Session Configuration ----
+if (!config.sessionSecret) {
   throw new Error('Missing SESSION_SECRET. Set a long random string in your .env file.');
 }
+
 app.use(session({
-  secret: process.env.SESSION_SECRET,
+  secret: config.sessionSecret,
   resave: false,
   saveUninitialized: false,
   store: createSessionStore(session),
   cookie: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: config.isProd,
     sameSite: 'lax',
-    maxAge: 1000 * 60 * 60 * 8, // 8 hours
+    maxAge: config.security.tokenExpiry,
   },
 }));
 
-// Basic brute-force protection on login: 5 attempts per username per 5 minutes.
+// ---- Rate Limiting: Profitability & Security ----
+const rateLimiter = new RateLimiter();
 const loginAttempts = new Map(); // username -> [timestamps]
+
 function isRateLimited(username) {
-  const now = Date.now();
-  const attempts = (loginAttempts.get(username) || []).filter((t) => now - t < 5 * 60 * 1000);
-  loginAttempts.set(username, attempts);
-  return attempts.length >= 5;
-}
-function recordFailedAttempt(username) {
-  const attempts = loginAttempts.get(username) || [];
-  attempts.push(Date.now());
-  loginAttempts.set(username, attempts);
+  return rateLimiter.isLimited(
+    username,
+    config.rateLimiting.loginAttempts,
+    config.rateLimiting.loginWindowMs
+  );
 }
 
-const PREMIUM_REPORT_PRICE_USD = '9.99';
-const PREMIUM_REPORT_PRICE_KES = 1300; // adjust to your pricing
+function recordFailedAttempt(username) {
+  // Rate limiter tracks this automatically
+  logger.warn(`Failed login attempt for user: ${username}`);
+}
+
+// Flexible, configurable pricing from config system
+const PRICING = config.pricing;
+
+// ---- Health Check Endpoint ----
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
+});
+
+// ---- Metrics & Monitoring Endpoint (Admin Only) ----
+app.get('/metrics', (req, res) => {
+  // In production, secure this endpoint with authentication
+  res.json({
+    logger: logger.getMetrics(),
+    cache: cache.stats(),
+    rateLimiter: rateLimiter.userLimits.size,
+  });
+});
 
 async function finalizeLead(ref) {
   const lead = pendingLeads.get(ref);
@@ -98,7 +134,7 @@ app.post('/api/lead', async (req, res) => {
           {
             description: 'Premium lead report',
             custom_id: leadRef, // lets the webhook find this lead later
-            amount: { currency_code: 'USD', value: PREMIUM_REPORT_PRICE_USD },
+            amount: { currency_code: 'USD', value: PRICING.usd.starter.price },
           },
         ],
         application_context: {
@@ -120,7 +156,7 @@ app.post('/api/lead', async (req, res) => {
       }
       const stk = await initiateSTKPush({
         phone,
-        amount: PREMIUM_REPORT_PRICE_KES,
+        amount: PRICING.kes.starter.price,
         accountReference: 'PremiumLeadReport',
         description: 'Premium lead report',
       });
@@ -362,9 +398,50 @@ app.post('/api/prospecting/company-prospects', requireAuth, async (req, res) => 
     const result = await fetchProspectsAtCompanies(req.body);
     res.json(result);
   } catch (err) {
+    logger.error(`Error in prospecting endpoint: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Lead agent API listening on port ${PORT}`));
+// ---- Error Handling Middleware (Maintainability & Resilience) ----
+app.use(errorHandler);
+
+// ---- Server Startup ----
+const PORT = config.port;
+const HOST = config.host;
+
+const server = app.listen(PORT, HOST, () => {
+  logger.info(`Dispatch Pro API listening on ${HOST}:${PORT}`, {
+    env: config.env,
+    isProd: config.isProd,
+  });
+});
+
+// ---- Graceful Shutdown (Resilience) ----
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    logger.info('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  logger.info('SIGINT received, shutting down gracefully');
+  server.close(() => {
+    logger.info('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('uncaughtException', (err) => {
+  logger.error('Uncaught exception', { error: err.message, stack: err.stack });
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled rejection', { reason, promise });
+  process.exit(1);
+});
+
+module.exports = app;
