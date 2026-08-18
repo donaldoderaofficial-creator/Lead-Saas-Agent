@@ -28,7 +28,7 @@ const { RateLimiter } = require('./rate-limiter');
 const { client, checkoutNodeJssdk, verifyWebhookSignature } = require('./paypal-client');
 const { generateDynamicQrCode, initiateSTKPush } = require('./mpesa-client');
 const { processLead } = require('./lead-pipeline');
-const { pendingLeads, completedReports, leads, users, createSessionStore } = require('./store');
+const { pendingLeads, completedReports, payments, leads, users, createSessionStore } = require('./store');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateQrCode } = require('./auth');
 const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = require('./explorium-client');
 
@@ -116,9 +116,10 @@ app.get('/metrics', requireAuth, (req, res) => {
   });
 });
 
-async function finalizeLead(ref) {
+async function finalizeLead(ref, payment) {
   const lead = pendingLeads.get(ref);
   if (!lead || completedReports.has(ref)) return; // unknown ref, or already processed
+  if (payment) payments.record({ ...payment, reference: ref });
   const outcome = await processLead(lead);
   completedReports.set(ref, {
     ...outcome,
@@ -220,7 +221,13 @@ app.post('/payments/capture-order/:orderId', async (req, res) => {
     const capture = await client().execute(request);
 
     if (capture.result.status === 'COMPLETED') {
-      await finalizeLead(req.params.orderId);
+      await finalizeLead(req.params.orderId, {
+        provider: 'paypal',
+        transactionId: req.params.orderId,
+        amount: capture.result.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value || 0,
+        currency: capture.result.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.currency_code || 'USD',
+        raw: capture.result,
+      });
     }
     res.json({ status: capture.result.status });
   } catch (err) {
@@ -247,7 +254,13 @@ app.post('/payments/paypal/webhook', async (req, res) => {
   const event = req.body || {};
   if (event.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
     const leadRef = event.resource?.custom_id;
-    if (leadRef) await finalizeLead(leadRef);
+    if (leadRef) await finalizeLead(leadRef, {
+      provider: 'paypal',
+      transactionId: event.resource?.id || leadRef,
+      amount: event.resource?.amount?.value || 0,
+      currency: event.resource?.amount?.currency_code || 'USD',
+      raw: event,
+    });
   }
   res.json({ received: true });
 });
@@ -257,9 +270,36 @@ app.post('/payments/paypal/webhook', async (req, res) => {
 app.post('/payments/mpesa/callback', async (req, res) => {
   const stkCallback = req.body?.Body?.stkCallback;
   if (stkCallback?.ResultCode === 0) {
-    await finalizeLead(stkCallback.CheckoutRequestID);
+    const metadata = stkCallback.CallbackMetadata?.Item || [];
+    const value = (name) => metadata.find((item) => item.Name === name)?.Value;
+    await finalizeLead(stkCallback.CheckoutRequestID, {
+      provider: 'mpesa-stk',
+      transactionId: value('MpesaReceiptNumber') || stkCallback.CheckoutRequestID,
+      amount: value('Amount') || 0,
+      currency: 'KES',
+      raw: req.body,
+    });
   }
   // Safaricom just needs a 200 acknowledging receipt — no payload required.
+  res.json({ ResultCode: 0, ResultDesc: 'Received' });
+});
+
+// ---- M-Pesa: C2B confirmation for QR and other merchant payments ----
+app.post('/payments/mpesa/c2b/validation', (req, res) => {
+  res.json({ ResultCode: 0, ResultDesc: 'Accepted' });
+});
+
+app.post('/payments/mpesa/c2b/confirmation', async (req, res) => {
+  const payment = req.body || {};
+  if (payment.TransID && payment.BillRefNumber && Number(payment.TransAmount) > 0) {
+    await finalizeLead(payment.BillRefNumber, {
+      provider: 'mpesa-c2b',
+      transactionId: payment.TransID,
+      amount: payment.TransAmount,
+      currency: 'KES',
+      raw: payment,
+    });
+  }
   res.json({ ResultCode: 0, ResultDesc: 'Received' });
 });
 

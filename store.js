@@ -79,6 +79,19 @@ db.exec(`
     details TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS payment_transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider TEXT NOT NULL,
+    transaction_id TEXT NOT NULL,
+    reference TEXT NOT NULL,
+    amount REAL NOT NULL,
+    currency TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'confirmed',
+    raw_json TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(provider, transaction_id)
+  );
 `);
 
 const stmts = {
@@ -128,6 +141,11 @@ const stmts = {
   listIncidents: db.prepare('SELECT * FROM compliance_incidents WHERE client_key = ? ORDER BY created_at DESC'),
   insertAudit: db.prepare('INSERT INTO compliance_audit (event_type, client_key, details) VALUES (?, ?, ?)'),
   listAudit: db.prepare('SELECT * FROM compliance_audit ORDER BY created_at DESC'),
+  insertPayment: db.prepare(`
+    INSERT OR IGNORE INTO payment_transactions
+      (provider, transaction_id, reference, amount, currency, status, raw_json)
+    VALUES (@provider, @transactionId, @reference, @amount, @currency, @status, @rawJson)
+  `),
 };
 
 const pendingLeads = {
@@ -157,6 +175,21 @@ const completedReports = {
   },
   has(ref) {
     return !!stmts.getReport.get(ref);
+  },
+};
+
+const payments = {
+  record({ provider, transactionId, reference, amount, currency, status = 'confirmed', raw }) {
+    const result = stmts.insertPayment.run({
+      provider,
+      transactionId,
+      reference,
+      amount: Number(amount),
+      currency,
+      status,
+      rawJson: raw ? JSON.stringify(raw) : null,
+    });
+    return result.changes === 1;
   },
 };
 
@@ -315,6 +348,7 @@ function createSessionStore(sessionLib) {
 module.exports = {
   pendingLeads,
   completedReports,
+  payments,
   leads,
   users,
   subscription,
