@@ -1,0 +1,2091 @@
+{
+  "info": {
+    "_postman_id": "57cc8afd-ccf2-4a61-afb8-ff9db6c78a7f",
+    "name": "Safaricom APIs",
+    "description": "# Introduction\nWhat does your API do?\n\n# Overview\nThings that the developers should know about\n\n# Authentication\nWhat is the preferred way of using the API?\n\n# Error Codes\nWhat errors and status codes can a user expect?\n\n# Rate limit\nIs there a limit to the number of requests an user can send?",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "13728471"
+  },
+  "item": [
+    {
+      "name": "M-Pesa Ratiba - Sandbox",
+      "item": [
+        {
+          "name": "Access Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "password",
+                  "value": "",
+                  "type": "string"
+                },
+                {
+                  "key": "username",
+                  "value": "",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials",
+              "protocol": "https",
+              "host": [
+                "sandbox",
+                "safaricom",
+                "co",
+                "ke"
+              ],
+              "path": [
+                "oauth",
+                "v1",
+                "generate"
+              ],
+              "query": [
+                {
+                  "key": "grant_type",
+                  "value": "client_credentials"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "createReminderSchedule-External(Paybill)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"StandingOrderName\": \"\",\n    \"BusinessShortCode\": \"174379\",\n    \"CustomStoId\": \"\",\n    \"TransactionType\": \"Standing Order Customer Pay Bill\",\n    \"Amount\": \"\",\n    \"PartyA\": \"\",\n    \"ReceiverPartyIdentifierType\": \"4\",\n    \"CallBackURL\": \"\",\n    \"AccountReference\": \"\",\n    \"TransactionDesc\": \"\",\n    \"Frequency\": \"\",\n    \"StartDate\": \"\",\n    \"EndDate\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://sandbox.safaricom.co.ke/standingorder/v1/createStandingOrderExternal",
+              "protocol": "https",
+              "host": [
+                "sandbox",
+                "safaricom",
+                "co",
+                "ke"
+              ],
+              "path": [
+                "standingorder",
+                "v1",
+                "createStandingOrderExternal"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "createReminderSchedule-External(Buy Goods)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"StandingOrderName\": \"\",\n    \"BusinessShortCode\": \"300584\",\n    \"CustomStoId\": \"\",\n    \"TransactionType\": \"Standing Order Customer Pay Merchant\",\n    \"Amount\": \"\",\n    \"PartyA\": \"\",\n    \"ReceiverPartyIdentifierType\": \"2\",\n    \"CallBackURL\": \"\",\n    \"AccountReference\": \"\",\n    \"TransactionDesc\": \"\",\n    \"Frequency\": \"\",\n    \"StartDate\": \"\",\n    \"EndDate\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://sandbox.safaricom.co.ke/standingorder/v1/createStandingOrderExternal",
+              "protocol": "https",
+              "host": [
+                "sandbox",
+                "safaricom",
+                "co",
+                "ke"
+              ],
+              "path": [
+                "standingorder",
+                "v1",
+                "createStandingOrderExternal"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "IoT APIS - Sandbox",
+      "item": [
+        {
+          "name": "ms-iot-messaging",
+          "item": [
+            {
+              "name": "search messages",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-correlation-conversationid",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-source-system",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "Yl4S3KEcr173mbeUdYdjf147IuG3rJ824ArMkP6Z",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MSISDN",
+                    "value": "0110100606",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MessageID",
+                    "value": "v7I5m/coazTYvz7gzXt1Hg|eKJ",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"searchValue\": \"test\",\r\n    \"vpnGroup\":\"1-555162310488_VPN\",\r\n    \"username\":\"eokeda@safaricom.co.ke\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://sandbox.safaricom.co.ke/simportal/v1/searchmessages?pageNo=1&pageSize=5",
+                  "protocol": "https",
+                  "host": [
+                    "sandbox",
+                    "safaricom",
+                    "co",
+                    "ke"
+                  ],
+                  "path": [
+                    "simportal",
+                    "v1",
+                    "searchmessages"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNo",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "5"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "filter messages",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-correlation-conversationid",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-source-system",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "Yl4S3KEcr173mbeUdYdjf147IuG3rJ824ArMkP6Z",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept-Language",
+                    "value": "EN",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MSISDN",
+                    "value": "0110100606",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MessageID",
+                    "value": "v7I5m/coazTYvz7gzXt1Hg|eKJEoNjhNNlurtAFScipaw|4EzkycIrr5VezD6x3Eyess",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"startDate\": \"\",\r\n    \"endDate\": \"\",\r\n    \"status\": \"\",\r\n    \"vpnGroup\":\"1-555162310488_VPN\",\r\n    \"username\":\"\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://sandbox.safaricom.co.ke/simportal/v1/filtermessages?pageNo=1&pageSize=10",
+                  "protocol": "https",
+                  "host": [
+                    "sandbox",
+                    "safaricom",
+                    "co",
+                    "ke"
+                  ],
+                  "path": [
+                    "simportal",
+                    "v1",
+                    "filtermessages"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNo",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "delete message thread",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-correlation-conversationid",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-source-system",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "Yl4S3KEcr173mbeUdYdjf147IuG3rJ824ArMkP6Z",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept-Language",
+                    "value": "EN",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Correlation-ConversationID",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MSISDN",
+                    "value": "0110100606",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MessageID",
+                    "value": "v7I5m/coazTYvz7gzXt1Hg|eKJEoNjhNNlurtAFScipaw|4EzkycIrr5VezD6x3Eyess",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"msisdn\": \"\",\r\n    \"vpnGroup\":\"\",\r\n    \"username\":\"\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://sandbox.safaricom.co.ke/simportal/v1/deleteMessageThread",
+                  "protocol": "https",
+                  "host": [
+                    "sandbox",
+                    "safaricom",
+                    "co",
+                    "ke"
+                  ],
+                  "path": [
+                    "simportal",
+                    "v1",
+                    "deleteMessageThread"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get all messages",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{apigee-uat-token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-correlation-conversationid",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-source-system",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "Yl4S3KEcr173mbeUdYdjf147IuG3rJ824ArMkP6Z",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept-Language",
+                    "value": "EN",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Correlation-ConversationID",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MSISDN",
+                    "value": "0110100606",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MessageID",
+                    "value": "v7I5m/coazTYvz7gzXt1Hg|eKJEoNjhNNlurtAFScipaw|4EzkycIrr5VezD6x3Eyess",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"vpnGroup\": \"1-555162310488_VPN\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://sandbox.safaricom.co.ke/simportal/v1/getallmessages?pageNo=1&pageSize=10",
+                  "protocol": "https",
+                  "host": [
+                    "sandbox",
+                    "safaricom",
+                    "co",
+                    "ke"
+                  ],
+                  "path": [
+                    "simportal",
+                    "v1",
+                    "getallmessages"
+                  ],
+                  "query": [
+                    {
+                      "key": "pageNo",
+                      "value": "1"
+                    },
+                    {
+                      "key": "pageSize",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "send single message",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{apigee-uat-token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-correlation-conversationid",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-source-system",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "Yl4S3KEcr173mbeUdYdjf147IuG3rJ824ArMkP6Z",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept-Language",
+                    "value": "EN",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Correlation-ConversationID",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MSISDN",
+                    "value": "0110100606",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MessageID",
+                    "value": "v7I5m/coazTYvz7gzXt1Hg|eKJEoNjhNNlurtAFScipaw|4EzkycIrr5VezD6x3Eyess",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"msisdn\": \"\",\r\n    \"message\": \"\",\r\n    \"vpnGroup\":\"\",\r\n    \"username\":\"\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://sandbox.safaricom.co.ke/simportal/v1/sendsinglemessage",
+                  "protocol": "https",
+                  "host": [
+                    "sandbox",
+                    "safaricom",
+                    "co",
+                    "ke"
+                  ],
+                  "path": [
+                    "simportal",
+                    "v1",
+                    "sendsinglemessage"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "delete message",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{apigee-uat-token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-correlation-conversationid",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-source-system",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "Yl4S3KEcr173mbeUdYdjf147IuG3rJ824ArMkP6Z",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept-Language",
+                    "value": "EN",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Correlation-ConversationID",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MSISDN",
+                    "value": "0110100606",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MessageID",
+                    "value": "v7I5m/coazTYvz7gzXt1Hg|eKJEoNjhNNlurtAFScipaw|4EzkycIrr5VezD6x3Eyess",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"id\": 0,\r\n    \"vpnGroup\":\"\",\r\n    \"username\":\"\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://sandbox.safaricom.co.ke/simportal/v1/deletemessage",
+                  "protocol": "https",
+                  "host": [
+                    "sandbox",
+                    "safaricom",
+                    "co",
+                    "ke"
+                  ],
+                  "path": [
+                    "simportal",
+                    "v1",
+                    "deletemessage"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "sim-operations",
+          "item": [
+            {
+              "name": "all sims",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{apigee-uat-token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-correlation-conversationid",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-source-system",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "Yl4S3KEcr173mbeUdYdjf147IuG3rJ824ArMkP6Z",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MSISDN",
+                    "value": "0110100606",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MessageID",
+                    "value": "v7I5m/coazTYvz7gzXt1Hg|eKJ",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n   \"vpnGroup\":[\"1-555162310488_VPN\"],\r\n   \"startAtIndex\":\"0\",\r\n   \"pageSize\":\"0\",\r\n   \"username\":\"darajasandbox@safaricom.co.ke\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://sandbox.safaricom.co.ke/simportal/v1/allsims",
+                  "protocol": "https",
+                  "host": [
+                    "sandbox",
+                    "safaricom",
+                    "co",
+                    "ke"
+                  ],
+                  "path": [
+                    "simportal",
+                    "v1",
+                    "allsims"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "query lifecycle status",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{apigee-uat-token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-correlation-conversationid",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-source-system",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "Yl4S3KEcr173mbeUdYdjf147IuG3rJ824ArMkP6Z",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MSISDN",
+                    "value": "0110100606",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MessageID",
+                    "value": "v7I5m/coazTYvz7gzXt1Hg|eKJ",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"msisdn\":\"\",\r\n    \"vpnGroup\":\"\",\r\n    \"username\":\"\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://sandbox.safaricom.co.ke/simportal/v1/queryLifeCycleStatus",
+                  "protocol": "https",
+                  "host": [
+                    "sandbox",
+                    "safaricom",
+                    "co",
+                    "ke"
+                  ],
+                  "path": [
+                    "simportal",
+                    "v1",
+                    "queryLifeCycleStatus"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "query customer info",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{apigee-uat-token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-correlation-conversationid",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-source-system",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "Yl4S3KEcr173mbeUdYdjf147IuG3rJ824ArMkP6Z",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MSISDN",
+                    "value": "0110100606",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MessageID",
+                    "value": "v7I5m/coazTYvz7gzXt1Hg|eKJ",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"msisdn\":\"\",\r\n    \"vpnGroup\":\"\",\r\n    \"username\":\"\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://sandbox.safaricom.co.ke/simportal/v1/querycustomerinfo",
+                  "protocol": "https",
+                  "host": [
+                    "sandbox",
+                    "safaricom",
+                    "co",
+                    "ke"
+                  ],
+                  "path": [
+                    "simportal",
+                    "v1",
+                    "querycustomerinfo"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "sim activation",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{apigee-uat-token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-correlation-conversationid",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-source-system",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "Yl4S3KEcr173mbeUdYdjf147IuG3rJ824ArMkP6Z",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MSISDN",
+                    "value": "0110100606",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MessageID",
+                    "value": "v7I5m/coazTYvz7gzXt1Hg|eKJ",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"msisdn\":\"\",\r\n     \"vpnGroup\":\"\",\r\n    \"username\":\"\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://sandbox.safaricom.co.ke/simportal/v1/simactivation",
+                  "protocol": "https",
+                  "host": [
+                    "sandbox",
+                    "safaricom",
+                    "co",
+                    "ke"
+                  ],
+                  "path": [
+                    "simportal",
+                    "v1",
+                    "simactivation"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get activation trends",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{apigee-uat-token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-correlation-conversationid",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-source-system",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "Yl4S3KEcr173mbeUdYdjf147IuG3rJ824ArMkP6Z",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MSISDN",
+                    "value": "0110100606",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MessageID",
+                    "value": "v7I5m/coazTYvz7gzXt1Hg|eKJ",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"vpnGroup\":\"\",\r\n    \"startDate\":\"\",\r\n    \"stopDate\":\"\",\r\n    \"username\":\"\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://sandbox.safaricom.co.ke/simportal/v1/getactivationtrends",
+                  "protocol": "https",
+                  "host": [
+                    "sandbox",
+                    "safaricom",
+                    "co",
+                    "ke"
+                  ],
+                  "path": [
+                    "simportal",
+                    "v1",
+                    "getactivationtrends"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "rename asset",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{apigee-uat-token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-correlation-conversationid",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-source-system",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "Yl4S3KEcr173mbeUdYdjf147IuG3rJ824ArMkP6Z",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MSISDN",
+                    "value": "0110100606",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MessageID",
+                    "value": "v7I5m/coazTYvz7gzXt1Hg|eKJ",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"msisdn\":\"\",\r\n    \"vpnGroup\":\"\",\r\n    \"username\":\"\",\r\n    \"assetName\":\"\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://sandbox.safaricom.co.ke/simportal/v1/renameasset",
+                  "protocol": "https",
+                  "host": [
+                    "sandbox",
+                    "safaricom",
+                    "co",
+                    "ke"
+                  ],
+                  "path": [
+                    "simportal",
+                    "v1",
+                    "renameasset"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get location info",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{apigee-uat-token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-correlation-conversationid",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-source-system",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "Yl4S3KEcr173mbeUdYdjf147IuG3rJ824ArMkP6Z",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MSISDN",
+                    "value": "0110100606",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MessageID",
+                    "value": "v7I5m/coazTYvz7gzXt1Hg|eKJ",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"msisdn\":\"\",\r\n    \"vpnGroup\":\"\",\r\n    \"username\":\"\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://sandbox.safaricom.co.ke/simportal/v1/getlocationinfo",
+                  "protocol": "https",
+                  "host": [
+                    "sandbox",
+                    "safaricom",
+                    "co",
+                    "ke"
+                  ],
+                  "path": [
+                    "simportal",
+                    "v1",
+                    "getlocationinfo"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "suspend unsuspend sub",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{apigee-uat-token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-source-system",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "Yl4S3KEcr173mbeUdYdjf147IuG3rJ824ArMkP6Z",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MSISDN",
+                    "value": "0110100606",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-App",
+                    "value": "web-portal",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-MessageID",
+                    "value": "v7I5m/coazTYvz7gzXt1Hg|eKJ",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Correlation-ConversationId",
+                    "value": "{{$guid}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Identity",
+                    "value": "mjepkoech@safaricom.co.ke",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"msisdn\":\"\",\r\n    \"username\":\"\",\r\n    \"vpnGroup\":\"\",\r\n    \"product\":\"\",\r\n    \"operation\":\"\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://sandbox.safaricom.co.ke/simportal/v1/suspend_unsuspend_sub",
+                  "protocol": "https",
+                  "host": [
+                    "sandbox",
+                    "safaricom",
+                    "co",
+                    "ke"
+                  ],
+                  "path": [
+                    "simportal",
+                    "v1",
+                    "suspend_unsuspend_sub"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "IMSI",
+      "item": [
+        {
+          "name": "IMSI V1 - CheckATI",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"customerNumber\": \"\"\r\n}"
+            },
+            "url": {
+              "raw": "https://sandbox.safaricom.co.ke/imsi/v1/checkATI",
+              "protocol": "https",
+              "host": [
+                "sandbox",
+                "safaricom",
+                "co",
+                "ke"
+              ],
+              "path": [
+                "imsi",
+                "v1",
+                "checkATI"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "IMSI V2 - Lookup",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"customerNumber\": \"\"\r\n}"
+            },
+            "url": {
+              "raw": "https://sandbox.safaricom.co.ke/imsi-lookup/v1/checkATI",
+              "protocol": "https",
+              "host": [
+                "sandbox",
+                "safaricom",
+                "co",
+                "ke"
+              ],
+              "path": [
+                "imsi-lookup",
+                "v1",
+                "checkATI"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Age On Network",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"customerNumber\": \"\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://sandbox.safaricom.co.ke/registration/lookup/v1/checkATI",
+          "protocol": "https",
+          "host": [
+            "sandbox",
+            "safaricom",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "registration",
+            "lookup",
+            "v1",
+            "checkATI"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Make a B2B Payment Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <Access-Token>"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"Initiator\": \"\",\r\n    \"SecurityCredential\": \"\",\r\n    \"CommandID\": \"\",\r\n    \"SenderIdentifierType\": \"\",\r\n    \"RecieverIdentifierType\": \"\",\r\n    \"Amount\": \"\",\r\n    \"PartyA\": \"\",\r\n    \"PartyB\": \"\",\r\n    \"AccountReference\": \"\",\r\n    \"Remarks\": \"\",\r\n    \"QueueTimeOutURL\": \"\",\r\n    \"ResultURL\": \"\"\r\n}"
+        },
+        "url": {
+          "raw": "https://sandbox.safaricom.co.ke/mpesa/b2b/v1/paymentrequest",
+          "protocol": "https",
+          "host": [
+            "sandbox",
+            "safaricom",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "mpesa",
+            "b2b",
+            "v1",
+            "paymentrequest"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Reverse an M-Pesa Transaction",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <Access-Token>"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"Initiator\": \"\",\r\n    \"SecurityCredential\": \"\",\r\n    \"CommandID\": \"TransactionReversal\",\r\n    \"TransactionID\": \"\",\r\n    \"Amount\": \"\",\r\n    \"ReceiverParty\": \"\",\r\n    \"RecieverIdentifierType\": \"4\",\r\n    \"ResultURL\": \"\",\r\n    \"QueueTimeOutURL\": \"\",\r\n    \"Remarks\": \"\",\r\n    \"Occasion\": \"\"\r\n}"
+        },
+        "url": {
+          "raw": "https://sandbox.safaricom.co.ke/mpesa/reversal/v1/request",
+          "protocol": "https",
+          "host": [
+            "sandbox",
+            "safaricom",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "mpesa",
+            "reversal",
+            "v1",
+            "request"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Query the Transaction Status of an M-Pesa Transaction",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{apigee-token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <Access-Token>"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{    \r\n   \"BusinessShortCode\":\"\",    \r\n   \"Password\": \"\",    \r\n   \"Timestamp\":\"\",    \r\n   \"CheckoutRequestID\": \"\"\r\n}  "
+        },
+        "url": {
+          "raw": "https://sandbox.safaricom.co.ke/mpesa/transactionstatus/v1/query",
+          "protocol": "https",
+          "host": [
+            "sandbox",
+            "safaricom",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "mpesa",
+            "transactionstatus",
+            "v1",
+            "query"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Simulate a C2B Payment",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <Access-Token>"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"ShortCode\":\" \",\r\n    \"CommandID\":\"\",\r\n    \"Amount\":\" \",\r\n    \"Msisdn\":\" \",\r\n    \"BillRefNumber\":\" \"\r\n}"
+        },
+        "url": {
+          "raw": "https://sandbox.safaricom.co.ke/mpesa/c2b/v1/simulate",
+          "protocol": "https",
+          "host": [
+            "sandbox",
+            "safaricom",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "mpesa",
+            "c2b",
+            "v1",
+            "simulate"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Query the status of a Lipa na M-Pesa Online Payment",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{apigee-token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <Access-Token>"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{    \r\n   \"BusinessShortCode\":\"\",    \r\n   \"Password\": \"\",    \r\n   \"Timestamp\":\"\",    \r\n   \"CheckoutRequestID\": \"\"\r\n}  "
+        },
+        "url": {
+          "raw": "https://sandbox.safaricom.co.ke/mpesa/stkpushquery/v1/query",
+          "protocol": "https",
+          "host": [
+            "sandbox",
+            "safaricom",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "mpesa",
+            "stkpushquery",
+            "v1",
+            "query"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Make a B2C Payment Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <Access-Token>"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"InitiatorName\": \"\",\r\n    \"SecurityCredential\": \"\",\r\n    \"CommandID\": \"\",\r\n    \"Amount\": \"\",\r\n    \"PartyA\": \"\",\r\n    \"PartyB\": \"\",\r\n    \"Remarks\": \"\",\r\n    \"QueueTimeOutURL\": \"\",\r\n    \"ResultURL\": \"\",\r\n  \"Occasion\": \"\"\r\n}"
+        },
+        "url": {
+          "raw": "https://sandbox.safaricom.co.ke/mpesa/b2c/v1/paymentrequest",
+          "protocol": "https",
+          "host": [
+            "sandbox",
+            "safaricom",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "mpesa",
+            "b2c",
+            "v1",
+            "paymentrequest"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Make a B2Pochi Payment Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <Access-Token>"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"OriginatorConversationID\": \"\",\r\n    \"InitiatorName\": \"\",\r\n    \"SecurityCredential\": \"\",\r\n    \"CommandID\": \"\",\r\n    \"Amount\": \"\",\r\n    \"PartyA\": \"\",\r\n    \"PartyB\": \"\",\r\n    \"Remarks\": \"\",\r\n    \"QueueTimeOutURL\": \"\",\r\n    \"ResultURL\": \"\",\r\n    \"Occasion\": \"\"\r\n}"
+        },
+        "url": {
+          "raw": "https://sandbox.safaricom.co.ke/mpesa/b2c/v1/paymentrequest",
+          "protocol": "https",
+          "host": [
+            "sandbox",
+            "safaricom",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "mpesa",
+            "b2c",
+            "v1",
+            "paymentrequest"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Initiate a Lipa na M-Pesa Online Payment",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <Access-Token>"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"BusinessShortCode\": \"\",\r\n    \"Password\": \"\",\r\n    \"Timestamp\": \"\",\r\n    \"TransactionType\": \"\",\r\n    \"Amount\": 1,\r\n    \"PartyA\": 254708374149,\r\n    \"PartyB\": 174379,\r\n    \"PhoneNumber\": 254708374149,\r\n    \"CallBackURL\": \"https://mydomain.com/path\",\r\n    \"AccountReference\": \"CompanyXLTD\",\r\n    \"TransactionDesc\": \"Payment of X\"\r\n}"
+        },
+        "url": {
+          "raw": "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
+          "protocol": "https",
+          "host": [
+            "sandbox",
+            "safaricom",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "mpesa",
+            "stkpush",
+            "v1",
+            "processrequest"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Make an Account Balance query",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <Access-Token>"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"Initiator\": \"\",\r\n    \"SecurityCredential\": \"\",\r\n    \"CommandID\": \"AccountBalance\",\r\n    \"PartyA\": \"\",\r\n    \"IdentifierType\": \"4\",\r\n    \"Remarks\": \"\",\r\n    \"QueueTimeOutURL\": \"\",\r\n    \"ResultURL\": \"\"\r\n}"
+        },
+        "url": {
+          "raw": "https://sandbox.safaricom.co.ke/mpesa/accountbalance/v1/query",
+          "protocol": "https",
+          "host": [
+            "sandbox",
+            "safaricom",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "mpesa",
+            "accountbalance",
+            "v1",
+            "query"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Register C2B Confirmation and Validation URLs",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"ShortCode\": \"\",\r\n    \"ResponseType\": \"Completed\",\r\n    \"ConfirmationURL\": \"https://mydomain.com/confirmation\",\r\n    \"ValidationURL\": \"https://mydomain.com/validation\"\r\n}"
+        },
+        "url": {
+          "raw": "https://sandbox.safaricom.co.ke/mpesa/c2b/v1/registerurl",
+          "protocol": "https",
+          "host": [
+            "sandbox",
+            "safaricom",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "mpesa",
+            "c2b",
+            "v1",
+            "registerurl"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Generate an OAuth Access Token",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "password",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "key": "username",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "key": "showPassword",
+              "value": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": []
+        },
+        "url": {
+          "raw": "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials",
+          "protocol": "https",
+          "host": [
+            "sandbox",
+            "safaricom",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "oauth",
+            "v1",
+            "generate"
+          ],
+          "query": [
+            {
+              "key": "grant_type",
+              "value": "client_credentials"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "SWAP CheckATI",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n\t\"customerNumber\":\"\"\r\n}"
+        },
+        "url": {
+          "raw": "https://sandbox.safaricom.co.ke/imsi/v2/checkATI",
+          "protocol": "https",
+          "host": [
+            "sandbox",
+            "safaricom",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "imsi",
+            "v2",
+            "checkATI"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Pull API - Register URL",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"ShortCode\": \"\",\r\n    \"RequestType\": \"\",\r\n    \"NominatedNumber\": \"\",\r\n    \"CallBackURL\": \"\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://sandbox.safaricom.co.ke/pulltransactions/v1/register",
+          "protocol": "https",
+          "host": [
+            "sandbox",
+            "safaricom",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "pulltransactions",
+            "v1",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Pull API - Query",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"ShortCode\": \"\",\r\n    \"StartDate\": \"2020-08-04 8:36:00\",\r\n    \"EndDate\": \"2020-08-16 10:10:000\",\r\n    \"OffSetValue\": \"0\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://sandbox.safaricom.co.ke/pulltransactions/v1/query",
+          "protocol": "https",
+          "host": [
+            "sandbox",
+            "safaricom",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "pulltransactions",
+            "v1",
+            "query"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "B2B Hakikisha(Query Org Info)",
+      "request": {
+        "auth": {
+          "type": "bearer"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"IdentifierType\": \"\",\n    \"Identifier\": \"\"\n}"
+        },
+        "url": {
+          "raw": "https://sandbox.safaricom.co.ke/sfcverify/v1/query/info",
+          "protocol": "https",
+          "host": [
+            "sandbox",
+            "safaricom",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "sfcverify",
+            "v1",
+            "query",
+            "info"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Mobile Number Validation",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"requestRefID\": \"{{$timestamp}}\",\r\n    \"shortCode\":\"\",\r\n    \"msisdn\": \"\",\r\n    \"idType\": \"\",\r\n    \"idNumber\": \"\"\r\n} ",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://sandbox.safaricom.co.ke/v1/KYC-validation/validateID",
+          "protocol": "https",
+          "host": [
+            "sandbox",
+            "safaricom",
+            "co",
+            "ke"
+          ],
+          "path": [
+            "v1",
+            "KYC-validation",
+            "validateID"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "access_token",
+      "value": ""
+    }
+  ]
+}
