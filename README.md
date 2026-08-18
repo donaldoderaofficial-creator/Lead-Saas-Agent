@@ -178,3 +178,4 @@ See [LICENSE](LICENSE) for terms and conditions.
 ## License
 
 MIT
+# Automatic commit message system enabled
