@@ -24,7 +24,7 @@ services:
         sync: false
       - key: MPESA_CONSUMER_SECRET
         sync: false
-      - key: MPESA_SHORTCODE
+      - key: MPESA_SHORT_CODE
         sync: false
       - key: MPESA_PASSKEY
         sync: false
