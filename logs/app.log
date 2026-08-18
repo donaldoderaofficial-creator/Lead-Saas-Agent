@@ -1,0 +1,8 @@
+{"timestamp":"2026-08-18T22:15:04.439Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:3300","env":"production","isProd":true}
+{"timestamp":"2026-08-18T22:15:04.550Z","level":"info","message":"GET /health","statusCode":200,"duration":"5ms"}
+{"timestamp":"2026-08-18T22:15:26.031Z","level":"info","message":"GET /","statusCode":200,"duration":"6ms"}
+{"timestamp":"2026-08-18T22:15:28.775Z","level":"info","message":"GET /favicon.ico","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-08-18T22:15:51.862Z","level":"info","message":"POST /api/lead","statusCode":403,"duration":"15ms"}
+{"timestamp":"2026-08-18T22:16:51.010Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:3000","env":"development","isProd":false}
+{"timestamp":"2026-08-18T22:17:12.512Z","level":"info","message":"GET /health","statusCode":200,"duration":"6ms"}
+{"timestamp":"2026-08-18T22:17:30.090Z","level":"info","message":"GET /health","statusCode":200,"duration":"1ms"}

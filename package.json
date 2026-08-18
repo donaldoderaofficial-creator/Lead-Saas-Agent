@@ -23,6 +23,7 @@
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
     "compression": "^1.8.1",
+    "connect-sqlite3": "^0.9.18",
     "cross-fetch": "^3.2.0",
     "dotenv": "^17.4.2",
     "express": "^4.19.2",

@@ -108,8 +108,7 @@ app.get('/health', (req, res) => {
 });
 
 // ---- Metrics & Monitoring Endpoint (Admin Only) ----
-app.get('/metrics', (req, res) => {
-  // In production, secure this endpoint with authentication
+app.get('/metrics', requireAuth, (req, res) => {
   res.json({
     logger: logger.getMetrics(),
     cache: cache.stats(),
@@ -376,8 +375,6 @@ app.patch('/api/leads/:ref/followup', requireAuth, (req, res) => {
   leads.setFollowup(req.params.ref, status, notes);
   res.json({ status: 'saved' });
 });
-
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 // ---- Prospecting: company/prospect data via Explorium, costs real credits per call ----
 // All gated behind dashboard login — this is a paid feature, not public.
