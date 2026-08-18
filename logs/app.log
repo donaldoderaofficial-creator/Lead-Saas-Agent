@@ -23,3 +23,7 @@
 {"timestamp":"2026-08-18T22:59:21.349Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:3000","env":"development","isProd":false}
 {"timestamp":"2026-08-18T22:59:34.152Z","level":"info","message":"GET /health","statusCode":200,"duration":"4ms"}
 {"timestamp":"2026-08-18T22:59:37.911Z","level":"info","message":"GET /api/payments/options","statusCode":200,"duration":"3ms"}
+{"timestamp":"2026-08-18T23:04:38.497Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:3000","env":"development","isProd":false}
+{"timestamp":"2026-08-18T23:04:55.738Z","level":"info","message":"GET /api/billing/status","statusCode":200,"duration":"4ms"}
+{"timestamp":"2026-08-18T23:05:00.469Z","level":"info","message":"POST /api/lead","statusCode":402,"duration":"10ms"}
+{"timestamp":"2026-08-18T23:05:04.372Z","level":"info","message":"GET /health","statusCode":200,"duration":"1ms"}
