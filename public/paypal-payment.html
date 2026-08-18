@@ -54,7 +54,8 @@
       button.disabled = true;
       status.textContent = 'Creating secure PayPal checkout…';
       try {
-        const response = await fetch('/api/lead', {
+        const apiBase = window.DISPATCH_API_URL || window.location.origin;
+        const response = await fetch(`${apiBase}/api/lead`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, method: 'paypal' })

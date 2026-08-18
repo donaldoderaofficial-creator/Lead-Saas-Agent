@@ -219,6 +219,8 @@
 
 <script>
 const el = (id) => document.getElementById(id);
+const API_BASE = window.DISPATCH_API_URL || window.location.origin;
+const apiUrl = (path) => `${API_BASE}${path}`;
 const statusEl = el('status');
 const reportEl = el('report');
 
@@ -275,7 +277,7 @@ async function pollReport(ref, { onPending } = {}) {
     const tick = async () => {
       attempts += 1;
       try {
-        const res = await fetch(`/leads/report/${ref}`);
+        const res = await fetch(apiUrl(`/leads/report/${ref}`));
         const data = await res.json();
         if (res.status === 200) return resolve(data);
         if (res.status === 202) {
@@ -295,7 +297,7 @@ async function pollReport(ref, { onPending } = {}) {
 
 async function loadPaymentOptions() {
   try {
-    const res = await fetch('/api/payments/options');
+    const res = await fetch(apiUrl('/api/payments/options'));
     if (!res.ok) return;
     const data = await res.json();
     const paypalEnabled = data.providers?.paypal?.enabled;
@@ -316,7 +318,7 @@ el('payPaypal').addEventListener('click', async () => {
 
   try {
     setStatus('Creating PayPal order…', false, true);
-    const res = await fetch('/api/lead', {
+    const res = await fetch(apiUrl('/api/lead'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...lead, method: 'paypal' }),
@@ -350,7 +352,7 @@ el('payMpesa').addEventListener('click', async () => {
   try {
     setStep(2);
     setStatus('Sending STK Push to your phone…', false, true);
-    const res = await fetch('/api/lead', {
+    const res = await fetch(apiUrl('/api/lead'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...lead, phone, method: 'mpesa' }),
@@ -385,7 +387,7 @@ el('payMpesa').addEventListener('click', async () => {
   setStep(2);
   setStatus('Confirming payment with PayPal…', false, true);
   try {
-    const captureRes = await fetch(`/payments/capture-order/${orderId}`, { method: 'POST' });
+    const captureRes = await fetch(apiUrl(`/payments/capture-order/${orderId}`), { method: 'POST' });
     const capture = await captureRes.json();
     if (!captureRes.ok || capture.status !== 'COMPLETED') {
       throw new Error(capture.error || 'Payment not completed');
