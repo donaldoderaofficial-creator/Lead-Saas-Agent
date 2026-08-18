@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Plans & Billing</title>
+<style>
+  :root {
+    --bg: #0b0d12; --surface: #151822; --surface-2: #1c202c; --border: #262b38;
+    --text: #e7e9ee; --text-dim: #9aa1b1; --accent: #6c8cff; --nurture: #6cffa3;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 48px 20px; }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; text-align: center; }
+  p.sub { color: var(--text-dim); font-size: 14px; margin: 0 0 28px; text-align: center; }
+
+  .toggle { display: flex; justify-content: center; gap: 8px; margin-bottom: 32px; }
+  .toggle button {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
+    padding: 8px 18px; border-radius: 999px; font-size: 13px; cursor: pointer;
+  }
+  .toggle button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .toggle .save-badge { font-size: 11px; color: var(--nurture); margin-left: 4px; }
+
+  .plans { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  @media (max-width: 640px) { .plans { grid-template-columns: 1fr; } }
+
+  .plan-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; }
+  .plan-card.featured { border-color: var(--accent); }
+  .plan-name { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+  .plan-price { font-size: 30px; font-weight: 700; margin: 12px 0 2px; }
+  .plan-price span { font-size: 14px; color: var(--text-dim); font-weight: 400; }
+  .plan-desc { font-size: 13px; color: var(--text-dim); margin: 0 0 18px; }
+  .plan-features { list-style: none; padding: 0; margin: 0 0 20px; font-size: 13px; }
+  .plan-features li { padding: 6px 0; border-top: 1px solid var(--border); }
+  .plan-features li:first-child { border-top: none; }
+
+  .plan-btn {
+    width: 100%; padding: 11px; border-radius: 8px; border: none;
+    background: var(--accent); color: #fff; font-weight: 500; font-size: 14px; cursor: pointer;
+  }
+  .plan-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  #paypal-starter, #paypal-growth { margin-top: 4px; }
+
+  #status { text-align: center; font-size: 13px; color: var(--text-dim); margin-top: 20px; min-height: 18px; }
+
+  .current-plan-banner {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 16px; font-size: 13px; margin-bottom: 24px; text-align: center; display: none;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Plans & Billing</h1>
+    <p class="sub">Choose how you want to bill — monthly or annual.</p>
+
+    <div class="current-plan-banner" id="currentBanner"></div>
+
+    <div class="toggle">
+      <button id="btnMonthly" class="active">Monthly</button>
+      <button id="btnAnnual">Annual <span class="save-badge">save 2 months</span></button>
+    </div>
+
+    <div class="plans">
+      <div class="plan-card">
+        <p class="plan-name">Starter</p>
+        <p class="plan-price" id="starterPrice">$79<span>/mo</span></p>
+        <p class="plan-desc">Lead pipeline, payments, and dashboard</p>
+        <ul class="plan-features">
+          <li>Event-driven lead scoring</li>
+          <li>PayPal + M-Pesa payments</li>
+          <li>Leads dashboard with follow-up tracking</li>
+        </ul>
+        <button class="plan-btn" id="btnStarterAnnual" style="display:none;">Pay annually</button>
+        <div id="paypal-starter"></div>
+      </div>
+
+      <div class="plan-card featured">
+        <p class="plan-name">Growth</p>
+        <p class="plan-price" id="growthPrice">$249<span>/mo</span></p>
+        <p class="plan-desc">Everything in Starter, plus prospecting</p>
+        <ul class="plan-features">
+          <li>Everything in Starter</li>
+          <li>Company search by industry/size/location</li>
+          <li>Contact enrichment (email + phone)</li>
+        </ul>
+        <button class="plan-btn" id="btnGrowthAnnual" style="display:none;">Pay annually</button>
+        <div id="paypal-growth"></div>
+      </div>
+    </div>
+
+    <div id="status"></div>
+  </div>
+
+<script>
+const el = (id) => document.getElementById(id);
+let config = null;
+let billingMode = 'monthly';
+
+function setStatus(msg, isError) {
+  el('status').textContent = msg;
+  el('status').style.color = isError ? '#ff6c6c' : '#9aa1b1';
+}
+
+async function loadConfig() {
+  const res = await fetch('/api/config');
+  config = await res.json();
+  el('starterPrice').innerHTML = `$${config.plans.starter.priceMonthly}<span>/mo</span>`;
+  el('growthPrice').innerHTML = `$${config.plans.growth.priceMonthly}<span>/mo</span>`;
+  loadPaypalSdk();
+}
+
+async function loadCurrentStatus() {
+  try {
+    const res = await fetch('/api/billing/status', { credentials: 'include' });
+    if (!res.ok) return; // not logged in — fine, they can still view pricing
+    const sub = await res.json();
+    if (sub.plan !== 'none' && sub.status === 'active') {
+      const banner = el('currentBanner');
+      banner.style.display = 'block';
+      banner.textContent = `Current plan: ${sub.plan} (${sub.billingType}) — active`;
+    }
+  } catch {}
+}
+
+function loadPaypalSdk() {
+  const script = document.createElement('script');
+  script.src = `https://www.paypal.com/sdk/js?client-id=${config.paypalClientId}&vault=true&intent=subscription`;
+  script.onload = renderMonthlyButtons;
+  document.head.appendChild(script);
+}
+
+function renderMonthlyButtons() {
+  ['starter', 'growth'].forEach((plan) => {
+    const container = el(`paypal-${plan}`);
+    container.innerHTML = '';
+    if (typeof paypal === 'undefined') return;
+    paypal.Buttons({
+      createSubscription: (data, actions) => actions.subscription.create({ plan_id: config.plans[plan].paypalPlanId }),
+      onApprove: (data) => {
+        setStatus(`Subscribed to ${plan}! Subscription ID: ${data.subscriptionID}`);
+        setTimeout(loadCurrentStatus, 1500);
+      },
+      onError: (err) => setStatus('PayPal error — see console for details.', true),
+    }).render(`#paypal-${plan}`);
+  });
+}
+
+async function payAnnual(plan) {
+  setStatus(`Creating annual order for ${plan}…`);
+  try {
+    const res = await fetch('/api/billing/annual', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    window.location.href = data.approveUrl;
+  } catch (err) {
+    setStatus(err.message, true);
+  }
+}
+
+el('btnStarterAnnual').addEventListener('click', () => payAnnual('starter'));
+el('btnGrowthAnnual').addEventListener('click', () => payAnnual('growth'));
+
+function setBillingMode(mode) {
+  billingMode = mode;
+  el('btnMonthly').classList.toggle('active', mode === 'monthly');
+  el('btnAnnual').classList.toggle('active', mode === 'annual');
+
+  const showAnnual = mode === 'annual';
+  el('btnStarterAnnual').style.display = showAnnual ? 'block' : 'none';
+  el('btnGrowthAnnual').style.display = showAnnual ? 'block' : 'none';
+  el('paypal-starter').style.display = showAnnual ? 'none' : 'block';
+  el('paypal-growth').style.display = showAnnual ? 'none' : 'block';
+
+  if (config) {
+    el('starterPrice').innerHTML = showAnnual
+      ? `$${config.plans.starter.priceAnnual}<span>/yr</span>`
+      : `$${config.plans.starter.priceMonthly}<span>/mo</span>`;
+    el('growthPrice').innerHTML = showAnnual
+      ? `$${config.plans.growth.priceAnnual}<span>/yr</span>`
+      : `$${config.plans.growth.priceMonthly}<span>/mo</span>`;
+  }
+}
+
+el('btnMonthly').addEventListener('click', () => setBillingMode('monthly'));
+el('btnAnnual').addEventListener('click', () => setBillingMode('annual'));
+
+// Handle returning from an annual PayPal approval redirect
+(async function handleReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const orderId = params.get('token');
+  if (params.has('paypal_cancel')) return setStatus('Checkout cancelled.', true);
+  if (!orderId) return;
+  setStatus('Confirming annual payment…');
+  try {
+    const res = await fetch(`/payments/capture-order/${orderId}`, { method: 'POST', credentials: 'include' });
+    const data = await res.json();
+    if (data.status === 'COMPLETED') {
+      setStatus('Annual plan activated!');
+      loadCurrentStatus();
+    } else {
+      setStatus('Payment not completed.', true);
+    }
+  } catch (err) {
+    setStatus(err.message, true);
+  }
+})();
+
+loadConfig();
+loadCurrentStatus();
+</script>
+</body>
+</html>
