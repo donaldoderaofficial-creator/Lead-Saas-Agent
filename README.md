@@ -13,6 +13,18 @@ is confirmed via PayPal or M-Pesa, and every completed lead lands in a
 private dashboard for follow-up tracking — status, notes, and search across
 your whole lead history.
 
+## Architecture at a glance
+
+The app is built around a small persistence layer in [store.js](store.js):
+
+- pending leads stay in SQLite until payment confirmation arrives
+- completed lead reports are stored as JSON documents and surfaced to the dashboard
+- user accounts, roles, and TOTP configuration are kept as first-class records
+- compliance incidents and audit activity are retained for review and reinstatement workflows
+- session storage is initialized through the same SQLite-backed session factory used by Express
+
+This keeps the system understandable and auditable without over-engineering the data model for a single-deployment SaaS setup.
+
 ## Safety and compliance controls
 
 Lead submissions may include optional campaign, description, message, notes, instructions, goal, or targeting fields. Requests that clearly indicate high-risk activity are blocked before processing and recorded in an internal review queue.

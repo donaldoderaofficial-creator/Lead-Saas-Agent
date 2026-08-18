@@ -24,6 +24,11 @@ const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, genera
 const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = require('./explorium-client');
 
 const app = express();
+const DISPATCH_PRO = {
+  brand: 'Dispatch Pro',
+  founder: 'Odera Donald Ombok, BSc',
+  title: 'Founder & CEO',
+};
 app.set('trust proxy', 1); // needed for secure cookies behind Render/Railway's proxy
 app.use(express.json());
 app.use(express.static('public'));
@@ -234,7 +239,13 @@ app.post('/auth/register', async (req, res) => {
     const totpSecret = generateTotpSecret();
     const userId = users.create(username, passwordHash, totpSecret);
     const qrCodeDataUrl = await generateQrCode(username, totpSecret);
-    res.json({ userId, username, qrCodeDataUrl, manualEntryKey: totpSecret });
+    res.json({
+      userId,
+      username,
+      qrCodeDataUrl,
+      manualEntryKey: totpSecret,
+      companyProfile: DISPATCH_PRO,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -282,7 +293,8 @@ app.post('/auth/login', async (req, res) => {
 
   req.session.userId = user.id;
   req.session.username = user.username;
-  res.json({ status: 'ok', username: user.username });
+  req.session.companyProfile = DISPATCH_PRO;
+  res.json({ status: 'ok', username: user.username, companyProfile: DISPATCH_PRO });
 });
 
 app.post('/auth/logout', (req, res) => {
@@ -291,7 +303,13 @@ app.post('/auth/logout', (req, res) => {
 
 app.get('/auth/me', (req, res) => {
   if (!req.session?.userId) return res.status(401).json({ error: 'Not logged in' });
-  res.json({ username: req.session.username });
+  req.session.companyProfile = req.session.companyProfile || DISPATCH_PRO;
+  res.json({
+    username: req.session.username,
+    companyProfile: req.session.companyProfile,
+    founder: DISPATCH_PRO.founder,
+    founderTitle: DISPATCH_PRO.title,
+  });
 });
 
 app.get('/api/leads', requireAuth, (req, res) => {
