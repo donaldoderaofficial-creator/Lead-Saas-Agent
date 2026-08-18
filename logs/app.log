@@ -20,3 +20,6 @@
 {"timestamp":"2026-08-18T22:55:59.504Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:3000","env":"development","isProd":false}
 {"timestamp":"2026-08-18T22:56:13.928Z","level":"info","message":"GET /health","statusCode":200,"duration":"4ms"}
 {"timestamp":"2026-08-18T22:56:17.934Z","level":"info","message":"POST /payments/mpesa/c2b/confirmation","statusCode":200,"duration":"8ms"}
+{"timestamp":"2026-08-18T22:59:21.349Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:3000","env":"development","isProd":false}
+{"timestamp":"2026-08-18T22:59:34.152Z","level":"info","message":"GET /health","statusCode":200,"duration":"4ms"}
+{"timestamp":"2026-08-18T22:59:37.911Z","level":"info","message":"GET /api/payments/options","statusCode":200,"duration":"3ms"}

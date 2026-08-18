@@ -162,6 +162,23 @@ Get current authenticated user info.
 
 ### Lead Management
 
+#### `GET /api/payments/options`
+Returns the payment providers configured for the current deployment. PayPal
+handles international USD checkout; M-Pesa handles KES STK Push and dynamic
+QR payments. These providers settle independently and cannot transfer funds
+directly between PayPal and M-Pesa.
+
+**Response:** `200 OK`
+```json
+{
+  "providers": {
+    "paypal": { "enabled": true, "currency": "USD", "methods": ["checkout"] },
+    "mpesa": { "enabled": true, "currency": "KES", "methods": ["stk-push", "dynamic-qr"] }
+  },
+  "supportedCurrencies": ["USD", "KES"]
+}
+```
+
 #### `POST /api/lead`
 Submit a new lead and initiate payment.
 

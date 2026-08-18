@@ -107,6 +107,26 @@ app.get('/health', (req, res) => {
   });
 });
 
+// ---- Global payment capabilities ----
+app.get('/api/payments/options', (req, res) => {
+  res.json({
+    providers: {
+      paypal: {
+        enabled: config.payment.paypal.enabled,
+        currency: 'USD',
+        methods: ['checkout'],
+      },
+      mpesa: {
+        enabled: config.payment.mpesa.enabled,
+        currency: 'KES',
+        methods: ['stk-push', 'dynamic-qr'],
+      },
+    },
+    supportedCurrencies: ['USD', 'KES'],
+    settlement: 'Payments settle separately with PayPal or M-Pesa; direct PayPal-to-M-Pesa transfers are not supported by provider APIs.',
+  });
+});
+
 // ---- Metrics & Monitoring Endpoint (Admin Only) ----
 app.get('/metrics', requireAuth, (req, res) => {
   res.json({

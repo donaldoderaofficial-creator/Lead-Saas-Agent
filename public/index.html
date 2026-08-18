@@ -293,6 +293,23 @@ async function pollReport(ref, { onPending } = {}) {
   });
 }
 
+async function loadPaymentOptions() {
+  try {
+    const res = await fetch('/api/payments/options');
+    if (!res.ok) return;
+    const data = await res.json();
+    const paypalEnabled = data.providers?.paypal?.enabled;
+    const mpesaEnabled = data.providers?.mpesa?.enabled;
+    el('payPaypal').disabled = !paypalEnabled;
+    el('payMpesa').disabled = !mpesaEnabled;
+    if (!paypalEnabled && !mpesaEnabled) {
+      setStatus('Payment providers are being configured. Please try again later.', true);
+    }
+  } catch {
+    // Keep the checkout usable if capability discovery is temporarily unavailable.
+  }
+}
+
 el('payPaypal').addEventListener('click', async () => {
   if (!validateFields()) return setStatus('Enter a valid name and email first.', true);
   const lead = getLead();
@@ -369,6 +386,8 @@ el('payMpesa').addEventListener('click', async () => {
     setStatus(err.message, true);
   }
 })();
+
+loadPaymentOptions();
 
 const FAQ = [
   { q: ['price', 'cost', 'how much', 'fee'], a: 'The premium report is $9.99 via PayPal, or KSh 1,300 via M-Pesa STK Push.' },
