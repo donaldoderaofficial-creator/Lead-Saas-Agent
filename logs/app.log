@@ -8,3 +8,8 @@
 {"timestamp":"2026-08-18T22:17:30.090Z","level":"info","message":"GET /health","statusCode":200,"duration":"1ms"}
 {"timestamp":"2026-08-18T22:18:38.208Z","level":"info","message":"GET /favicon.ico","statusCode":404,"duration":"2ms"}
 {"timestamp":"2026-08-18T22:18:53.334Z","level":"info","message":"GET /","statusCode":200,"duration":"4ms"}
+{"timestamp":"2026-08-18T22:21:56.971Z","level":"info","message":"SIGTERM received, shutting down gracefully"}
+{"timestamp":"2026-08-18T22:21:56.972Z","level":"info","message":"Server closed"}
+{"timestamp":"2026-08-18T22:22:21.956Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:3000","env":"development","isProd":false}
+{"timestamp":"2026-08-18T22:22:36.890Z","level":"info","message":"GET /health","statusCode":200,"duration":"4ms"}
+{"timestamp":"2026-08-18T22:23:15.891Z","level":"info","message":"GET /health","statusCode":200,"duration":"2ms"}
