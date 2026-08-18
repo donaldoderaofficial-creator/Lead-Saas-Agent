@@ -70,7 +70,7 @@ Create a new user account (first-time registration).
     "brand": "Dispatch Pro",
     "founder": "Odera Donald Ombok, BSc",
     "title": "Founder & CEO",
-    "email": "odera@dispatchpro.com"
+    "email": "odera.ombok@dispatchpro.com"
   }
 }
 ```
@@ -118,7 +118,7 @@ Authenticate and establish session.
     "brand": "Dispatch Pro",
     "founder": "Odera Donald Ombok, BSc",
     "title": "Founder & CEO",
-    "email": "odera@dispatchpro.com"
+    "email": "odera.ombok@dispatchpro.com"
   }
 }
 ```

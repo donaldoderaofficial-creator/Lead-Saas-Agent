@@ -72,7 +72,7 @@ const config = {
     brand: 'Dispatch Pro',
     founder: 'Odera Donald Ombok, BSc',
     title: 'Founder & CEO',
-    email: 'odera@dispatchpro.com',
+    email: 'odera.ombok@dispatchpro.com',
     website: 'https://dispatchpro.com',
     supportEmail: 'support@dispatchpro.com',
   },

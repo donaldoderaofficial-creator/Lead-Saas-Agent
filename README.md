@@ -1,7 +1,7 @@
 # Dispatch Pro - Lead Agent SaaS
 
 **Built by:** Odera Donald Ombok, BSc — Founder & CEO  
-**Email:** odera@dispatchpro.com
+**Email:** odera.ombok@dispatchpro.com
 
 Event-driven lead-qualification agent with dual payment gateway integration
 (PayPal + M-Pesa STK Push), a persistent leads dashboard with 2FA-protected

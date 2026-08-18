@@ -378,4 +378,4 @@ if (isFeatureEnabled('prospecting')) {
 
 **Built by Odera Donald Ombok, BSc**  
 **Founder & CEO, Dispatch Pro**  
-**odera@dispatchpro.com**
+**odera.ombok@dispatchpro.com**
