@@ -291,7 +291,10 @@ app.post('/payments/mpesa/c2b/validation', (req, res) => {
 
 app.post('/payments/mpesa/c2b/confirmation', async (req, res) => {
   const payment = req.body || {};
-  if (payment.TransID && payment.BillRefNumber && Number(payment.TransAmount) > 0) {
+  const expectedShortCode = config.payment.mpesa.shortCode;
+  const merchantMatches = expectedShortCode
+    && String(payment.BusinessShortCode || '') === String(expectedShortCode);
+  if (merchantMatches && payment.TransID && payment.BillRefNumber && Number(payment.TransAmount) > 0) {
     await finalizeLead(payment.BillRefNumber, {
       provider: 'mpesa-c2b',
       transactionId: payment.TransID,

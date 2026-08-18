@@ -226,6 +226,16 @@ is rate-limited per client IP.
 
 ---
 
+#### `POST /payments/mpesa/c2b/confirmation`
+Safaricom calls this endpoint after a QR or other C2B merchant payment. The
+server validates the configured business shortcode, records the receipt
+idempotently, and unlocks a matching pending lead reference.
+
+Register the paired validation URL and this confirmation URL in the Daraja
+merchant configuration.
+
+---
+
 #### `GET /api/leads`
 List all leads for the authenticated user. **Requires authentication.**
 
