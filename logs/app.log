@@ -13,3 +13,7 @@
 {"timestamp":"2026-08-18T22:22:21.956Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:3000","env":"development","isProd":false}
 {"timestamp":"2026-08-18T22:22:36.890Z","level":"info","message":"GET /health","statusCode":200,"duration":"4ms"}
 {"timestamp":"2026-08-18T22:23:15.891Z","level":"info","message":"GET /health","statusCode":200,"duration":"2ms"}
+{"timestamp":"2026-08-18T22:45:05.547Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:3000","env":"development","isProd":false}
+{"timestamp":"2026-08-18T22:45:31.784Z","level":"info","message":"GET /health","statusCode":200,"duration":"4ms"}
+{"timestamp":"2026-08-18T22:45:31.812Z","level":"error","message":"M-Pesa QR generation failed","error":"Missing MPESA_SHORT_CODE. Set it in your .env file."}
+{"timestamp":"2026-08-18T22:45:31.813Z","level":"info","message":"POST /payments/mpesa/qr","statusCode":400,"duration":"11ms"}

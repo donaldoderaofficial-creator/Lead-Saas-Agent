@@ -197,6 +197,35 @@ or (M-Pesa):
 
 ---
 
+#### `POST /payments/mpesa/qr`
+Generate a dynamic M-Pesa QR code for a merchant payment. The merchant name
+and configured shortcode are supplied by the server.
+
+**Request:**
+```json
+{
+  "reference": "ORDER-123",
+  "amount": 250,
+  "transactionCode": "PB",
+  "size": 300
+}
+```
+
+`transactionCode` supports `PB` (Paybill) and `BG` (Buy Goods). The endpoint
+is rate-limited per client IP.
+
+**Response:** `200 OK`
+```json
+{
+  "method": "mpesa-qr",
+  "ResponseCode": "00",
+  "RequestID": "request-1",
+  "QRCode": "base64-encoded-qr-payload"
+}
+```
+
+---
+
 #### `GET /api/leads`
 List all leads for the authenticated user. **Requires authentication.**
 
@@ -255,7 +284,6 @@ Update follow-up status and notes for a lead. **Requires authentication.**
 **Errors:**
 - `400 Bad Request` - Invalid status value
 - `404 Not Found` - Lead not found
-- `401 Unauthorized` - Not authenticated
 
 ---
 
@@ -279,9 +307,6 @@ Get the qualification report for a completed lead.
   }
 }
 ```
-
----
-
 ### Prospecting (Premium Feature)
 
 #### `POST /api/prospecting/companies`

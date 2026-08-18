@@ -16,6 +16,8 @@
 
 require('dotenv').config();
 
+const fetch = globalThis.fetch || require('cross-fetch');
+
 const BASE_URL = {
   sandbox: 'https://sandbox.safaricom.co.ke',
   production: 'https://api.safaricom.co.ke',
@@ -97,4 +99,54 @@ async function initiateSTKPush({ phone, amount, accountReference, description })
   return data; // includes CheckoutRequestID
 }
 
-module.exports = { initiateSTKPush };
+/**
+ * Generate a dynamic M-Pesa QR code for a supported transaction type.
+ * @param {{ merchantName: string, reference: string, amount: number, transactionCode: string, cpi?: string, size?: number }} params
+ * transactionCode is one of PB (Paybill) or BG (Buy Goods) for merchant payments.
+ */
+async function generateDynamicQrCode({ merchantName, reference, amount, transactionCode, cpi, size = 300 }) {
+  const shortcode = cpi || requireEnv('MPESA_SHORT_CODE');
+  const normalizedCode = String(transactionCode || '').toUpperCase();
+  const numericAmount = Number(amount);
+
+  if (!merchantName || String(merchantName).length > 20) {
+    throw new Error('merchantName is required and must be 20 characters or fewer');
+  }
+  if (!reference || String(reference).length > 20) {
+    throw new Error('reference is required and must be 20 characters or fewer');
+  }
+  if (!Number.isInteger(numericAmount) || numericAmount < 1) {
+    throw new Error('amount must be a positive integer');
+  }
+  if (!['PB', 'BG'].includes(normalizedCode)) {
+    throw new Error('transactionCode must be PB or BG');
+  }
+  if (!Number.isInteger(Number(size)) || Number(size) < 100 || Number(size) > 1000) {
+    throw new Error('size must be an integer between 100 and 1000');
+  }
+
+  const token = await getAccessToken();
+  const res = await fetch(`${baseUrl()}/mpesa/qrcode/v1/generate`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      MerchantName: String(merchantName),
+      RefNo: String(reference),
+      Amount: numericAmount,
+      TrxCode: normalizedCode,
+      CPI: String(shortcode),
+      Size: String(size),
+    }),
+  });
+
+  const data = await res.json();
+  if (!res.ok || data.ResponseCode !== '00') {
+    throw new Error(`M-Pesa QR generation failed: ${JSON.stringify(data)}`);
+  }
+  return data;
+}
+
+module.exports = { generateDynamicQrCode, initiateSTKPush };

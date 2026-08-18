@@ -26,7 +26,7 @@ const { RateLimiter } = require('./rate-limiter');
 
 // Core modules
 const { client, checkoutNodeJssdk, verifyWebhookSignature } = require('./paypal-client');
-const { initiateSTKPush } = require('./mpesa-client');
+const { generateDynamicQrCode, initiateSTKPush } = require('./mpesa-client');
 const { processLead } = require('./lead-pipeline');
 const { pendingLeads, completedReports, leads, users, createSessionStore } = require('./store');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateQrCode } = require('./auth');
@@ -186,6 +186,29 @@ app.post('/api/lead', async (req, res) => {
     return res.status(400).json({ error: "method must be 'paypal' or 'mpesa'" });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- M-Pesa: generate a dynamic QR code for merchant checkout ----
+app.post('/payments/mpesa/qr', async (req, res) => {
+  if (rateLimiter.isLimited(`mpesa-qr:${req.ip}`, 30, 60 * 60 * 1000)) {
+    return res.status(429).json({ error: 'Too many QR requests. Try again later.' });
+  }
+
+  const { reference, amount, transactionCode = 'PB', size = 300 } = req.body || {};
+  try {
+    const qr = await generateDynamicQrCode({
+      merchantName: DISPATCH_PRO.brand,
+      reference,
+      amount,
+      transactionCode,
+      size,
+      cpi: config.payment.mpesa.shortCode,
+    });
+    res.json({ method: 'mpesa-qr', ...qr });
+  } catch (err) {
+    logger.error('M-Pesa QR generation failed', { error: err.message });
+    res.status(400).json({ error: err.message });
   }
 });
 
