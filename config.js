@@ -10,6 +10,21 @@ const ENV = process.env.NODE_ENV || 'development';
 const IS_PROD = ENV === 'production';
 const IS_DEV = ENV === 'development';
 
+function parsePort(value) {
+  const port = Number(value);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`PORT must be an integer between 1 and 65535; received: ${value}`);
+  }
+  return port;
+}
+
+function parseCorsOrigins(value) {
+  return value
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
 // Application Configuration
 const config = {
   // Environment
@@ -19,8 +34,8 @@ const config = {
   isTest: ENV === 'test',
 
   // Server
-  port: parseInt(process.env.PORT || 3000),
-  host: process.env.HOST || 'localhost',
+  port: parsePort(process.env.PORT || 3000),
+  host: process.env.HOST || (IS_PROD ? '0.0.0.0' : 'localhost'),
   sessionSecret: process.env.SESSION_SECRET,
 
   // Database
@@ -124,7 +139,7 @@ const config = {
     bcryptRounds: 12,
     tokenExpiry: 8 * 60 * 60 * 1000, // 8 hours
     csrfProtection: !IS_DEV,
-    corsOrigins: (process.env.CORS_ORIGINS || 'http://localhost:3000').split(','),
+    corsOrigins: parseCorsOrigins(process.env.CORS_ORIGINS || 'http://localhost:3000'),
   },
 
   // Monitoring & Analytics (maintainability, efficiency)
@@ -139,6 +154,12 @@ const config = {
 function validate() {
   if (!config.sessionSecret) {
     throw new Error('Missing SESSION_SECRET environment variable');
+  }
+  if (config.isProd && config.sessionSecret.length < 32) {
+    throw new Error('SESSION_SECRET must be at least 32 characters in production');
+  }
+  if (config.security.corsOrigins.length === 0) {
+    throw new Error('CORS_ORIGINS must contain at least one allowed origin');
   }
   if (config.payment.paypal.enabled && !config.payment.paypal.clientId) {
     console.warn('PayPal enabled but credentials missing');
@@ -164,6 +185,8 @@ module.exports = {
   config,
   get,
   isFeatureEnabled,
+  parseCorsOrigins,
+  parsePort,
   ENV,
   IS_PROD,
   IS_DEV,

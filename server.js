@@ -41,9 +41,24 @@ if (config.performance.enableCompression) {
 }
 
 app.use(requestLogger); // Request logging for monitoring
-app.set('trust proxy', 1);
+app.set('trust proxy', config.isProd ? 1 : false);
 app.use(express.json());
 app.use(express.static('public'));
+
+app.use((req, res, next) => {
+  const requestOrigin = req.get('origin');
+  if (!requestOrigin) return next();
+  if (!config.security.corsOrigins.includes(requestOrigin)) {
+    return res.status(403).json({ error: 'Origin is not allowed' });
+  }
+  res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+  res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 
 // ---- Session Configuration ----
 if (!config.sessionSecret) {
@@ -67,17 +82,17 @@ app.use(session({
 const rateLimiter = new RateLimiter();
 const loginAttempts = new Map(); // username -> [timestamps]
 
-function isRateLimited(username) {
+function isRateLimited(username, req) {
   return rateLimiter.isLimited(
-    username,
+    `${req.ip}:${username}`,
     config.rateLimiting.loginAttempts,
     config.rateLimiting.loginWindowMs
   );
 }
 
-function recordFailedAttempt(username) {
+function recordFailedAttempt(username, req) {
   // Rate limiter tracks this automatically
-  logger.warn(`Failed login attempt for user: ${username}`);
+  logger.warn(`Failed login attempt for user: ${username}`, { ip: req.ip });
 }
 
 // Flexible, configurable pricing from config system
@@ -302,19 +317,19 @@ app.post('/auth/login', async (req, res) => {
   const { username, password, totpCode } = req.body || {};
   if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
 
-  if (isRateLimited(username)) {
+  if (isRateLimited(username, req)) {
     return res.status(429).json({ error: 'Too many failed attempts. Try again in a few minutes.' });
   }
 
   const user = users.findByUsername(username);
   if (!user) {
-    recordFailedAttempt(username);
+    recordFailedAttempt(username, req);
     return res.status(401).json({ error: 'Invalid username or password' });
   }
 
   const passwordOk = await verifyPassword(password, user.password_hash);
   if (!passwordOk) {
-    recordFailedAttempt(username);
+    recordFailedAttempt(username, req);
     return res.status(401).json({ error: 'Invalid username or password' });
   }
 
@@ -323,7 +338,7 @@ app.post('/auth/login', async (req, res) => {
   }
 
   if (!totpCode || !verifyTotpCode(totpCode, user.totp_secret)) {
-    recordFailedAttempt(username);
+    recordFailedAttempt(username, req);
     return res.status(401).json({ error: 'Invalid 2FA code' });
   }
 

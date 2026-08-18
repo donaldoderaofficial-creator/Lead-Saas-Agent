@@ -28,7 +28,7 @@ jobs:
 
       - name: Smoke test health endpoint
         env:
-          SESSION_SECRET: ci-only-session-secret
+          SESSION_SECRET: ci-only-session-secret-with-at-least-32-characters
           DB_PATH: /tmp/lead-agent-ci.db
           NODE_ENV: production
         run: |
