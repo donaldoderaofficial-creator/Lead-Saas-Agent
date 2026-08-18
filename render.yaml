@@ -18,7 +18,7 @@ services:
       - key: TZ
         value: Africa/Nairobi
       - key: CORS_ORIGINS
-        value: https://lead-saas-agent.netlify.app
+        value: https://lead-saas-agent.netlify.app,https://agent-6a81dca937d9510b5c359--dispatch-lead-agent.netlify.app
       - key: PUBLIC_APP_URL
         value: https://lead-saas-agent.netlify.app
       - key: BACKUP_DIR

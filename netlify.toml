@@ -1,0 +1,26 @@
+[build]
+  publish = "public"
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://ideal-spork-qv9jg97vwwrvc44qw-3000.app.github.dev/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/leads/*"
+  to = "https://ideal-spork-qv9jg97vwwrvc44qw-3000.app.github.dev/leads/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/payments/*"
+  to = "https://ideal-spork-qv9jg97vwwrvc44qw-3000.app.github.dev/payments/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/health"
+  to = "https://ideal-spork-qv9jg97vwwrvc44qw-3000.app.github.dev/health"
+  status = 200
+  force = true

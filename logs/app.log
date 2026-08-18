@@ -28,3 +28,4 @@
 {"timestamp":"2026-08-18T23:05:00.469Z","level":"info","message":"POST /api/lead","statusCode":402,"duration":"10ms"}
 {"timestamp":"2026-08-18T23:05:04.372Z","level":"info","message":"GET /health","statusCode":200,"duration":"1ms"}
 {"timestamp":"2026-08-18T23:14:20.043Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:3000","env":"development","isProd":false}
+{"timestamp":"2026-08-18T23:16:10.635Z","level":"info","message":"GET /api/payments/options","statusCode":200,"duration":"6ms"}
