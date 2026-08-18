@@ -1,0 +1,23 @@
+# <type>(<scope>): <subject>
+#
+# <body>
+#
+# <footer>
+#
+# Conventional Commits Format:
+# type: feat, fix, docs, style, refactor, perf, test, chore, ci, revert
+# scope: (optional) component or module affected
+# subject: (required) brief description of change
+# body: (optional) detailed explanation of what and why
+# footer: (optional) references to issues or breaking changes
+#
+# Examples:
+# feat(auth): Add TOTP-based 2FA support
+# fix(api): Resolve rate limit calculation error
+# docs: Update architecture documentation
+# refactor(server): Improve error handling middleware
+# perf(cache): Implement TTL-based caching
+#
+# Dispatch Pro - Lead Agent SaaS Platform
+# Author: Odera Donald Ombok, BSc
+# Founder & CEO, Dispatch Pro
