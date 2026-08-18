@@ -20,6 +20,10 @@ services:
         value: sandbox
       - key: PAYPAL_WEBHOOK_ID
         sync: false
+      - key: PAYPAL_PLAN_STARTER_MONTHLY
+        sync: false
+      - key: PAYPAL_PLAN_GROWTH_MONTHLY
+        sync: false
       - key: MPESA_CONSUMER_KEY
         sync: false
       - key: MPESA_CONSUMER_SECRET

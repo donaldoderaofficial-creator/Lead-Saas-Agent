@@ -30,6 +30,7 @@ persistent disk mounted at `/data`.
 2. Connect the GitHub repo you just pushed — Render reads `render.yaml` automatically
 3. It will prompt you for the env vars marked `sync: false` (your real credentials).
    Fill in: `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`,
+   `PAYPAL_PLAN_STARTER_MONTHLY`, `PAYPAL_PLAN_GROWTH_MONTHLY`,
    `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_SHORT_CODE`,
    `MPESA_PASSKEY`, `MPESA_CALLBACK_URL` (use the Render URL you're given +
    `/payments/mpesa/callback`), plus `COMPLIANCE_MPESA_NUMBER`,
