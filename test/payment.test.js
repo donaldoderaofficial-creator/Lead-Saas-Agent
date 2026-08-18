@@ -11,6 +11,13 @@ for (const suffix of ['', '-wal', '-shm']) {
 process.env.DB_PATH = dbPath;
 
 const { payments } = require('../store');
+const { hasActiveSubscription } = require('../subscription-policy');
+
+test('requires an active paid package before service access', () => {
+  assert.equal(hasActiveSubscription({ plan: 'none', status: 'inactive' }), false);
+  assert.equal(hasActiveSubscription({ plan: 'starter', status: 'cancelled' }), false);
+  assert.equal(hasActiveSubscription({ plan: 'starter', status: 'active' }), true);
+});
 
 test('records each provider payment once', () => {
   const payment = {

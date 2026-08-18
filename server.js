@@ -28,7 +28,8 @@ const { RateLimiter } = require('./rate-limiter');
 const { client, checkoutNodeJssdk, verifyWebhookSignature } = require('./paypal-client');
 const { generateDynamicQrCode, initiateSTKPush } = require('./mpesa-client');
 const { processLead } = require('./lead-pipeline');
-const { pendingLeads, completedReports, payments, leads, users, createSessionStore } = require('./store');
+const { pendingLeads, completedReports, payments, leads, users, subscription, createSessionStore } = require('./store');
+const { hasActiveSubscription } = require('./subscription-policy');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateQrCode } = require('./auth');
 const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = require('./explorium-client');
 
@@ -127,6 +128,20 @@ app.get('/api/payments/options', (req, res) => {
   });
 });
 
+app.get('/api/config', (req, res) => {
+  res.json({
+    paypalClientId: config.payment.paypal.clientId || null,
+    plans: {
+      starter: { paypalPlanId: process.env.PAYPAL_PLAN_STARTER_MONTHLY || null },
+      growth: { paypalPlanId: process.env.PAYPAL_PLAN_GROWTH_MONTHLY || null },
+    },
+  });
+});
+
+app.get('/api/billing/status', (req, res) => {
+  res.json(subscription.get());
+});
+
 // ---- Metrics & Monitoring Endpoint (Admin Only) ----
 app.get('/metrics', requireAuth, (req, res) => {
   res.json({
@@ -155,6 +170,13 @@ async function finalizeLead(ref, payment) {
 }
 // ---- Step 1: submit a lead, get a payment reference back ----
 app.post('/api/lead', async (req, res) => {
+  if (!hasActiveSubscription(subscription.get())) {
+    return res.status(402).json({
+      error: 'An active Dispatch Pro package is required before lead services can be used.',
+      code: 'subscription_required',
+      plansUrl: '/billing.html',
+    });
+  }
   const { name, email, phone, method } = req.body || {};
   if (!name || !email) return res.status(400).json({ error: 'Missing name or email' });
 
@@ -282,6 +304,27 @@ app.post('/payments/paypal/webhook', async (req, res) => {
       raw: event,
     });
   }
+  if (event.event_type === 'BILLING.SUBSCRIPTION.ACTIVATED') {
+    const planId = event.resource?.plan_id;
+    const plan = planId === process.env.PAYPAL_PLAN_GROWTH_MONTHLY
+      ? 'growth'
+      : planId === process.env.PAYPAL_PLAN_STARTER_MONTHLY ? 'starter' : null;
+    if (plan) {
+      subscription.set({
+        plan,
+        billingType: 'monthly',
+        paypalSubscriptionId: event.resource.id,
+        status: 'active',
+        currentPeriodEnd: event.resource.billing_info?.next_billing_time || null,
+      });
+    }
+  }
+  if (['BILLING.SUBSCRIPTION.CANCELLED', 'BILLING.SUBSCRIPTION.SUSPENDED'].includes(event.event_type)) {
+    const current = subscription.get();
+    if (current.paypalSubscriptionId === event.resource?.id) {
+      subscription.set({ ...current, status: event.event_type.endsWith('SUSPENDED') ? 'suspended' : 'cancelled' });
+    }
+  }
   res.json({ received: true });
 });
 
@@ -338,6 +381,13 @@ app.get('/leads/report/:ref', (req, res) => {
 
 // ---- Free tier: run the pipeline without payment ----
 app.post('/leads', async (req, res) => {
+  if (!hasActiveSubscription(subscription.get())) {
+    return res.status(402).json({
+      error: 'An active Dispatch Pro package is required before lead services can be used.',
+      code: 'subscription_required',
+      plansUrl: '/billing.html',
+    });
+  }
   try {
     const outcome = await processLead(req.body);
     res.json(outcome);
@@ -352,6 +402,17 @@ app.post('/leads', async (req, res) => {
 // registration is not open to the public.
 function requireAuth(req, res, next) {
   if (!req.session?.userId) return res.status(401).json({ error: 'Not logged in' });
+  next();
+}
+
+function requireActiveSubscription(req, res, next) {
+  if (!hasActiveSubscription(subscription.get())) {
+    return res.status(402).json({
+      error: 'An active Dispatch Pro package is required for this service.',
+      code: 'subscription_required',
+      plansUrl: '/billing.html',
+    });
+  }
   next();
 }
 
@@ -465,7 +526,7 @@ app.patch('/api/leads/:ref/followup', requireAuth, (req, res) => {
 // ---- Prospecting: company/prospect data via Explorium, costs real credits per call ----
 // All gated behind dashboard login — this is a paid feature, not public.
 
-app.post('/api/prospecting/companies', requireAuth, async (req, res) => {
+app.post('/api/prospecting/companies', requireAuth, requireActiveSubscription, async (req, res) => {
   try {
     const result = await fetchBusinesses(req.body || {});
     res.json(result);
@@ -474,7 +535,7 @@ app.post('/api/prospecting/companies', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/prospecting/person', requireAuth, async (req, res) => {
+app.post('/api/prospecting/person', requireAuth, requireActiveSubscription, async (req, res) => {
   const { fullName, companyName, email } = req.body || {};
   if (!email && !(fullName && companyName)) {
     return res.status(400).json({ error: 'Provide either email, or fullName + companyName' });
@@ -487,7 +548,7 @@ app.post('/api/prospecting/person', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/prospecting/company-prospects', requireAuth, async (req, res) => {
+app.post('/api/prospecting/company-prospects', requireAuth, requireActiveSubscription, async (req, res) => {
   const { businessIds } = req.body || {};
   if (!Array.isArray(businessIds) || businessIds.length === 0) {
     return res.status(400).json({ error: 'businessIds must be a non-empty array of Explorium business IDs' });
