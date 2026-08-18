@@ -172,7 +172,7 @@
       Dispatch Pro • Founder & CEO: Odera Donald Ombok, BSc
     </div>
     <h1>Premium Lead Report</h1>
-    <p class="sub">Submit a lead, pay to unlock the full scored report.</p>
+    <p class="sub">Subscribe to a Dispatch Pro package, then submit leads and pay to unlock reports.</p>
 
     <div class="steps">
       <div class="step active" id="stepDetails"><div class="dot">1</div><div class="label">Details</div></div>
@@ -322,7 +322,13 @@ el('payPaypal').addEventListener('click', async () => {
       body: JSON.stringify({ ...lead, method: 'paypal' }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    if (!res.ok) {
+      if (res.status === 402) {
+        window.location.href = data.plansUrl || '/billing.html';
+        return;
+      }
+      throw new Error(data.error);
+    }
 
     sessionStorage.setItem('leadRef', data.orderId);
     setStep(2);
@@ -350,7 +356,13 @@ el('payMpesa').addEventListener('click', async () => {
       body: JSON.stringify({ ...lead, phone, method: 'mpesa' }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    if (!res.ok) {
+      if (res.status === 402) {
+        window.location.href = data.plansUrl || '/billing.html';
+        return;
+      }
+      throw new Error(data.error);
+    }
 
     setStatus('Enter your M-Pesa PIN on your phone. Waiting…', false, true);
     const report = await pollReport(data.checkoutRequestId);

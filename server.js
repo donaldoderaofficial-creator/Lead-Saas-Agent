@@ -379,7 +379,7 @@ app.get('/leads/report/:ref', (req, res) => {
   res.status(404).json({ error: 'Unknown reference' });
 });
 
-// ---- Free tier: run the pipeline without payment ----
+// ---- Internal lead processing: package gate applies before this route ----
 app.post('/leads', async (req, res) => {
   if (!hasActiveSubscription(subscription.get())) {
     return res.status(402).json({

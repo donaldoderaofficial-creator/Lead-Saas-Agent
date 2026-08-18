@@ -162,6 +162,11 @@ Get current authenticated user info.
 
 ### Lead Management
 
+All lead-generation and prospecting services require an active Dispatch Pro
+package. Without one, service requests return `402 Payment Required` with
+`code: "subscription_required"` and a link to the package page. PayPal
+subscription activation and cancellation are applied from verified webhooks.
+
 #### `GET /api/payments/options`
 Returns the payment providers configured for the current deployment. PayPal
 handles international USD checkout; M-Pesa handles KES STK Push and dynamic
