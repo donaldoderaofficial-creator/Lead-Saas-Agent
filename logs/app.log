@@ -17,3 +17,4 @@
 {"timestamp":"2026-08-18T22:45:31.784Z","level":"info","message":"GET /health","statusCode":200,"duration":"4ms"}
 {"timestamp":"2026-08-18T22:45:31.812Z","level":"error","message":"M-Pesa QR generation failed","error":"Missing MPESA_SHORT_CODE. Set it in your .env file."}
 {"timestamp":"2026-08-18T22:45:31.813Z","level":"info","message":"POST /payments/mpesa/qr","statusCode":400,"duration":"11ms"}
+{"timestamp":"2026-08-18T22:55:59.504Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:3000","env":"development","isProd":false}
