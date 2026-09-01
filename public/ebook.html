@@ -365,19 +365,19 @@
         <label for="name">Full name</label>
         <input id="name" type="text" placeholder="Your name" />
 
-        <label for="email">Email</label>
-        <input id="email" type="email" placeholder="you@example.com" />
+        <label for="email">Email (optional)</label>
+        <input id="email" type="email" placeholder="you@example.com (optional)" />
 
-        <button class="cta" id="payButton">Get instant access</button>
+        <button class="cta" id="payButton">Copy wallet and pay</button>
         <div class="cta-row">
           <a href="/ebook/preview" class="mini-cta">Read preview</a>
         </div>
-        <div class="secure-note">Secure direct wallet payment • instant delivery after confirmation</div>
+        <div class="secure-note">Simple BTC wallet payment • copy address, send, then confirm the tx hash</div>
 
         <div class="wallet-box" id="walletBox" style="display:none;">
           <strong>Send BTC to this wallet</strong>
           <div class="address" id="walletAddress">3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k</div>
-          <div>Amount: <strong id="btcAmount">0.00028571 BTC</strong></div>
+          <div>Amount: <strong id="btcAmount">0.00025700 BTC</strong></div>
         </div>
 
         <div class="status" id="status"></div>
@@ -430,18 +430,14 @@
     }
 
     async function createOrder() {
-      const name = document.getElementById('name').value.trim();
+      const name = document.getElementById('name').value.trim() || 'Customer';
       const email = document.getElementById('email').value.trim();
-      if (!email || !email.includes('@')) {
-        setStatus('Please enter a valid email address.', 'error');
-        return;
-      }
 
-      setStatus('Creating your BTC order…');
+      setStatus('Preparing your wallet payment instructions…');
       const response = await fetch('/api/ebook/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email })
+        body: JSON.stringify({ name, email: email || undefined })
       });
       const payload = await response.json();
 
@@ -457,16 +453,27 @@
       btcAmountEl.textContent = `${payload.amountBtc} BTC`;
       walletBox.style.display = 'block';
 
-      const txHash = window.prompt('Paste the Bitcoin transaction hash after sending the BTC payment:', '');
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(payload.walletAddress);
+          setStatus(`Wallet address copied to clipboard. Send ${payload.amountBtc} BTC to ${payload.walletAddress}.`, 'success');
+        } catch (_) {
+          setStatus(`Copy this wallet address and send ${payload.amountBtc} BTC: ${payload.walletAddress}`, 'success');
+        }
+      } else {
+        setStatus(`Copy this wallet address and send ${payload.amountBtc} BTC: ${payload.walletAddress}`, 'success');
+      }
+
+      const txHash = window.prompt('After sending the BTC payment, paste the transaction hash to unlock the book:', '');
       if (!txHash || !txHash.trim()) {
-        setStatus('Payment not confirmed yet. Send BTC first and paste the transaction hash to finish the order.', 'error');
+        setStatus('Payment not confirmed yet. Send BTC and paste the transaction hash to finish the order.', 'error');
         return;
       }
 
       const confirmResp = await fetch('/api/ebook/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reference: state.reference, txHash: txHash.trim(), name, email })
+        body: JSON.stringify({ reference: state.reference, txHash: txHash.trim(), name, email: email || undefined })
       });
       const confirmPayload = await confirmResp.json();
 

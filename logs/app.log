@@ -62,3 +62,5 @@
 {"timestamp":"2026-09-01T16:43:18.014Z","level":"info","message":"POST /api/ebook/order","statusCode":403,"duration":"1ms"}
 {"timestamp":"2026-09-01T16:44:24.927Z","level":"info","message":"Dispatch Pro API listening on localhost:3210","env":"development","isProd":false}
 {"timestamp":"2026-09-01T16:45:05.469Z","level":"info","message":"POST /api/ebook/order","statusCode":403,"duration":"1ms"}
+{"timestamp":"2026-09-01T16:51:42.775Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T16:52:38.202Z","level":"info","message":"POST /api/ebook/order","statusCode":403,"duration":"0ms"}
