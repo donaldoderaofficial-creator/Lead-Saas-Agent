@@ -135,8 +135,9 @@ const EBOOK_PRICE_USD = Number(config.ebook?.priceUsd || 19.99);
 const BTC_USD_PRICE = Number(process.env.BTC_USD_PRICE || 70000);
 
 function getEbookBtcAmount() {
-  if (!Number.isFinite(BTC_USD_PRICE) || BTC_USD_PRICE <= 0) return '0.00028571';
-  return (EBOOK_PRICE_USD / BTC_USD_PRICE).toFixed(8);
+  if (!Number.isFinite(BTC_USD_PRICE) || BTC_USD_PRICE <= 0) return '0.00025700';
+  const btcValue = EBOOK_PRICE_USD / BTC_USD_PRICE;
+  return btcValue < 0.000257 ? '0.00025700' : btcValue.toFixed(8);
 }
 
 function buildEbookCheckoutPayload({ name, email, reference } = {}) {
