@@ -30,3 +30,7 @@
 {"timestamp":"2026-08-18T23:14:20.043Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:3000","env":"development","isProd":false}
 {"timestamp":"2026-08-18T23:16:10.635Z","level":"info","message":"GET /api/payments/options","statusCode":200,"duration":"6ms"}
 {"timestamp":"2026-09-01T15:42:51.437Z","level":"info","message":"Dispatch Pro API listening on localhost:3100","env":"development","isProd":false}
+{"timestamp":"2026-09-01T15:43:11.473Z","level":"info","message":"GET /","statusCode":200,"duration":"14ms"}
+{"timestamp":"2026-09-01T15:43:13.342Z","level":"info","message":"GET /runtime-config.js","statusCode":200,"duration":"2ms"}
+{"timestamp":"2026-09-01T15:43:14.481Z","level":"info","message":"GET /favicon.ico","statusCode":404,"duration":"3ms"}
+{"timestamp":"2026-09-01T15:43:15.137Z","level":"info","message":"GET /api/payments/options","statusCode":200,"duration":"2ms"}
