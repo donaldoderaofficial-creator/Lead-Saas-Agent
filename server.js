@@ -77,6 +77,15 @@ if (config.performance.enableCompression) {
 app.use(requestLogger); // Request logging for monitoring
 app.set('trust proxy', config.isProd ? 1 : false);
 app.use(express.json());
+
+app.use((req, res, next) => {
+  const legacyEbookPaths = ['/ebook-success.html', '/ebook-reader.html', '/ebook/access', '/ebook/download.pdf', '/ebook/read'];
+  if (legacyEbookPaths.includes(req.path)) {
+    return res.redirect(302, '/ebook.html');
+  }
+  next();
+});
+
 app.use(express.static('public'));
 
 app.use((req, res, next) => {
@@ -309,10 +318,6 @@ app.post('/api/ebook/confirm', async (req, res) => {
 
 app.get('/ebook/preview', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'ebook-preview.html'));
-});
-
-app.get(['/ebook-success.html', '/ebook-reader.html', '/ebook/access', '/ebook/download.pdf', '/ebook/read'], (req, res) => {
-  return res.redirect(302, '/ebook.html');
 });
 
 app.get('/ebook/success', (req, res) => {
