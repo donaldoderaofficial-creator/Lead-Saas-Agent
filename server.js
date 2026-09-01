@@ -311,6 +311,10 @@ app.get('/ebook/preview', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'ebook-preview.html'));
 });
 
+app.get(['/ebook-success.html', '/ebook-reader.html', '/ebook/access', '/ebook/download.pdf', '/ebook/read'], (req, res) => {
+  return res.redirect(302, '/ebook.html');
+});
+
 app.get('/ebook/success', (req, res) => {
   const reference = req.query.ref;
   const report = completedReports.get(reference);
