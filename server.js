@@ -254,6 +254,10 @@ app.post('/api/ebook/confirm', async (req, res) => {
   });
 });
 
+app.get('/ebook/preview', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'ebook-preview.html'));
+});
+
 app.get('/ebook/access', (req, res) => {
   const reference = req.query.ref;
   const report = completedReports.get(reference);
