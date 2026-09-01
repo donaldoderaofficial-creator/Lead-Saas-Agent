@@ -123,93 +123,45 @@ db.exec(`
   );
 `);
 
-const stmts = {
-  insertPending: db.prepare('INSERT OR REPLACE INTO pending_leads (ref, name, email, phone) VALUES (?, ?, ?, ?)'),
-  getPending: db.prepare('SELECT name, email, phone FROM pending_leads WHERE ref = ?'),
-  deletePending: db.prepare('DELETE FROM pending_leads WHERE ref = ?'),
-  insertReport: db.prepare('INSERT OR REPLACE INTO completed_reports (ref, report_json) VALUES (?, ?)'),
-  getReport: db.prepare('SELECT report_json FROM completed_reports WHERE ref = ?'),
-  listReports: db.prepare('SELECT ref, report_json, created_at FROM completed_reports ORDER BY created_at DESC'),
-  upsertFollowup: db.prepare(`
-    INSERT INTO followups (ref, status, notes, updated_at) VALUES (?, ?, ?, datetime('now'))
-    ON CONFLICT(ref) DO UPDATE SET status = excluded.status, notes = excluded.notes, updated_at = datetime('now')
-  `),
-  getFollowup: db.prepare('SELECT status, notes, updated_at FROM followups WHERE ref = ?'),
-  insertUser: db.prepare('INSERT INTO users (username, password_hash, totp_secret, role) VALUES (?, ?, ?, ?)'),
-  getUserByUsername: db.prepare('SELECT * FROM users WHERE username = ?'),
-  getUserById: db.prepare('SELECT * FROM users WHERE id = ?'),
-  countUsers: db.prepare('SELECT COUNT(*) AS n FROM users'),
-  enableTotp: db.prepare('UPDATE users SET totp_enabled = 1 WHERE id = ?'),
-  setRole: db.prepare('UPDATE users SET role = ? WHERE id = ?'),
-  getSubscription: db.prepare('SELECT * FROM subscription WHERE id = 1'),
-  upsertSubscription: db.prepare(`
-    INSERT INTO subscription (id, plan, billing_type, paypal_subscription_id, status, current_period_end, updated_at)
-    VALUES (1, @plan, @billingType, @paypalSubscriptionId, @status, @currentPeriodEnd, datetime('now'))
-    ON CONFLICT(id) DO UPDATE SET
-      plan = @plan,
-      billing_type = @billingType,
-      paypal_subscription_id = @paypalSubscriptionId,
-      status = @status,
-      current_period_end = @currentPeriodEnd,
-      updated_at = datetime('now')
-  `),
-  upsertClient: db.prepare(`
-    INSERT INTO compliance_clients (
-      client_key, status, violation_count, verified_payment_reference, verified_payment_amount, verified_payment_at, updated_at
-    ) VALUES (@clientKey, @status, @violationCount, @verifiedPaymentReference, @verifiedPaymentAmount, @verifiedPaymentAt, datetime('now'))
-    ON CONFLICT(client_key) DO UPDATE SET
-      status = excluded.status,
-      violation_count = excluded.violation_count,
-      verified_payment_reference = excluded.verified_payment_reference,
-      verified_payment_amount = excluded.verified_payment_amount,
-      verified_payment_at = excluded.verified_payment_at,
-      updated_at = datetime('now')
-  `),
-  getClient: db.prepare('SELECT * FROM compliance_clients WHERE client_key = ?'),
-  insertIncident: db.prepare('INSERT INTO compliance_incidents (client_key, categories, summary, status) VALUES (?, ?, ?, ?)'),
-  listIncidents: db.prepare('SELECT * FROM compliance_incidents WHERE client_key = ? ORDER BY created_at DESC'),
-  insertAudit: db.prepare('INSERT INTO compliance_audit (event_type, client_key, details) VALUES (?, ?, ?)'),
-  listAudit: db.prepare('SELECT * FROM compliance_audit ORDER BY created_at DESC'),
-  insertPayment: db.prepare(`
-    INSERT OR IGNORE INTO payment_transactions
-      (provider, transaction_id, reference, amount, currency, status, raw_json)
-    VALUES (@provider, @transactionId, @reference, @amount, @currency, @status, @rawJson)
-  `),
-};
-
 const pendingLeads = {
   set(ref, lead) {
-    stmts.insertPending.run(ref, lead.name, lead.email, lead.phone || null);
+    db.prepare('INSERT OR REPLACE INTO pending_leads (ref, name, email, phone) VALUES (?, ?, ?, ?)')
+      .run(ref, lead.name, lead.email, lead.phone || null);
   },
   get(ref) {
-    const row = stmts.getPending.get(ref);
+    const row = db.prepare('SELECT name, email, phone FROM pending_leads WHERE ref = ?').get(ref);
     if (!row) return undefined;
     return { name: row.name, email: row.email, ...(row.phone ? { phone: row.phone } : {}) };
   },
   has(ref) {
-    return !!stmts.getPending.get(ref);
+    return !!db.prepare('SELECT name FROM pending_leads WHERE ref = ?').get(ref);
   },
   delete(ref) {
-    stmts.deletePending.run(ref);
+    db.prepare('DELETE FROM pending_leads WHERE ref = ?').run(ref);
   },
 };
 
 const completedReports = {
   set(ref, report) {
-    stmts.insertReport.run(ref, JSON.stringify(report));
+    db.prepare('INSERT OR REPLACE INTO completed_reports (ref, report_json) VALUES (?, ?)')
+      .run(ref, JSON.stringify(report));
   },
   get(ref) {
-    const row = stmts.getReport.get(ref);
+    const row = db.prepare('SELECT report_json FROM completed_reports WHERE ref = ?').get(ref);
     return row ? JSON.parse(row.report_json) : undefined;
   },
   has(ref) {
-    return !!stmts.getReport.get(ref);
+    return !!db.prepare('SELECT report_json FROM completed_reports WHERE ref = ?').get(ref);
   },
 };
 
 const payments = {
   record({ provider, transactionId, reference, amount, currency, status = 'confirmed', raw }) {
-    const result = stmts.insertPayment.run({
+    const result = db.prepare(`
+      INSERT OR IGNORE INTO payment_transactions
+        (provider, transaction_id, reference, amount, currency, status, raw_json)
+      VALUES (@provider, @transactionId, @reference, @amount, @currency, @status, @rawJson)
+    `).run({
       provider,
       transactionId,
       reference,
@@ -224,9 +176,9 @@ const payments = {
 
 const leads = {
   listAll() {
-    return stmts.listReports.all().map((row) => {
+    return db.prepare('SELECT ref, report_json, created_at FROM completed_reports ORDER BY created_at DESC').all().map((row) => {
       const report = JSON.parse(row.report_json);
-      const followup = stmts.getFollowup.get(row.ref) || { status: 'new', notes: '', updated_at: null };
+      const followup = db.prepare('SELECT status, notes, updated_at FROM followups WHERE ref = ?').get(row.ref) || { status: 'new', notes: '', updated_at: null };
       return {
         ref: row.ref,
         createdAt: row.created_at,
@@ -243,35 +195,39 @@ const leads = {
     });
   },
   setFollowup(ref, status, notes) {
-    stmts.upsertFollowup.run(ref, status, notes || '');
+    db.prepare(`
+      INSERT INTO followups (ref, status, notes, updated_at) VALUES (?, ?, ?, datetime('now'))
+      ON CONFLICT(ref) DO UPDATE SET status = excluded.status, notes = excluded.notes, updated_at = datetime('now')
+    `).run(ref, status, notes || '');
   },
 };
 
 const users = {
   create(username, passwordHash, totpSecret, role = 'user') {
-    const info = stmts.insertUser.run(username, passwordHash, totpSecret, role);
+    const info = db.prepare('INSERT INTO users (username, password_hash, totp_secret, role) VALUES (?, ?, ?, ?)')
+      .run(username, passwordHash, totpSecret, role);
     return Number(info.lastInsertRowid);
   },
   findByUsername(username) {
-    return stmts.getUserByUsername.get(username);
+    return db.prepare('SELECT * FROM users WHERE username = ?').get(username);
   },
   findById(id) {
-    return stmts.getUserById.get(id);
+    return db.prepare('SELECT * FROM users WHERE id = ?').get(id);
   },
   count() {
-    return Number(stmts.countUsers.get().n);
+    return Number(db.prepare('SELECT COUNT(*) AS n FROM users').get().n);
   },
   enableTotp(id) {
-    stmts.enableTotp.run(id);
+    db.prepare('UPDATE users SET totp_enabled = 1 WHERE id = ?').run(id);
   },
   setRole(id, role) {
-    stmts.setRole.run(role, id);
+    db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id);
   },
 };
 
 const subscription = {
   get() {
-    const row = stmts.getSubscription.get();
+    const row = db.prepare('SELECT * FROM subscription WHERE id = 1').get();
     if (!row) {
       return { plan: 'none', status: 'inactive', billingType: null, paypalSubscriptionId: null, currentPeriodEnd: null };
     }
@@ -284,7 +240,17 @@ const subscription = {
     };
   },
   set({ plan, billingType, paypalSubscriptionId, status, currentPeriodEnd }) {
-    stmts.upsertSubscription.run({
+    db.prepare(`
+      INSERT INTO subscription (id, plan, billing_type, paypal_subscription_id, status, current_period_end, updated_at)
+      VALUES (1, @plan, @billingType, @paypalSubscriptionId, @status, @currentPeriodEnd, datetime('now'))
+      ON CONFLICT(id) DO UPDATE SET
+        plan = @plan,
+        billing_type = @billingType,
+        paypal_subscription_id = @paypalSubscriptionId,
+        status = @status,
+        current_period_end = @currentPeriodEnd,
+        updated_at = datetime('now')
+    `).run({
       plan,
       billingType: billingType || null,
       paypalSubscriptionId: paypalSubscriptionId || null,
@@ -296,7 +262,7 @@ const subscription = {
 
 const compliance = {
   getClient(clientKey) {
-    const row = stmts.getClient.get(clientKey);
+    const row = db.prepare('SELECT * FROM compliance_clients WHERE client_key = ?').get(clientKey);
     if (!row) return null;
     return {
       clientKey: row.client_key,
@@ -308,10 +274,10 @@ const compliance = {
     };
   },
   listAudit() {
-    return stmts.listAudit.all();
+    return db.prepare('SELECT * FROM compliance_audit ORDER BY created_at DESC').all();
   },
   recordViolation(clientKey, categories, summary = '') {
-    const current = stmts.getClient.get(clientKey) || {
+    const current = db.prepare('SELECT * FROM compliance_clients WHERE client_key = ?').get(clientKey) || {
       client_key: clientKey,
       status: 'active',
       violation_count: 0,
@@ -322,7 +288,18 @@ const compliance = {
     const violationCount = Number(current.violation_count || 0) + 1;
     const status = violationCount >= 2 ? 'suspended' : 'active';
 
-    stmts.upsertClient.run({
+    db.prepare(`
+      INSERT INTO compliance_clients (
+        client_key, status, violation_count, verified_payment_reference, verified_payment_amount, verified_payment_at, updated_at
+      ) VALUES (@clientKey, @status, @violationCount, @verifiedPaymentReference, @verifiedPaymentAmount, @verifiedPaymentAt, datetime('now'))
+      ON CONFLICT(client_key) DO UPDATE SET
+        status = excluded.status,
+        violation_count = excluded.violation_count,
+        verified_payment_reference = excluded.verified_payment_reference,
+        verified_payment_amount = excluded.verified_payment_amount,
+        verified_payment_at = excluded.verified_payment_at,
+        updated_at = datetime('now')
+    `).run({
       clientKey,
       status,
       violationCount,
@@ -331,14 +308,27 @@ const compliance = {
       verifiedPaymentAt: current.verified_payment_at || null,
     });
 
-    const incidentId = Number(stmts.insertIncident.run(clientKey, JSON.stringify(categories), summary, status === 'suspended' ? 'suspended' : 'open').lastInsertRowid);
-    stmts.insertAudit.run('violation-recorded', clientKey, JSON.stringify({ incidentId, categories, violationCount, status }));
+    const incidentId = Number(db.prepare('INSERT INTO compliance_incidents (client_key, categories, summary, status) VALUES (?, ?, ?, ?)')
+      .run(clientKey, JSON.stringify(categories), summary, status === 'suspended' ? 'suspended' : 'open').lastInsertRowid);
+    db.prepare('INSERT INTO compliance_audit (event_type, client_key, details) VALUES (?, ?, ?)')
+      .run('violation-recorded', clientKey, JSON.stringify({ incidentId, categories, violationCount, status }));
 
     return { incidentId, violationCount, status };
   },
   recordVerifiedPayment(clientKey, reference, amount = 0) {
-    const client = stmts.getClient.get(clientKey) || { client_key: clientKey, status: 'active', violation_count: 0 };
-    stmts.upsertClient.run({
+    const client = db.prepare('SELECT * FROM compliance_clients WHERE client_key = ?').get(clientKey) || { client_key: clientKey, status: 'active', violation_count: 0 };
+    db.prepare(`
+      INSERT INTO compliance_clients (
+        client_key, status, violation_count, verified_payment_reference, verified_payment_amount, verified_payment_at, updated_at
+      ) VALUES (@clientKey, @status, @violationCount, @verifiedPaymentReference, @verifiedPaymentAmount, @verifiedPaymentAt, datetime('now'))
+      ON CONFLICT(client_key) DO UPDATE SET
+        status = excluded.status,
+        violation_count = excluded.violation_count,
+        verified_payment_reference = excluded.verified_payment_reference,
+        verified_payment_amount = excluded.verified_payment_amount,
+        verified_payment_at = excluded.verified_payment_at,
+        updated_at = datetime('now')
+    `).run({
       clientKey,
       status: client.status === 'suspended' ? 'suspended' : 'active',
       violationCount: Number(client.violation_count || 0),
@@ -346,7 +336,8 @@ const compliance = {
       verifiedPaymentAmount: amount,
       verifiedPaymentAt: new Date().toISOString(),
     });
-    stmts.insertAudit.run('payment-verified', clientKey, JSON.stringify({ reference, amount }));
+    db.prepare('INSERT INTO compliance_audit (event_type, client_key, details) VALUES (?, ?, ?)')
+      .run('payment-verified', clientKey, JSON.stringify({ reference, amount }));
     return this.getClient(clientKey);
   },
   reinstate(clientKey) {
@@ -356,7 +347,18 @@ const compliance = {
       return { ok: false, reason: 'payment-not-verified' };
     }
 
-    stmts.upsertClient.run({
+    db.prepare(`
+      INSERT INTO compliance_clients (
+        client_key, status, violation_count, verified_payment_reference, verified_payment_amount, verified_payment_at, updated_at
+      ) VALUES (@clientKey, @status, @violationCount, @verifiedPaymentReference, @verifiedPaymentAmount, @verifiedPaymentAt, datetime('now'))
+      ON CONFLICT(client_key) DO UPDATE SET
+        status = excluded.status,
+        violation_count = excluded.violation_count,
+        verified_payment_reference = excluded.verified_payment_reference,
+        verified_payment_amount = excluded.verified_payment_amount,
+        verified_payment_at = excluded.verified_payment_at,
+        updated_at = datetime('now')
+    `).run({
       clientKey,
       status: 'active',
       violationCount: client.violationCount,
@@ -364,7 +366,8 @@ const compliance = {
       verifiedPaymentAmount: client.verifiedPaymentAmount,
       verifiedPaymentAt: client.verifiedPaymentAt,
     });
-    stmts.insertAudit.run('reinstate', clientKey, JSON.stringify({ reference: client.verifiedPaymentReference }));
+    db.prepare('INSERT INTO compliance_audit (event_type, client_key, details) VALUES (?, ?, ?)')
+      .run('reinstate', clientKey, JSON.stringify({ reference: client.verifiedPaymentReference }));
     return { ok: true };
   },
 };
