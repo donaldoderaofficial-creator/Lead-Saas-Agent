@@ -1,480 +1,355 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Lead Agent — Premium Report</title>
-<style>
-  :root {
-    --bg: #0b0d12;
-    --surface: #151822;
-    --surface-2: #1c202c;
-    --border: #262b38;
-    --text: #e7e9ee;
-    --text-dim: #9aa1b1;
-    --accent: #6c8cff;
-    --hot: #ff6c6c;
-    --nurture: #6cffa3;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background:
-      radial-gradient(circle at 15% 0%, rgba(108,140,255,0.10), transparent 40%),
-      radial-gradient(circle at 85% 100%, rgba(108,255,163,0.08), transparent 40%),
-      var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    display: flex;
-    justify-content: center;
-    min-height: 100vh;
-    padding: 48px 16px;
-  }
-  .card {
-    width: 100%;
-    max-width: 480px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 28px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
-    animation: rise 0.4s ease;
-  }
-  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  p.sub { color: var(--text-dim); font-size: 14px; margin: 0 0 20px; }
-
-  .steps { display: flex; align-items: center; margin-bottom: 24px; }
-  .step { display: flex; align-items: center; gap: 8px; }
-  .step .dot {
-    width: 22px; height: 22px; border-radius: 50%;
-    background: var(--surface-2); border: 1px solid var(--border);
-    color: var(--text-dim); font-size: 11px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.25s ease;
-  }
-  .step.active .dot { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .step.done .dot { background: var(--nurture); border-color: var(--nurture); color: #06210f; }
-  .step .label { font-size: 12px; color: var(--text-dim); }
-  .step.active .label, .step.done .label { color: var(--text); }
-  .step-line { flex: 1; height: 1px; background: var(--border); margin: 0 8px; }
-
-  label { display: block; font-size: 13px; color: var(--text-dim); margin: 14px 0 6px; }
-  input {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
-    color: var(--text);
-    font-size: 14px;
-    transition: border-color 0.15s ease;
-  }
-  input:focus { outline: none; border-color: var(--accent); }
-  input.invalid { border-color: var(--hot); }
-
-  .row { display: flex; gap: 10px; margin-top: 22px; }
-  button {
-    flex: 1;
-    padding: 11px;
-    border-radius: 8px;
-    border: none;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: transform 0.1s ease, opacity 0.15s ease;
-  }
-  button:hover:not(:disabled) { transform: translateY(-1px); }
-  button:active:not(:disabled) { transform: translateY(0); }
-  #payPaypal { background: #ffc439; color: #1a1a1a; }
-  #payMpesa { background: var(--nurture); color: #06210f; }
-  button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
-
-  #status {
-    margin-top: 16px; font-size: 13px; color: var(--text-dim); min-height: 18px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .spinner {
-    width: 13px; height: 13px; border-radius: 50%;
-    border: 2px solid var(--border); border-top-color: var(--accent);
-    animation: spin 0.7s linear infinite; flex-shrink: 0;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  #report {
-    margin-top: 20px;
-    border-top: 1px solid var(--border);
-    padding-top: 18px;
-    display: none;
-    animation: rise 0.35s ease;
-  }
-  .badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .badge.hot { background: rgba(255,108,108,0.15); color: var(--hot); }
-  .badge.nurture { background: rgba(108,255,163,0.15); color: var(--nurture); }
-  #report .row2 { display: flex; justify-content: space-between; font-size: 14px; margin: 10px 0; }
-  #report .label2 { color: var(--text-dim); }
-
-  #assistantToggle {
-    position: fixed; bottom: 20px; right: 20px;
-    width: 52px; height: 52px; border-radius: 50%;
-    background: var(--accent); border: none; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 8px 24px rgba(108,140,255,0.4);
-    font-size: 22px; z-index: 50;
-    transition: transform 0.15s ease;
-  }
-  #assistantToggle:hover { transform: scale(1.06); }
-
-  #assistantPanel {
-    position: fixed; bottom: 84px; right: 20px;
-    width: 320px; max-width: calc(100vw - 40px);
-    height: 420px; max-height: calc(100vh - 140px);
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,0.45);
-    display: none; flex-direction: column; overflow: hidden; z-index: 50;
-    animation: rise 0.25s ease;
-  }
-  #assistantPanel.open { display: flex; }
-  #assistantHeader {
-    padding: 14px 16px; border-bottom: 1px solid var(--border);
-    font-size: 14px; font-weight: 600; display: flex; justify-content: space-between; align-items: center;
-  }
-  #assistantHeader span.dot2 { width: 7px; height: 7px; border-radius: 50%; background: var(--nurture); display: inline-block; margin-right: 6px; }
-  #assistantClose { background: none; border: none; color: var(--text-dim); font-size: 16px; cursor: pointer; flex: none; padding: 4px; }
-  #assistantMessages { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
-  .msg { font-size: 13px; line-height: 1.5; padding: 9px 12px; border-radius: 10px; max-width: 85%; }
-  .msg.bot { background: var(--surface-2); align-self: flex-start; }
-  .msg.user { background: var(--accent); color: #fff; align-self: flex-end; }
-  #assistantQuick { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 12px; }
-  .quick-btn {
-    flex: none; background: var(--surface-2); border: 1px solid var(--border);
-    color: var(--text); font-size: 12px; padding: 6px 10px; border-radius: 999px; cursor: pointer;
-  }
-  .quick-btn:hover { border-color: var(--accent); }
-  #assistantInputRow { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
-  #assistantInput {
-    flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
-    padding: 8px 10px; color: var(--text); font-size: 13px;
-  }
-  #assistantSend { flex: none; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Builder's Blueprint | Premium Ebook</title>
+  <meta name="description" content="A premium ebook for developers and builders who want to turn skill into leverage, products, and profitable systems." />
+  <style>
+    :root {
+      --bg: #06141d;
+      --bg-soft: #0d1d2a;
+      --panel: rgba(12, 25, 35, 0.94);
+      --panel-strong: rgba(18, 35, 47, 0.98);
+      --line: rgba(148, 163, 184, 0.2);
+      --text: #edf5ff;
+      --muted: #a9bbcf;
+      --brand: #65e6a0;
+      --brand-strong: #4ade80;
+      --gold: #fbbf24;
+      --warm: #f97316;
+      --shadow: rgba(0, 0, 0, 0.28);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(101, 230, 160, 0.14), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(251, 191, 36, 0.12), transparent 28%),
+        linear-gradient(180deg, #051219, var(--bg));
+      color: var(--text);
+    }
+    a { color: inherit; }
+    .shell {
+      width: min(1200px, calc(100% - 24px));
+      margin: 0 auto;
+      padding: 28px 0 72px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 10px 0 22px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+      font-weight: 800;
+      color: var(--text);
+    }
+    .brand .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--brand-strong);
+      box-shadow: 0 0 22px rgba(74, 222, 128, 0.85);
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 24px;
+      align-items: stretch;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: clamp(22px, 4vw, 34px);
+      box-shadow: 0 24px 70px var(--shadow);
+    }
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border: 1px solid rgba(101, 230, 160, 0.26);
+      background: rgba(101, 230, 160, 0.09);
+      border-radius: 999px;
+      color: var(--brand);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    h1 {
+      margin: 18px 0 14px;
+      font-size: clamp(2.8rem, 6vw, 5rem);
+      line-height: 0.98;
+      letter-spacing: -0.06em;
+      max-width: 640px;
+    }
+    .lede {
+      max-width: 680px;
+      color: var(--muted);
+      font-size: 1.08rem;
+      line-height: 1.75;
+      margin: 0;
+    }
+    .price-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      margin-top: 24px;
+      margin-bottom: 18px;
+    }
+    .price {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 8px;
+      font-weight: 800;
+    }
+    .price strong {
+      font-size: clamp(2.2rem, 5vw, 3.3rem);
+      color: var(--gold);
+      line-height: 1;
+    }
+    .price span {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.8rem;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 8px 12px;
+      border: 1px solid rgba(251, 191, 36, 0.28);
+      background: rgba(251, 191, 36, 0.08);
+      color: #f6d78d;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 52px;
+      padding: 0 22px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 800;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn.primary {
+      background: linear-gradient(135deg, var(--gold), var(--warm));
+      color: #1a160d;
+      box-shadow: 0 16px 32px rgba(251, 191, 36, 0.2);
+    }
+    .btn.secondary {
+      color: var(--brand);
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+    }
+    .mini-proof {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 26px;
+    }
+    .proof {
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+      text-align: center;
+      padding: 16px 12px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+    .proof strong {
+      display: block;
+      font-size: 1.18rem;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .checkout-box {
+      position: relative;
+      background: var(--panel-strong);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 18px 54px var(--shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .checkout-box h2 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 1.55rem;
+    }
+    .checkout-box p {
+      color: var(--muted);
+      line-height: 1.7;
+      margin: 0 0 18px;
+    }
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 10px;
+    }
+    .feature-list li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .feature-list li::before {
+      content: '✓';
+      color: var(--brand);
+      font-weight: 800;
+      margin-top: 1px;
+    }
+    .lower-grid {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 20px;
+    }
+    .info-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 22px;
+    }
+    .info-card h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 1.15rem;
+    }
+    .info-card ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.9;
+    }
+    .info-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.75;
+    }
+    .quote {
+      font-style: italic;
+      color: var(--text);
+      margin: 0 0 10px;
+      line-height: 1.7;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    @media (max-width: 980px) {
+      .hero, .lower-grid { grid-template-columns: 1fr; }
+      .checkout-box { order: -1; }
+    }
+    @media (max-width: 640px) {
+      .shell { width: min(100% - 18px, 1200px); }
+      .topbar { flex-direction: column; align-items: flex-start; }
+      .mini-proof { grid-template-columns: 1fr; }
+      .cta-row { flex-direction: column; }
+      .btn { width: 100%; }
+      h1 { letter-spacing: -0.05em; }
+    }
+  </style>
 </head>
 <body>
-  <div class="card">
-    <div style="margin-bottom: 18px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: rgba(108,140,255,0.08); color: var(--text); font-size: 13px; text-align: center; font-weight: 600;">
-      Dispatch Pro • Founder & CEO: Odera Donald Ombok, BSc
-    </div>
-    <h1>Premium Lead Report</h1>
-    <p class="sub">Subscribe to a Dispatch Pro package, then submit leads and pay to unlock reports.</p>
-
-    <div class="steps">
-      <div class="step active" id="stepDetails"><div class="dot">1</div><div class="label">Details</div></div>
-      <div class="step-line"></div>
-      <div class="step" id="stepPay"><div class="dot">2</div><div class="label">Pay</div></div>
-      <div class="step-line"></div>
-      <div class="step" id="stepReport"><div class="dot">3</div><div class="label">Report</div></div>
+  <div class="shell">
+    <div class="topbar">
+      <div class="brand"><span class="dot"></span> Builder's Blueprint</div>
+      <div>Digital ebook • direct BTC checkout • $19.99</div>
     </div>
 
-    <label for="name">Name</label>
-    <input id="name" placeholder="Ada K." />
+    <div class="hero">
+      <section class="panel">
+        <div class="kicker">The practical playbook</div>
+        <h1>Turn coding skill into leverage.</h1>
+        <p class="lede">
+          This is the book I wish I had when I was starting: a real-world guide to building with intent, pricing with confidence, creating leverage, and turning your work into something people genuinely value.
+        </p>
 
-    <label for="email">Email</label>
-    <input id="email" placeholder="ada@bigcorp.com" />
+        <div class="price-row">
+          <div class="price"><strong>$19.99</strong><span>USD</span></div>
+          <div class="badge">Up to 300 pages • instant digital access</div>
+        </div>
 
-    <label for="phone">M-Pesa phone (for STK Push, format 2547XXXXXXXX)</label>
-    <input id="phone" placeholder="254112217747" />
+        <div class="cta-row">
+          <a class="btn primary" href="/ebook.html">Buy the ebook</a>
+          <a class="btn secondary" href="/ebook/preview">Read preview</a>
+        </div>
 
-    <div class="row">
-      <button id="payPaypal">Pay with PayPal</button>
-      <button id="payMpesa">Pay with M-Pesa</button>
+        <div class="mini-proof">
+          <div class="proof"><strong>7</strong>Core chapters</div>
+          <div class="proof"><strong>50+</strong>Actionable lessons</div>
+          <div class="proof"><strong>Instant</strong>Access delivery</div>
+        </div>
+      </section>
+
+      <aside class="checkout-box">
+        <h2>What you get</h2>
+        <p>Clear, practical guidance for developers, creators, and builders who want to move from learning into income and leverage.</p>
+        <ul class="feature-list">
+          <li>Build with intent instead of chasing random tutorials.</li>
+          <li>Price your work with confidence and sell without feeling desperate.</li>
+          <li>Validate ideas before wasting time on dead-end projects.</li>
+          <li>Turn skill into systems, products, and long-term value.</li>
+        </ul>
+      </aside>
     </div>
 
-    <div id="status"></div>
+    <div class="lower-grid">
+      <div class="info-card">
+        <h3>What you’ll learn</h3>
+        <ul>
+          <li>How to stop collecting information and start creating value.</li>
+          <li>How to think like a builder instead of a consumer.</li>
+          <li>How to turn a skill into a product or revenue engine.</li>
+          <li>How to create leverage without burning out.</li>
+        </ul>
+      </div>
 
-    <div id="report">
-      <div class="row2"><span class="label2">Company</span><span id="rCompany"></span></div>
-      <div class="row2"><span class="label2">Score</span><span id="rScore"></span>/100</div>
-      <div class="row2"><span class="label2">Path</span><span id="rPath" class="badge"></span></div>
-      <div class="row2"><span class="label2">Recommendation</span><span id="rRec" style="text-align:right; max-width:60%;"></span></div>
+      <div class="info-card">
+        <h3>Why this book works</h3>
+        <p>It is written for people who are serious about action. No fluff, no vague theory, no empty motivation. Just real decisions, clearer thinking, and useful next steps.</p>
+      </div>
+
+      <div class="info-card">
+        <h3>Reader response</h3>
+        <p class="quote">“This helped me stop jumping between ideas and start building what actually matters.”</p>
+        <div class="meta">— Product-minded developer</div>
+      </div>
     </div>
   </div>
-
-  <button id="assistantToggle" aria-label="Open assistant">💬</button>
-  <div id="assistantPanel">
-    <div id="assistantHeader"><span><span class="dot2"></span>Assistant</span><button id="assistantClose">✕</button></div>
-    <div id="assistantMessages"></div>
-    <div id="assistantQuick"></div>
-    <div id="assistantInputRow">
-      <input id="assistantInput" placeholder="Ask a question…" />
-      <button id="assistantSend">Send</button>
-    </div>
-  </div>
-
-<script src="/runtime-config.js"></script>
-<script>
-const el = (id) => document.getElementById(id);
-const API_BASE = window.DISPATCH_API_URL || window.location.origin;
-const apiUrl = (path) => `${API_BASE}${path}`;
-const statusEl = el('status');
-const reportEl = el('report');
-
-function setStep(n) {
-  ['stepDetails', 'stepPay', 'stepReport'].forEach((id, i) => {
-    const stepEl = el(id);
-    stepEl.classList.remove('active', 'done');
-    if (i + 1 < n) stepEl.classList.add('done');
-    else if (i + 1 === n) stepEl.classList.add('active');
-  });
-}
-
-function setStatus(msg, isError, showSpinner) {
-  statusEl.innerHTML = '';
-  if (showSpinner) {
-    const s = document.createElement('div');
-    s.className = 'spinner';
-    statusEl.appendChild(s);
-  }
-  const t = document.createElement('span');
-  t.textContent = msg;
-  t.style.color = isError ? '#ff6c6c' : '#9aa1b1';
-  statusEl.appendChild(t);
-}
-
-function getLead() {
-  return { name: el('name').value.trim(), email: el('email').value.trim() };
-}
-
-function validateFields() {
-  const lead = getLead();
-  let ok = true;
-  el('name').classList.toggle('invalid', !lead.name);
-  el('email').classList.toggle('invalid', !lead.email.includes('@'));
-  if (!lead.name || !lead.email.includes('@')) ok = false;
-  return ok;
-}
-
-function renderReport(report) {
-  const r = report.result;
-  el('rCompany').textContent = r.company || '—';
-  el('rScore').textContent = r.score;
-  const pathEl = el('rPath');
-  pathEl.textContent = r.path;
-  pathEl.className = 'badge ' + (r.path === 'priority-outreach' ? 'hot' : 'nurture');
-  el('rRec').textContent = report.premium?.recommendedNextStep || '—';
-  reportEl.style.display = 'block';
-  setStep(3);
-}
-
-async function pollReport(ref, { onPending } = {}) {
-  return new Promise((resolve, reject) => {
-    let attempts = 0;
-    const tick = async () => {
-      attempts += 1;
-      try {
-        const res = await fetch(apiUrl(`/leads/report/${ref}`));
-        const data = await res.json();
-        if (res.status === 200) return resolve(data);
-        if (res.status === 202) {
-          onPending?.(attempts);
-          if (attempts >= 15) return reject(new Error('Still waiting on payment confirmation.'));
-          setTimeout(tick, 4000);
-        } else {
-          reject(new Error(data.error || 'Report lookup failed'));
-        }
-      } catch (err) {
-        reject(err);
-      }
-    };
-    tick();
-  });
-}
-
-async function loadPaymentOptions() {
-  try {
-    const res = await fetch(apiUrl('/api/payments/options'));
-    if (!res.ok) return;
-    const data = await res.json();
-    const paypalEnabled = data.providers?.paypal?.enabled;
-    const mpesaEnabled = data.providers?.mpesa?.enabled;
-    el('payPaypal').disabled = !paypalEnabled;
-    el('payMpesa').disabled = !mpesaEnabled;
-    if (!paypalEnabled && !mpesaEnabled) {
-      setStatus('Payment providers are being configured. Please try again later.', true);
-    }
-  } catch {
-    // Keep the checkout usable if capability discovery is temporarily unavailable.
-  }
-}
-
-el('payPaypal').addEventListener('click', async () => {
-  if (!validateFields()) return setStatus('Enter a valid name and email first.', true);
-  const lead = getLead();
-
-  try {
-    setStatus('Creating PayPal order…', false, true);
-    const res = await fetch(apiUrl('/api/lead'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...lead, method: 'paypal' }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      if (res.status === 402) {
-        window.location.href = data.plansUrl || '/billing.html';
-        return;
-      }
-      throw new Error(data.error);
-    }
-
-    sessionStorage.setItem('leadRef', data.orderId);
-    setStep(2);
-    setStatus('Redirecting to PayPal…', false, true);
-    window.location.href = data.approveUrl;
-  } catch (err) {
-    setStatus(err.message, true);
-  }
-});
-
-el('payMpesa').addEventListener('click', async () => {
-  if (!validateFields()) return setStatus('Enter a valid name and email first.', true);
-  const lead = getLead();
-  const phone = el('phone').value.trim();
-  const phoneOk = /^254\d{9}$/.test(phone);
-  el('phone').classList.toggle('invalid', !phoneOk);
-  if (!phoneOk) return setStatus('Phone must be in 2547XXXXXXXX format.', true);
-
-  try {
-    setStep(2);
-    setStatus('Sending STK Push to your phone…', false, true);
-    const res = await fetch(apiUrl('/api/lead'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...lead, phone, method: 'mpesa' }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      if (res.status === 402) {
-        window.location.href = data.plansUrl || '/billing.html';
-        return;
-      }
-      throw new Error(data.error);
-    }
-
-    setStatus('Enter your M-Pesa PIN on your phone. Waiting…', false, true);
-    const report = await pollReport(data.checkoutRequestId);
-    renderReport(report);
-    setStatus('Report ready.');
-  } catch (err) {
-    setStatus(err.message, true);
-  }
-});
-
-(async function handlePaypalReturn() {
-  const params = new URLSearchParams(window.location.search);
-  const orderId = params.get('token');
-  if (params.has('paypal_cancel')) {
-    setStatus('PayPal checkout was cancelled.', true);
-    return;
-  }
-  if (!orderId) return;
-
-  setStep(2);
-  setStatus('Confirming payment with PayPal…', false, true);
-  try {
-    const captureRes = await fetch(apiUrl(`/payments/capture-order/${orderId}`), { method: 'POST' });
-    const capture = await captureRes.json();
-    if (!captureRes.ok || capture.status !== 'COMPLETED') {
-      throw new Error(capture.error || 'Payment not completed');
-    }
-    setStatus('Payment confirmed — generating report…', false, true);
-    const report = await pollReport(orderId);
-    renderReport(report);
-    setStatus('Report ready.');
-  } catch (err) {
-    setStatus(err.message, true);
-  }
-})();
-
-loadPaymentOptions();
-
-const FAQ = [
-  { q: ['price', 'cost', 'how much', 'fee'], a: 'The premium report is $9.99 via PayPal, or KSh 1,300 via M-Pesa STK Push.' },
-  { q: ['mpesa', 'stk', 'm-pesa'], a: "Enter your phone as 2547XXXXXXXX (no '+', no leading 0), then approve the prompt that appears on your phone." },
-  { q: ['paypal'], a: "You'll be redirected to PayPal to approve the payment, then brought back here automatically once it's confirmed." },
-  { q: ['report', 'what do i get', 'include'], a: 'The report includes a lead score out of 100, a hot/nurture classification, and a recommended next step.' },
-  { q: ['refund'], a: "For refund requests, reach out to the account this site is registered under — that's handled outside this automated flow." },
-  { q: ['how long', 'wait', 'time'], a: "PayPal reports appear within a few seconds of payment. M-Pesa reports appear once you approve the STK prompt — usually under 30 seconds." },
-  { q: ['score', 'scoring'], a: 'Leads are scored 0-100 based on company signals. 70+ is routed as a hot lead for priority outreach; below that goes to a nurture sequence.' },
-];
-
-function findAnswer(text) {
-  const lower = text.toLowerCase();
-  const hit = FAQ.find((f) => f.q.some((kw) => lower.includes(kw)));
-  return hit ? hit.a : "I don't have an answer for that specific question — try asking about pricing, payment methods, or what's in the report.";
-}
-
-const messagesEl = el('assistantMessages');
-function addMessage(text, from) {
-  const m = document.createElement('div');
-  m.className = 'msg ' + from;
-  m.textContent = text;
-  messagesEl.appendChild(m);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-}
-
-function botReply(text) {
-  const typing = document.createElement('div');
-  typing.className = 'msg bot';
-  typing.textContent = '…';
-  messagesEl.appendChild(typing);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-  setTimeout(() => {
-    typing.textContent = text;
-  }, 450);
-}
-
-const QUICK = ['How much does it cost?', 'How does M-Pesa payment work?', "What's in the report?"];
-const quickEl = el('assistantQuick');
-QUICK.forEach((q) => {
-  const b = document.createElement('button');
-  b.className = 'quick-btn';
-  b.textContent = q;
-  b.addEventListener('click', () => handleUserMessage(q));
-  quickEl.appendChild(b);
-});
-
-function handleUserMessage(text) {
-  if (!text.trim()) return;
-  addMessage(text, 'user');
-  botReply(findAnswer(text));
-}
-
-el('assistantSend').addEventListener('click', () => {
-  const input = el('assistantInput');
-  handleUserMessage(input.value);
-  input.value = '';
-});
-el('assistantInput').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') el('assistantSend').click();
-});
-
-let assistantOpened = false;
-el('assistantToggle').addEventListener('click', () => {
-  const panel = el('assistantPanel');
-  panel.classList.toggle('open');
-  if (!assistantOpened && panel.classList.contains('open')) {
-    assistantOpened = true;
-    botReply("Hi! I can answer questions about pricing, payment methods, or what's in the report.");
-  }
-});
-el('assistantClose').addEventListener('click', () => el('assistantPanel').classList.remove('open'));
-</script>
 </body>
 </html>
