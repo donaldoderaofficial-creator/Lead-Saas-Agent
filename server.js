@@ -37,6 +37,38 @@ const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = requir
 const app = express();
 const DISPATCH_PRO = config.company;
 
+function matchesAllowedOrigin(origin, allowedOrigins) {
+  if (!origin) return true;
+  return allowedOrigins.some((pattern) => {
+    if (pattern === '*') return true;
+    if (pattern.includes('*')) {
+      const regex = new RegExp(`^${pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`);
+      return regex.test(origin);
+    }
+    return origin === pattern;
+  });
+}
+
+function isOriginAllowed(origin, path = '') {
+  if (!origin) return true;
+  if (matchesAllowedOrigin(origin, config.security.corsOrigins)) return true;
+
+  try {
+    const { hostname } = new URL(origin);
+    const isLocalDevelopmentHost = ['localhost', '127.0.0.1', '::1'].includes(hostname) || hostname.endsWith('.localhost');
+    if (isLocalDevelopmentHost) return true;
+    if (path.startsWith('/api/ebook/') || path.startsWith('/ebook/')) {
+      return hostname.endsWith('.netlify.app') || hostname.endsWith('.vercel.app') || hostname.endsWith('.pages.dev');
+    }
+  } catch (_) {
+    return false;
+  }
+
+  return false;
+}
+
+app.isOriginAllowed = isOriginAllowed;
+
 // ---- Middleware: Performance & Scalability ----
 if (config.performance.enableCompression) {
   app.use(compression()); // GZIP compression for efficient data transfer
@@ -50,7 +82,7 @@ app.use(express.static('public'));
 app.use((req, res, next) => {
   const requestOrigin = req.get('origin');
   if (!requestOrigin) return next();
-  if (!config.security.corsOrigins.includes(requestOrigin)) {
+  if (!app.isOriginAllowed(requestOrigin, req.path)) {
     return res.status(403).json({ error: 'Origin is not allowed' });
   }
   res.setHeader('Access-Control-Allow-Origin', requestOrigin);
