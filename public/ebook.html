@@ -466,16 +466,53 @@
         setStatus(`Copy this wallet address and send ${payload.amountBtc} BTC: ${payload.walletAddress}`, 'success');
       }
 
-      const txHash = window.prompt('After sending the BTC payment, paste the transaction hash to unlock the book:', '');
-      if (!txHash || !txHash.trim()) {
-        setStatus('Payment not confirmed yet. Send BTC and paste the transaction hash to finish the order.', 'error');
+      const txHashInput = window.prompt('After sending the BTC payment, paste the transaction hash. If you prefer, leave it blank and upload a screenshot of the deposit below.', '');
+      const txHash = (txHashInput || '').trim();
+
+      let screenshotData = null;
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.style.display = 'none';
+      document.body.appendChild(fileInput);
+
+      const hasScreenshot = await new Promise((resolve) => {
+        const onChange = () => {
+          const file = fileInput.files && fileInput.files[0];
+          if (!file) {
+            resolve(false);
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = () => {
+            screenshotData = String(reader.result || '');
+            resolve(true);
+          };
+          reader.onerror = () => {
+            resolve(false);
+          };
+          reader.readAsDataURL(file);
+        };
+        fileInput.addEventListener('change', onChange, { once: true });
+        fileInput.click();
+      });
+      fileInput.remove();
+
+      if (!txHash && !hasScreenshot) {
+        setStatus('Payment not confirmed yet. Send BTC, then provide either the transaction hash or a screenshot of the deposit.', 'error');
         return;
       }
 
       const confirmResp = await fetch('/api/ebook/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reference: state.reference, txHash: txHash.trim(), name, email: email || undefined })
+        body: JSON.stringify({
+          reference: state.reference,
+          txHash: txHash || undefined,
+          screenshotData: screenshotData || undefined,
+          name,
+          email: email || undefined,
+        })
       });
       const confirmPayload = await confirmResp.json();
 
@@ -484,7 +521,7 @@
         return;
       }
 
-      setStatus('Payment confirmed. Your access is ready. Redirecting…', 'success');
+      setStatus('Payment confirmed. Your e-book is ready. Redirecting…', 'success');
       window.location.href = confirmPayload.accessUrl;
     }
 

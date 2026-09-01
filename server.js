@@ -257,9 +257,9 @@ app.post('/api/ebook/order', (req, res) => {
 });
 
 app.post('/api/ebook/confirm', async (req, res) => {
-  const { reference, txHash, name, email } = req.body || {};
-  if (!reference || !txHash) {
-    return res.status(400).json({ error: 'reference and txHash are required.' });
+  const { reference, txHash, screenshotData, screenshotUrl, name, email } = req.body || {};
+  if (!reference || (!txHash && !screenshotData && !screenshotUrl)) {
+    return res.status(400).json({ error: 'reference and either a txHash or a deposit screenshot are required.' });
   }
 
   const order = pendingLeads.get(reference);
@@ -277,7 +277,9 @@ app.post('/api/ebook/confirm', async (req, res) => {
     amountUsd: Number(config.ebook?.priceUsd || 19.99),
     amountBtc: getEbookBtcAmount(),
     walletAddress: config.ebook?.walletAddress || config.wallets.bitcoin.address,
-    txHash,
+    txHash: txHash || null,
+    screenshotData: screenshotData || null,
+    screenshotUrl: screenshotUrl || null,
     status: 'paid',
     purchasedAt: new Date().toISOString(),
   };
@@ -286,7 +288,7 @@ app.post('/api/ebook/confirm', async (req, res) => {
   pendingLeads.delete(reference);
   payments.record({
     provider: 'bitcoin-ebook',
-    transactionId: txHash,
+    transactionId: txHash || screenshotData || screenshotUrl || reference,
     reference,
     amount: receipt.amountUsd,
     currency: 'USD',
@@ -298,8 +300,9 @@ app.post('/api/ebook/confirm', async (req, res) => {
     status: 'confirmed',
     reference,
     title: config.ebook?.title,
-    accessUrl: `/ebook/success?ref=${encodeURIComponent(reference)}`,
-    txHash,
+    accessUrl: `/ebook/access?ref=${encodeURIComponent(reference)}`,
+    txHash: txHash || null,
+    screenshotProvided: Boolean(screenshotData || screenshotUrl),
     amountUsd: receipt.amountUsd,
   });
 });

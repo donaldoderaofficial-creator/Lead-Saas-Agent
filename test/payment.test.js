@@ -76,6 +76,47 @@ test('allows ebook payment origins for buyer checkout', () => {
   assert.equal(app.isOriginAllowed('https://evil.example', '/api/ebook/order'), false);
 });
 
+test('accepts a deposit screenshot as ebook payment confirmation', () => {
+  const app = require('../server');
+  const { pendingLeads, completedReports } = require('../store');
+
+  const reference = 'ebook-screenshot-confirmation';
+  pendingLeads.set(reference, {
+    name: 'Image Buyer',
+    email: 'image@example.com',
+    paymentMethod: 'bitcoin-ebook',
+    product: 'ebook',
+  });
+
+  const response = {
+    statusCode: 200,
+    jsonBody: null,
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(payload) {
+      this.jsonBody = payload;
+      return this;
+    },
+  };
+
+  const req = { body: { reference, screenshotData: 'data:image/png;base64,abc123', name: 'Image Buyer' } };
+  const res = response;
+
+  app._router ? null : null;
+  const route = app._router.stack.find((layer) => layer.route && layer.route.path === '/api/ebook/confirm');
+  const handler = route.route.stack[0].handle;
+
+  assert.equal(typeof handler, 'function');
+
+  handler(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.jsonBody.status, 'confirmed');
+  assert.equal(completedReports.has(reference), true);
+});
+
 test('builds a simple wallet-only ebook checkout payload without email friction', () => {
   const { buildEbookCheckoutPayload } = require('../server');
 
