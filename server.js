@@ -272,10 +272,109 @@ app.get('/ebook/access', (req, res) => {
   const reference = req.query.ref;
   const report = completedReports.get(reference);
   if (!report || report.type !== 'ebook') {
-    return res.status(404).send('This ebook purchase is not recognized or has not been confirmed yet.');
+    return res.status(401).send('This page is only available to confirmed ebook buyers.');
   }
 
-  res.sendFile(path.join(__dirname, 'public', 'ebook-content.html'));
+  res.sendFile(path.join(__dirname, 'public', 'ebook-reader.html'));
+});
+
+app.get('/ebook/read', (req, res) => {
+  const reference = req.query.ref;
+  const report = completedReports.get(reference);
+  if (!report || report.type !== 'ebook') {
+    return res.status(401).send('This page is only available to confirmed ebook buyers.');
+  }
+
+  res.sendFile(path.join(__dirname, 'public', 'ebook-reader.html'));
+});
+
+function buildEbookPdf() {
+  const chapters = [
+    'Chapter 1: The first time I realized I was not lazy',
+    'The first real insight is that confusion is not the same as lack of talent. I was not lazy; I was overwhelmed by too many tutorials, too many ideas, and no system for turning effort into value.',
+    'I had to learn that building is not the same as collecting knowledge. The real shift begins when you decide what problem you want to solve, why it matters, and how you will turn your skill into leverage.',
+    'Chapter 2: Why talented people still get stuck',
+    'Talent can help, but talent without direction becomes noise. Many smart people remain stuck because they build things for attention instead of usefulness. They want approval, not traction.',
+    'The most valuable shift is to get honest about what you are making and who it is for. If you can identify the real pain point, the work becomes easier to explain, easier to sell, and easier to trust.',
+    'Chapter 3: Build for value, not applause',
+    'A project is not a business until it solves a real problem for someone else. This is the hidden rule: people do not buy effort, they buy outcomes.',
+    'I stopped asking, “How do I impress people?” and started asking, “How do I make someone’s life easier, faster, or more valuable?” Once I focused on outcomes, my work gained clarity and attention.',
+    'Chapter 4: The builder’s system',
+    'The builder’s system is simple: decide, validate, ship, learn, iterate. It sounds obvious, but most people get trapped in loops of planning and hesitation.',
+    'You do not need a twelve-step framework. You need a way to get from idea to proof quickly. Small experiments create data. Data creates clarity. Clarity creates directional power.',
+    'Chapter 5: Turning skill into leverage',
+    'Your best long-term skill is not collecting tutorials. It is learning how to turn knowledge into systems that deliver value repeatedly.',
+    'That means writing code that matters, designing products that solve real problems, and building assets that compound over time. This is how coding becomes income, and income becomes freedom.',
+    'Chapter 6: Pricing, sales, and confidence',
+    'Most builders undercharge because they do not understand the value of what they are creating. If your work saves time, reduces stress, or creates outcomes, it is worth more than you think.',
+    'The goal is not to sound forceful. It is to be clear. Explain what the work does, why it matters, and why someone should trust it. Clear pricing is part of strong value delivery.',
+    'Chapter 7: The long game',
+    'The real win is not a single launch. It is building a repeatable process that makes your work more valuable every time you do it.',
+    'The builders who last are not necessarily the most talented. They are the ones who stay clear, stay useful, and stay patient enough to make compounding work in their favor.'
+  ];
+
+  const text = chapters.join('\n\n');
+  const lines = text.split('\n');
+  const chunks = [];
+  let cursor = 0;
+  for (const line of lines) {
+    chunks.push(`${cursor} 0 moveto (${line.replace(/[()\\]/g, '\\$&')}) Tj`);
+    cursor += 16;
+  }
+
+  const content = chunks.join('\n');
+  const pdf = `%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length ${content.length + 100} >>
+stream
+BT
+/F1 12 Tf
+50 760 Td
+${content}
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000010 00000 n 
+0000000062 00000 n 
+0000000123 00000 n 
+0000000845 00000 n 
+0000001700 00000 n 
+0000002200 00000 n 
+trailer
+<< /Root 1 0 R /Size 6 >>
+startxref
+2280
+%%EOF`;
+
+  return Buffer.from(pdf, 'latin1');
+}
+
+app.get('/ebook/download.pdf', (req, res) => {
+  const reference = req.query.ref;
+  const report = completedReports.get(reference);
+  if (!report || report.type !== 'ebook') {
+    return res.status(401).send('This download is only available to confirmed ebook buyers.');
+  }
+
+  const pdf = buildEbookPdf();
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'attachment; filename="the-builders-blueprint.pdf"');
+  res.send(pdf);
 });
 
 // ---- Metrics & Monitoring Endpoint (Admin Only) ----
