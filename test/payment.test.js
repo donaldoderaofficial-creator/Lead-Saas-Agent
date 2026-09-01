@@ -117,6 +117,33 @@ test('accepts a deposit screenshot as ebook payment confirmation', () => {
   assert.equal(completedReports.has(reference), true);
 });
 
+test('redirects legacy ebook links to the current live ebook page', async () => {
+  const app = require('../server');
+  const server = app.listen(0);
+
+  await new Promise((resolve) => server.once('listening', resolve));
+  const { port } = server.address();
+
+  try {
+    const responses = await Promise.all([
+      fetch(`http://127.0.0.1:${port}/ebook-success.html`),
+      fetch(`http://127.0.0.1:${port}/ebook-reader.html`),
+      fetch(`http://127.0.0.1:${port}/ebook/access`),
+      fetch(`http://127.0.0.1:${port}/ebook/download.pdf`),
+    ]);
+
+    const locations = responses.map((response) => response.headers.get('location'));
+
+    assert.equal(responses[0].status, 302);
+    assert.equal(locations[0], '/ebook.html');
+    assert.equal(locations[1], '/ebook.html');
+    assert.equal(locations[2], '/ebook.html');
+    assert.equal(locations[3], '/ebook.html');
+  } finally {
+    server.close();
+  }
+});
+
 test('builds a simple wallet-only ebook checkout payload without email friction', () => {
   const { buildEbookCheckoutPayload } = require('../server');
 
