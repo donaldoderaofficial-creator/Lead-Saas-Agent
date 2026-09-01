@@ -37,7 +37,7 @@ const config = {
 
   // Server
   port: parsePort(process.env.PORT || 3000),
-  host: process.env.HOST || (IS_PROD ? '0.0.0.0' : 'localhost'),
+  host: process.env.HOST || '0.0.0.0',
   sessionSecret: process.env.SESSION_SECRET,
 
   // Database
