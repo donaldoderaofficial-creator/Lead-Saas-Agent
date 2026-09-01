@@ -52,3 +52,9 @@
 {"timestamp":"2026-09-01T16:23:54.709Z","level":"error","message":"Uncaught exception","error":"listen EADDRINUSE: address already in use ::1:3000","stack":"Error: listen EADDRINUSE: address already in use ::1:3000\n    at Server.setupListenHandle [as _listen2] (node:net:1939:16)\n    at listenInCluster (node:net:1996:12)\n    at GetAddrInfoReqWrap.callback (node:net:2205:7)\n    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8)"}
 {"timestamp":"2026-09-01T16:32:26.264Z","level":"error","message":"Uncaught exception","error":"listen EADDRINUSE: address already in use ::1:3000","stack":"Error: listen EADDRINUSE: address already in use ::1:3000\n    at Server.setupListenHandle [as _listen2] (node:net:1939:16)\n    at listenInCluster (node:net:1996:12)\n    at GetAddrInfoReqWrap.callback (node:net:2205:7)\n    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8)"}
 {"timestamp":"2026-09-01T16:33:07.056Z","level":"info","message":"Dispatch Pro API listening on localhost:3001","env":"development","isProd":false}
+{"timestamp":"2026-09-01T16:34:44.185Z","level":"info","message":"Dispatch Pro API listening on localhost:4500","env":"development","isProd":false}
+{"timestamp":"2026-09-01T16:35:04.317Z","level":"info","message":"GET /","statusCode":200,"duration":"6ms"}
+{"timestamp":"2026-09-01T16:35:06.755Z","level":"info","message":"GET /favicon.ico","statusCode":404,"duration":"4ms"}
+{"timestamp":"2026-09-01T16:36:32.020Z","level":"info","message":"GET /ebook/preview","statusCode":200,"duration":"5ms"}
+{"timestamp":"2026-09-01T16:40:45.920Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T16:41:07.960Z","level":"info","message":"POST /api/ebook/order","statusCode":403,"duration":"31ms"}
