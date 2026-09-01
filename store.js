@@ -5,15 +5,34 @@
  * restarts and are cheaply queryable from the dashboard and admin APIs.
  */
 
-let Database;
-try {
-  Database = require('better-sqlite3');
-} catch (error) {
-  const { DatabaseSync } = require('node:sqlite');
-  Database = DatabaseSync;
+function loadDatabaseClass() {
+  try {
+    const { DatabaseSync } = require('node:sqlite');
+    if (typeof DatabaseSync === 'function') {
+      return DatabaseSync;
+    }
+  } catch (error) {
+    // Node 22+ exposes the built-in SQLite module. The native better-sqlite3
+    // package can fail hard on older Linux images, so we avoid loading it unless
+    // the runtime itself does not provide a safe SQLite implementation.
+  }
+
+  try {
+    const BetterSqlite3 = require('better-sqlite3');
+    if (typeof BetterSqlite3 === 'function') {
+      return BetterSqlite3;
+    }
+  } catch (error) {
+    // This is intentionally left as a last resort; the project targets Node 22,
+    // where the built-in SQLite API is available and much more stable.
+  }
+
+  throw new Error('No supported SQLite implementation is available for this runtime.');
 }
 
+const Database = loadDatabaseClass();
 const db = new Database(process.env.DB_PATH || './data.db');
+
 if (typeof db.pragma === 'function') {
   db.pragma('journal_mode = WAL');
 } else {
