@@ -248,7 +248,7 @@ app.post('/api/ebook/confirm', async (req, res) => {
     status: 'confirmed',
     reference,
     title: config.ebook?.title,
-    accessUrl: `/ebook/access?ref=${encodeURIComponent(reference)}`,
+    accessUrl: `/ebook/success?ref=${encodeURIComponent(reference)}`,
     txHash,
     amountUsd: receipt.amountUsd,
   });
@@ -256,6 +256,16 @@ app.post('/api/ebook/confirm', async (req, res) => {
 
 app.get('/ebook/preview', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'ebook-preview.html'));
+});
+
+app.get('/ebook/success', (req, res) => {
+  const reference = req.query.ref;
+  const report = completedReports.get(reference);
+  if (!report || report.type !== 'ebook') {
+    return res.status(404).send('This ebook purchase is not recognized or has not been confirmed yet.');
+  }
+
+  res.sendFile(path.join(__dirname, 'public', 'ebook-success.html'));
 });
 
 app.get('/ebook/access', (req, res) => {
