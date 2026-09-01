@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Builder's Blueprint | Reader Mode</title>
+  <style>
+    :root {
+      --bg: #f6f1e8;
+      --paper: #fffdf8;
+      --ink: #1d2430;
+      --muted: #4a5868;
+      --line: rgba(29, 36, 48, 0.15);
+      --brand: #1f5f45;
+      --gold: #c78a2c;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Georgia, 'Times New Roman', serif;
+      line-height: 1.9;
+    }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(246, 241, 232, 0.94);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+    .topbar-inner {
+      width: min(980px, calc(100% - 24px));
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      min-height: 64px;
+    }
+    .brand {
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: var(--brand);
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 14px;
+      color: var(--ink);
+      background: rgba(255,255,255,0.3);
+      font-family: Arial, sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .action.primary {
+      background: linear-gradient(135deg, #f5d27a, #d6a64c);
+      color: #20180d;
+      border: none;
+    }
+    .page {
+      width: min(980px, calc(100% - 24px));
+      margin: 24px auto 72px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 18px 48px rgba(29,36,48,0.08);
+      padding: clamp(24px, 4vw, 52px);
+    }
+    .eyebrow {
+      color: var(--brand);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 0.72rem;
+      font-family: Arial, sans-serif;
+      font-weight: 700;
+    }
+    h1 {
+      font-size: clamp(2.5rem, 5vw, 4.2rem);
+      line-height: 1;
+      letter-spacing: -0.05em;
+      margin: 18px 0 18px;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 1.2rem;
+      margin-bottom: 26px;
+      max-width: 760px;
+    }
+    .chapter {
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      margin-top: 18px;
+    }
+    .chapter h2 {
+      font-size: clamp(1.5rem, 3vw, 2.1rem);
+      margin: 0 0 12px;
+      line-height: 1.2;
+    }
+    p {
+      margin: 0 0 1.2em;
+      font-size: 1.1rem;
+      color: rgba(29, 36, 48, 0.95);
+    }
+    .callout {
+      margin-top: 24px;
+      border-left: 4px solid var(--gold);
+      background: rgba(199, 138, 44, 0.08);
+      padding: 18px 18px 14px;
+      border-radius: 12px;
+    }
+    .callout p { margin-bottom: 0; }
+    @media (max-width: 640px) {
+      .topbar-inner { min-height: 74px; flex-wrap: wrap; padding: 10px 0; }
+      .actions { width: 100%; }
+      .action { flex: 1; }
+      .page { padding: 22px 18px 32px; }
+      p { font-size: 1.04rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">The Builder's Blueprint</div>
+      <div class="actions">
+        <a class="action primary" href="/ebook.html">Buy full book</a>
+        <a class="action" href="/ebook/download.pdf?ref=__REF__">Download PDF</a>
+      </div>
+    </div>
+  </div>
+
+  <main class="page">
+    <div class="eyebrow">Reader mode</div>
+    <h1>The Builder's Blueprint</h1>
+    <div class="subtitle">A practical guide to turning coding skill into leverage, clarity, and profitable systems.</div>
+
+    <section class="chapter">
+      <h2>Chapter 1 — The first time I realized I was not lazy</h2>
+      <p>For a long time, I thought I was behind. I watched other people build quickly, ship confidently, and seem to move with ease. I kept asking myself why I struggled to move forward. I kept thinking I needed more discipline, more motivation, and more time in the day.</p>
+      <p>Then I saw the truth: I was not lazy. I was confused. I had too many ideas, too many tutorials, and too much information without a clear path. I wanted to build, but I had no system. I felt pressure, yet I had no structure. I was trying to become a builder without first learning how builders think.</p>
+      <p>That was the turning point. It was not dramatic. It was quiet, honest, and uncomfortable. I realized that doing more was not the answer. I needed clarity. I needed a way to work with intention. And once I started building with purpose, everything changed.</p>
+    </section>
+
+    <section class="chapter">
+      <h2>Chapter 2 — Why talented people still get stuck</h2>
+      <p>A lot of people think talent alone creates progress. It does not. Talent can help, but without direction it becomes noise. Intelligent people can still spend years stuck if they do not understand how to turn skill into value.</p>
+      <p>The real problem is not intelligence. It is focus. Many builders learn a little bit of a lot of things and then carry a pile of unfinished projects. They are busy, but they are not moving forward. They are gathering information, but not creating momentum.</p>
+      <p>This book exists to help you avoid that trap. It is not about being the smartest person in the room. It is about becoming clear on what you are building, why it matters, and how to turn your work into something people genuinely value.</p>
+    </section>
+
+    <section class="chapter">
+      <h2>Chapter 3 — Build for value, not applause</h2>
+      <p>One of the biggest mistakes builders make is building to impress other people. They want likes, compliments, and proof that they are doing well. But the market does not reward effort alone. It rewards usefulness.</p>
+      <p>A product does not need to be perfect to matter. It needs to make someone’s life easier, faster, or more valuable. It needs to solve a real problem. When you focus on solving a pain point, the work becomes easier to explain, easier to trust, and much easier to sell.</p>
+      <p>That is the difference between a project and a business. One is a personal experiment. The other creates value for other people and gives you leverage. This is where many builders start to understand that real growth is not only technical—it is strategic.</p>
+    </section>
+
+    <section class="chapter">
+      <h2>Chapter 4 — Why people buy outcomes, not effort</h2>
+      <p>We all love to talk about the work. We talk about long nights, failed attempts, and new ideas. But people do not buy your effort. They buy the result they believe your work delivers. That is why communication matters so much.</p>
+      <p>The best builders do not just build. They explain. They understand the problem. They show the possibility. They make the value clear. If you can explain what your work does and why it matters, you will attract the right people much faster.</p>
+      <p>When skill meets clarity, you stop sounding like someone asking for attention. You start sounding like someone creating value.</p>
+    </section>
+
+    <section class="chapter">
+      <h2>Chapter 5 — The builder’s system</h2>
+      <p>The builder’s system is simple: decide, validate, ship, learn, iterate. It sounds obvious, but most people get stuck in loops of planning and hesitation. They never move from concept to proof.</p>
+      <p>You do not need a giant framework. You need a way to get from idea to evidence quickly. Small experiments create data. Data creates clarity. Clarity creates direction. Direction creates momentum.</p>
+      <p>That momentum is the difference between being busy and being effective.</p>
+    </section>
+
+    <section class="chapter">
+      <h2>Chapter 6 — Turning skill into leverage</h2>
+      <p>Your strongest long-term skill is not collecting tutorials. It is learning how to turn knowledge into systems that deliver value repeatedly.</p>
+      <p>That means writing code that matters, designing products that solve real problems, and building assets that compound over time. This is how coding becomes income, and income becomes freedom.</p>
+      <p>The smart path is not to chase the loudest idea. It is to build the quiet thing that solves a real problem and stays useful for a long time.</p>
+    </section>
+
+    <section class="chapter">
+      <h2>Chapter 7 — Pricing, sales, and confidence</h2>
+      <p>Most builders undercharge because they do not understand the value of the work they are creating. If your work saves time, reduces stress, or creates outcomes, it is worth more than you think.</p>
+      <p>Pricing confidence is not about being aggressive. It is about clarity. Explain what the work does, why it matters, and why someone should trust it. Clear pricing is part of strong value delivery.</p>
+      <p>You do not need to beg for attention. You need to show that your work is useful, valuable, and worth paying for.</p>
+    </section>
+
+    <section class="chapter">
+      <h2>Chapter 8 — The long game</h2>
+      <p>The real win is not a single launch. It is building a system that makes your work increasingly valuable over time.</p>
+      <p>The builders who last are not necessarily the most talented. They are the ones who stay clear, stay useful, and stay patient enough to let compounding work in their favor.</p>
+      <p>That is what this book is really about: not speed for speed’s sake, but deliberate progress that turns skill into lasting leverage.</p>
+    </section>
+
+    <div class="callout">
+      <p><strong>Final thought:</strong> readiness rarely arrives before action. It arrives after the first brave step. What you do next matters more than how long you have been learning.</p>
+    </div>
+  </main>
+
+  <script>
+    const ref = new URLSearchParams(window.location.search).get('ref');
+    const downloadLink = document.querySelector('.action[href*="/ebook/download.pdf"]');
+    if (ref) {
+      downloadLink.href = `/ebook/download.pdf?ref=${encodeURIComponent(ref)}`;
+    }
+  </script>
+</body>
+</html>
