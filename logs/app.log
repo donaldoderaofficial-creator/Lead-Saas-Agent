@@ -39,3 +39,4 @@
 {"timestamp":"2026-09-01T15:48:54.832Z","level":"error","message":"Uncaught exception","error":"listen EADDRINUSE: address already in use ::1:3000","stack":"Error: listen EADDRINUSE: address already in use ::1:3000\n    at Server.setupListenHandle [as _listen2] (node:net:1939:16)\n    at listenInCluster (node:net:1996:12)\n    at GetAddrInfoReqWrap.callback (node:net:2205:7)\n    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8)"}
 {"timestamp":"2026-09-01T15:51:56.892Z","level":"info","message":"Dispatch Pro API listening on localhost:4100","env":"development","isProd":false}
 {"timestamp":"2026-09-01T15:56:00.745Z","level":"info","message":"Dispatch Pro API listening on localhost:4200","env":"development","isProd":false}
+{"timestamp":"2026-09-01T16:00:58.352Z","level":"info","message":"Dispatch Pro API listening on localhost:4300","env":"development","isProd":false}
