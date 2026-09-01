@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Builder's Blueprint | Bitcoin Checkout</title>
+  <style>
+    :root {
+      --bg: #06141d;
+      --panel: #0d1f2e;
+      --panel-2: #112b3a;
+      --line: rgba(148,163,184,0.2);
+      --text: #edf5ff;
+      --muted: #a6b4c5;
+      --brand: #4ade80;
+      --gold: #fbbf24;
+      --warm: #f97316;
+      --danger: #f87171;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: radial-gradient(circle at top, rgba(74,222,128,0.12), transparent 28%), var(--bg);
+      color: var(--text);
+    }
+    .shell {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 18px rgba(74,222,128,0.8); }
+    .layout {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 24px;
+    }
+    .panel {
+      background: rgba(13,31,46,0.9);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.2);
+    }
+    .eyebrow {
+      display: inline-block;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(74,222,128,0.1);
+      border: 1px solid rgba(74,222,128,0.24);
+      padding: 7px 12px;
+      border-radius: 999px;
+      color: var(--brand);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    h1 {
+      margin: 20px 0 14px;
+      font-size: clamp(2.3rem, 5vw, 4rem);
+      line-height: 1.05;
+    }
+    .lead {
+      color: var(--muted);
+      font-size: 1.08rem;
+      max-width: 650px;
+    }
+    .price {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-top: 20px;
+      font-weight: 800;
+    }
+    .price span:first-child {
+      font-size: 2.3rem;
+      color: var(--gold);
+    }
+    .price span:last-child {
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 26px;
+    }
+    .feature {
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.02);
+    }
+    .feature strong {
+      display: block;
+      font-size: 1rem;
+      margin-bottom: 4px;
+    }
+    .feature span { color: var(--muted); font-size: 0.9rem; }
+    label {
+      display: block;
+      margin: 18px 0 8px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    input {
+      width: 100%;
+      background: rgba(6,20,29,0.9);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 12px 14px;
+      font-size: 1rem;
+    }
+    .cta {
+      width: 100%;
+      margin-top: 18px;
+      border: none;
+      background: linear-gradient(135deg, var(--gold), var(--warm));
+      color: #1a160d;
+      font-weight: 800;
+      font-size: 1rem;
+      padding: 14px 16px;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    .wallet-box {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--line);
+    }
+    .wallet-box strong { display: block; margin-bottom: 8px; }
+    .address {
+      word-break: break-all;
+      color: var(--brand);
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+    .status {
+      min-height: 20px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .error { color: var(--danger); }
+    .success { color: var(--brand); }
+    .tiny {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+    @media (max-width: 860px) {
+      .layout { display: block; }
+      .features { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div class="brand"><span class="dot"></span> Builder's Blueprint</div>
+      <div>Direct BTC checkout • $19.99</div>
+    </div>
+
+    <div class="layout">
+      <section class="panel">
+        <div class="eyebrow">Premium digital product</div>
+        <h1>The Builder's Blueprint</h1>
+        <div class="lead">
+          A practical guide to turning coding skills into income, leverage, and a sustainable product business—from the lessons I learned through my journey as a builder.
+        </div>
+
+        <div class="price"><span>$19.99</span><span>USD • BTC checkout</span></div>
+
+        <div class="features">
+          <div class="feature"><strong>0 to Profit</strong><span>Build the system, not just the code.</span></div>
+          <div class="feature"><strong>Pricing & Sales</strong><span>Sell with clarity, confidence, and leverage.</span></div>
+          <div class="feature"><strong>Product Thinking</strong><span>Validate demand before scaling.</span></div>
+          <div class="feature"><strong>Long-Term Focus</strong><span>Build a business that compounds.</span></div>
+        </div>
+      </section>
+
+      <aside class="panel">
+        <h2 style="margin-top:0;">Buy with Bitcoin</h2>
+        <label for="name">Full name</label>
+        <input id="name" type="text" placeholder="Your name" />
+
+        <label for="email">Email</label>
+        <input id="email" type="email" placeholder="you@example.com" />
+
+        <button class="cta" id="payButton">Create BTC order</button>
+
+        <div class="wallet-box" id="walletBox" style="display:none;">
+          <strong>Send BTC to this wallet</strong>
+          <div class="address" id="walletAddress">3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k</div>
+          <div>Amount: <strong id="btcAmount">0.00028571 BTC</strong></div>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="tiny">
+          After creating your order, send the exact BTC amount to the wallet above. Then paste the transaction hash in the confirmation box that appears.<br /><br />
+          Your access will be released immediately after confirmation.
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const state = { reference: '', walletAddress: '3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k', amountBtc: '0.00028571' };
+    const statusEl = document.getElementById('status');
+    const walletBox = document.getElementById('walletBox');
+    const walletAddressEl = document.getElementById('walletAddress');
+    const btcAmountEl = document.getElementById('btcAmount');
+
+    function setStatus(message, kind = 'info') {
+      statusEl.className = 'status';
+      if (kind === 'error') statusEl.classList.add('error');
+      if (kind === 'success') statusEl.classList.add('success');
+      statusEl.textContent = message;
+    }
+
+    async function createOrder() {
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      if (!email || !email.includes('@')) {
+        setStatus('Please enter a valid email address.', 'error');
+        return;
+      }
+
+      setStatus('Creating your BTC order…');
+      const response = await fetch('/api/ebook/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email })
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        setStatus(payload.error || 'Unable to create your order.', 'error');
+        return;
+      }
+
+      state.reference = payload.reference;
+      state.walletAddress = payload.walletAddress;
+      state.amountBtc = payload.amountBtc;
+      walletAddressEl.textContent = payload.walletAddress;
+      btcAmountEl.textContent = `${payload.amountBtc} BTC`;
+      walletBox.style.display = 'block';
+
+      const txHash = window.prompt('Paste the Bitcoin transaction hash after sending the BTC payment:', '');
+      if (!txHash || !txHash.trim()) {
+        setStatus('Payment not confirmed yet. Send BTC first and paste the transaction hash to finish the order.', 'error');
+        return;
+      }
+
+      const confirmResp = await fetch('/api/ebook/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reference: state.reference, txHash: txHash.trim(), name, email })
+      });
+      const confirmPayload = await confirmResp.json();
+
+      if (!confirmResp.ok) {
+        setStatus(confirmPayload.error || 'Confirmation failed.', 'error');
+        return;
+      }
+
+      setStatus(`Payment confirmed. Your ebook is ready. Redirecting…`, 'success');
+      window.location.href = confirmPayload.accessUrl;
+    }
+
+    document.getElementById('payButton').addEventListener('click', createOrder);
+  </script>
+</body>
+</html>

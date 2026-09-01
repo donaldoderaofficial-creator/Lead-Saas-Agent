@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Builder's Blueprint</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: #0f1d2d;
+      --panel-2: #14273d;
+      --border: #24405f;
+      --text: #edf3ff;
+      --muted: #9db1c9;
+      --accent: #6ee7b7;
+      --gold: #fbbf24;
+      --warm: #f97316;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: radial-gradient(circle at top, rgba(110,231,183,0.13), transparent 28%), var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 32px 20px 72px;
+    }
+    .hero {
+      background: linear-gradient(135deg, rgba(25,52,76,0.92), rgba(9,18,28,0.94));
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    }
+    .kicker {
+      display: inline-block;
+      background: rgba(110,231,183,0.12);
+      color: var(--accent);
+      border: 1px solid rgba(110,231,183,0.3);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    h1 { font-size: clamp(2.2rem, 5vw, 4rem); margin: 18px 0 12px; line-height: 1.08; }
+    .sub { color: var(--muted); font-size: 1.08rem; max-width: 680px; }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 22px;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+    .meta span { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; }
+    .content {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: 1.8fr 1fr;
+      gap: 24px;
+    }
+    .panel {
+      background: rgba(15,29,45,0.9);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .panel h2 { margin-top: 0; font-size: 1.1rem; }
+    ul {
+      margin: 0; padding-left: 18px;
+      color: var(--muted);
+    }
+    li { margin-bottom: 10px; }
+    .stats { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+    .stat {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .stat strong { display: block; font-size: 1.7rem; color: var(--gold); }
+    .stat span { color: var(--muted); font-size: 0.84rem; }
+    .cta {
+      margin-top: 20px;
+      display: inline-block;
+      background: linear-gradient(135deg, var(--gold), var(--warm));
+      color: #1d1b16;
+      padding: 12px 18px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 800;
+    }
+    @media (max-width: 760px) {
+      .content { grid-template-columns: 1fr; }
+      .wrap { padding-top: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <span class="kicker">Premium Ebook</span>
+      <h1>The Builder's Blueprint</h1>
+      <div class="sub">From zero to profitable product engineer: the exact systems, habits, and revenue moves that helped me turn coding into leverage, freedom, and a business.</div>
+      <div class="meta">
+        <span>19.99 USD</span>
+        <span>BTC Wallet Purchase</span>
+        <span>Digital Download</span>
+      </div>
+    </section>
+
+    <section class="content">
+      <div class="panel">
+        <h2>What you’ll learn</h2>
+        <ul>
+          <li>How to build with intent instead of chasing random tutorials.</li>
+          <li>How I structured my work so I could ship consistently and stay profitable.</li>
+          <li>How to turn a product idea into a revenue engine with validation and leverage.</li>
+          <li>How to build systems that help you grow without burning out.</li>
+          <li>How to market your work, price with confidence, and create long-term recurring value.</li>
+        </ul>
+        <a class="cta" href="/">Back to checkout</a>
+      </div>
+
+      <div class="panel">
+        <h2>Inside the book</h2>
+        <div class="stats">
+          <div class="stat"><strong>7</strong><span>Core chapters</span></div>
+          <div class="stat"><strong>50+</strong><span>Actionable principles</span></div>
+          <div class="stat"><strong>1</strong><span>Clear path from coding to profit</span></div>
+          <div class="stat"><strong>∞</strong><span>Leverage over time</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
