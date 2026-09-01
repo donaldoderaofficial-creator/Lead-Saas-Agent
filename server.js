@@ -14,6 +14,7 @@
 
 require('dotenv').config();
 const crypto = require('crypto');
+const path = require('node:path');
 const express = require('express');
 const session = require('express-session');
 const compression = require('compression');
@@ -98,6 +99,13 @@ function recordFailedAttempt(username, req) {
 
 // Flexible, configurable pricing from config system
 const PRICING = config.pricing;
+const EBOOK_PRICE_USD = Number(config.ebook?.priceUsd || 19.99);
+const BTC_USD_PRICE = Number(process.env.BTC_USD_PRICE || 70000);
+
+function getEbookBtcAmount() {
+  if (!Number.isFinite(BTC_USD_PRICE) || BTC_USD_PRICE <= 0) return '0.00028571';
+  return (EBOOK_PRICE_USD / BTC_USD_PRICE).toFixed(8);
+}
 
 // ---- Health Check Endpoint ----
 app.get('/health', (req, res) => {
@@ -147,11 +155,113 @@ app.get('/api/config', (req, res) => {
       starter: { paypalPlanId: process.env.PAYPAL_PLAN_STARTER_MONTHLY || null },
       growth: { paypalPlanId: process.env.PAYPAL_PLAN_GROWTH_MONTHLY || null },
     },
+    ebook: {
+      enabled: config.ebook?.enabled,
+      title: config.ebook?.title,
+      priceUsd: Number(config.ebook?.priceUsd || 19.99),
+      walletAddress: config.ebook?.walletAddress || config.wallets.bitcoin.address,
+    },
   });
 });
 
 app.get('/api/billing/status', (req, res) => {
   res.json(subscription.get());
+});
+
+app.get('/api/ebook/product', (req, res) => {
+  res.json({
+    enabled: config.ebook?.enabled ?? true,
+    title: config.ebook?.title || 'The Builder\'s Blueprint',
+    subtitle: config.ebook?.subtitle || 'A practical guide to building profitable software products.',
+    priceUsd: Number(config.ebook?.priceUsd || 19.99),
+    priceBtc: getEbookBtcAmount(),
+    walletAddress: config.ebook?.walletAddress || config.wallets.bitcoin.address,
+    currency: 'BTC',
+    checkoutNote: 'Send the exact BTC amount to the wallet above and confirm the transaction hash to unlock your copy.',
+  });
+});
+
+app.post('/api/ebook/order', (req, res) => {
+  const { name, email } = req.body || {};
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ error: 'A valid email address is required.' });
+  }
+
+  const reference = crypto.randomUUID();
+  pendingLeads.set(reference, {
+    name: name || 'Customer',
+    email,
+    paymentMethod: 'bitcoin-ebook',
+    product: 'ebook',
+  });
+
+  res.json({
+    status: 'pending',
+    reference,
+    product: config.ebook?.title,
+    amountUsd: Number(config.ebook?.priceUsd || 19.99),
+    amountBtc: getEbookBtcAmount(),
+    walletAddress: config.ebook?.walletAddress || config.wallets.bitcoin.address,
+    instructions: `Send ${getEbookBtcAmount()} BTC to the wallet address above, then submit the transaction hash to unlock access.`,
+  });
+});
+
+app.post('/api/ebook/confirm', async (req, res) => {
+  const { reference, txHash, name, email } = req.body || {};
+  if (!reference || !txHash) {
+    return res.status(400).json({ error: 'reference and txHash are required.' });
+  }
+
+  const order = pendingLeads.get(reference);
+  if (!order) {
+    return res.status(404).json({ error: 'Unknown order reference.' });
+  }
+
+  const receipt = {
+    type: 'ebook',
+    title: config.ebook?.title,
+    buyer: {
+      name: name || order.name || 'Customer',
+      email: email || order.email || 'unknown@example.com',
+    },
+    amountUsd: Number(config.ebook?.priceUsd || 19.99),
+    amountBtc: getEbookBtcAmount(),
+    walletAddress: config.ebook?.walletAddress || config.wallets.bitcoin.address,
+    txHash,
+    status: 'paid',
+    purchasedAt: new Date().toISOString(),
+  };
+
+  completedReports.set(reference, receipt);
+  pendingLeads.delete(reference);
+  payments.record({
+    provider: 'bitcoin-ebook',
+    transactionId: txHash,
+    reference,
+    amount: receipt.amountUsd,
+    currency: 'USD',
+    status: 'confirmed',
+    raw: receipt,
+  });
+
+  res.json({
+    status: 'confirmed',
+    reference,
+    title: config.ebook?.title,
+    accessUrl: `/ebook/access?ref=${encodeURIComponent(reference)}`,
+    txHash,
+    amountUsd: receipt.amountUsd,
+  });
+});
+
+app.get('/ebook/access', (req, res) => {
+  const reference = req.query.ref;
+  const report = completedReports.get(reference);
+  if (!report || report.type !== 'ebook') {
+    return res.status(404).send('This ebook purchase is not recognized or has not been confirmed yet.');
+  }
+
+  res.sendFile(path.join(__dirname, 'public', 'ebook-content.html'));
 });
 
 // ---- Metrics & Monitoring Endpoint (Admin Only) ----

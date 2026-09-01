@@ -25,6 +25,8 @@ function parseCorsOrigins(value) {
     .filter(Boolean);
 }
 
+const DEFAULT_BTC_WALLET = '3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k';
+
 // Application Configuration
 const config = {
   // Environment
@@ -120,8 +122,8 @@ const config = {
 
   wallets: {
     bitcoin: {
-      enabled: !!process.env.BITCOIN_WALLET_ADDRESS,
-      address: process.env.BITCOIN_WALLET_ADDRESS || null,
+      enabled: !!(process.env.BITCOIN_WALLET_ADDRESS || DEFAULT_BTC_WALLET),
+      address: process.env.BITCOIN_WALLET_ADDRESS || DEFAULT_BTC_WALLET,
       currency: 'BTC',
       label: 'Bitcoin',
     },
@@ -131,6 +133,14 @@ const config = {
       currency: 'ETH',
       label: 'Ethereum',
     },
+  },
+
+  ebook: {
+    enabled: true,
+    title: 'The Builder\'s Blueprint: From Zero to Profitable Product Engineer',
+    subtitle: 'A practical guide to turning coding skills into income, systems, and leverage.',
+    priceUsd: 19.99,
+    walletAddress: process.env.BITCOIN_WALLET_ADDRESS || DEFAULT_BTC_WALLET,
   },
 
   // Third-party APIs
