@@ -5,10 +5,20 @@
  * restarts and are cheaply queryable from the dashboard and admin APIs.
  */
 
-const Database = require('better-sqlite3');
+let Database;
+try {
+  Database = require('better-sqlite3');
+} catch (error) {
+  const { DatabaseSync } = require('node:sqlite');
+  Database = DatabaseSync;
+}
 
 const db = new Database(process.env.DB_PATH || './data.db');
-db.pragma('journal_mode = WAL');
+if (typeof db.pragma === 'function') {
+  db.pragma('journal_mode = WAL');
+} else {
+  db.exec('PRAGMA journal_mode = WAL');
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS pending_leads (

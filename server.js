@@ -122,9 +122,21 @@ app.get('/api/payments/options', (req, res) => {
         currency: 'KES',
         methods: ['stk-push', 'dynamic-qr'],
       },
+      bitcoin: {
+        enabled: !!config.wallets.bitcoin.address,
+        currency: 'BTC',
+        methods: ['wallet-transfer'],
+        address: config.wallets.bitcoin.address,
+      },
+      ethereum: {
+        enabled: !!config.wallets.ethereum.address,
+        currency: 'ETH',
+        methods: ['wallet-transfer'],
+        address: config.wallets.ethereum.address,
+      },
     },
-    supportedCurrencies: ['USD', 'KES'],
-    settlement: 'Payments settle separately with PayPal or M-Pesa; direct PayPal-to-M-Pesa transfers are not supported by provider APIs.',
+    supportedCurrencies: ['USD', 'KES', 'BTC', 'ETH'],
+    settlement: 'Direct Bitcoin and Ethereum wallet transfers are accepted manually and require transaction confirmation before a report is released.',
   });
 });
 
@@ -226,7 +238,26 @@ app.post('/api/lead', async (req, res) => {
       });
     }
 
-    return res.status(400).json({ error: "method must be 'paypal' or 'mpesa'" });
+    if (['bitcoin', 'ethereum'].includes(method)) {
+      const walletType = method === 'bitcoin' ? 'bitcoin' : 'ethereum';
+      const walletAddress = config.wallets[walletType].address;
+      if (!walletAddress) {
+        return res.status(400).json({ error: `Direct ${config.wallets[walletType].label} payments are not configured.` });
+      }
+      const leadRef = crypto.randomUUID();
+      pendingLeads.set(leadRef, { name, email, phone, paymentMethod: method });
+      return res.json({
+        status: 'pending',
+        method,
+        reference: leadRef,
+        walletAddress,
+        amount: PRICING.usd.starter.price,
+        currency: config.wallets[walletType].currency,
+        instructions: `Send ${config.wallets[walletType].currency} to the wallet address above and then confirm the transaction ID in the follow-up step or through the manual payment confirmation endpoint.`,
+      });
+    }
+
+    return res.status(400).json({ error: "method must be 'paypal', 'mpesa', 'bitcoin', or 'ethereum'" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -367,6 +398,28 @@ app.post('/payments/mpesa/c2b/confirmation', async (req, res) => {
     });
   }
   res.json({ ResultCode: 0, ResultDesc: 'Received' });
+});
+
+app.post('/api/payments/wallet/confirm', async (req, res) => {
+  const { reference, txHash, method, amount } = req.body || {};
+  if (!reference || !txHash || !method) {
+    return res.status(400).json({ error: 'reference, txHash, and method are required' });
+  }
+  if (!['bitcoin', 'ethereum'].includes(method)) {
+    return res.status(400).json({ error: "method must be 'bitcoin' or 'ethereum'" });
+  }
+  const lead = pendingLeads.get(reference);
+  if (!lead) {
+    return res.status(404).json({ error: 'Unknown payment reference' });
+  }
+  await finalizeLead(reference, {
+    provider: method,
+    transactionId: txHash,
+    amount: Number(amount) || PRICING.usd.starter.price,
+    currency: config.wallets[method].currency,
+    raw: { txHash, method, amount: Number(amount) || PRICING.usd.starter.price },
+  });
+  res.json({ status: 'confirmed', method, reference, txHash });
 });
 
 // ---- Step 2: fetch the report once payment has been confirmed ----

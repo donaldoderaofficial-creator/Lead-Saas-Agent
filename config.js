@@ -118,6 +118,21 @@ const config = {
     },
   },
 
+  wallets: {
+    bitcoin: {
+      enabled: !!process.env.BITCOIN_WALLET_ADDRESS,
+      address: process.env.BITCOIN_WALLET_ADDRESS || null,
+      currency: 'BTC',
+      label: 'Bitcoin',
+    },
+    ethereum: {
+      enabled: !!process.env.ETHEREUM_WALLET_ADDRESS,
+      address: process.env.ETHEREUM_WALLET_ADDRESS || null,
+      currency: 'ETH',
+      label: 'Ethereum',
+    },
+  },
+
   // Third-party APIs
   apis: {
     explorium: {
