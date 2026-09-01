@@ -154,3 +154,5 @@
 {"timestamp":"2026-09-01T21:46:29.865Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-01T21:46:29.876Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-01T21:46:29.879Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-01T21:47:17.365Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T21:47:36.766Z","level":"info","message":"GET /","statusCode":200,"duration":"2ms"}
