@@ -124,3 +124,4 @@
 {"timestamp":"2026-09-01T17:25:08.364Z","level":"info","message":"GET /favicon.ico","statusCode":404,"duration":"1ms"}
 {"timestamp":"2026-09-01T17:25:42.436Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
 {"timestamp":"2026-09-01T17:26:04.844Z","level":"info","message":"GET /robots.txt","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:48:47.213Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
