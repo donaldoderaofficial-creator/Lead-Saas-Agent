@@ -278,6 +278,11 @@
       color: var(--muted);
       line-height: 1.9;
     }
+    .mini-card p {
+      color: var(--muted);
+      line-height: 1.8;
+      margin: 0 0 10px;
+    }
     .quote {
       font-style: italic;
       color: var(--text);
@@ -289,6 +294,24 @@
       margin-top: 12px;
       color: var(--muted);
       font-size: 0.83rem;
+    }
+    .cta-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 18px;
+    }
+    .mini-cta {
+      display: inline-block;
+      width: 100%;
+      text-align: center;
+      text-decoration: none;
+      color: var(--brand);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.02);
+      font-weight: 700;
     }
     @media (max-width: 980px) {
       .layout, .section-grid, .trust-strip { grid-template-columns: 1fr; }
@@ -310,41 +333,45 @@
 
     <div class="layout">
       <section class="panel">
-        <div class="eyebrow">Premium digital product</div>
-        <h1>Turn your coding skill into leverage.</h1>
+        <div class="eyebrow">The system behind real product growth</div>
+        <h1>Stop learning forever. Start building something that matters.</h1>
         <div class="lead">
-          This is the playbook I wish I had when I was starting: how to think like a builder, create real value, price your work with confidence, and grow a product business that compounds instead of burns out.
+          This is the exact playbook I wish I had when I was starting: how to think like a builder, create real value, price your work with confidence, and turn coding skill into leverage instead of endless loops of tutorials and unfinished projects.
         </div>
 
         <div class="price-row">
           <div class="price"><strong>$19.99</strong><span>USD</span></div>
-          <div class="badge">Up to 300 pages</div>
+          <div class="badge">Up to 300 pages • practical, actionable, direct</div>
         </div>
 
         <div class="features">
-          <div class="feature"><strong>Build with intent</strong><span>Stop chasing random tutorials and start creating wealth-building assets.</span></div>
-          <div class="feature"><strong>Pricing & sales</strong><span>Understand how to sell your work without feeling awkward or desperate.</span></div>
-          <div class="feature"><strong>Product thinking</strong><span>Validate demand before you scale, and build solutions people genuinely want.</span></div>
-          <div class="feature"><strong>Long-term leverage</strong><span>Design a system that makes your time more valuable over time.</span></div>
+          <div class="feature"><strong>Build with intent</strong><span>Stop collecting shortcuts and start creating assets that actually compound.</span></div>
+          <div class="feature"><strong>Price with confidence</strong><span>Learn how to sell your work without feeling awkward or undercharging.</span></div>
+          <div class="feature"><strong>Think like a founder</strong><span>Validate demand, solve real pain points, and build what people want.</span></div>
+          <div class="feature"><strong>Create leverage</strong><span>Turn effort into systems, systems into products, and products into long-term value.</span></div>
         </div>
 
         <div class="trust-strip">
           <div class="trust"><strong>7</strong>Core chapters</div>
-          <div class="trust"><strong>50+</strong>Actionable lessons</div>
-          <div class="trust"><strong>Immediate</strong>Digital delivery</div>
+          <div class="trust"><strong>50+</strong>Practical lessons</div>
+          <div class="trust"><strong>Instant</strong>Digital access</div>
         </div>
       </section>
 
       <aside class="checkout-box">
-        <h2>Buy with Bitcoin</h2>
+        <h2>Buy the ebook with Bitcoin</h2>
+        <p style="margin:0 0 8px; color:var(--muted); line-height:1.7;">If you want to stop spinning and start building with clarity, this book is for you.</p>
+
         <label for="name">Full name</label>
         <input id="name" type="text" placeholder="Your name" />
 
         <label for="email">Email</label>
         <input id="email" type="email" placeholder="you@example.com" />
 
-        <button class="cta" id="payButton">Create BTC order</button>
-        <a href="/ebook/preview" style="display:inline-block; width:100%; margin-top:12px; text-align:center; text-decoration:none; color:var(--brand); border:1px solid var(--line); border-radius:10px; padding:12px 14px; background:rgba(255,255,255,0.02); font-weight:700;">Read preview</a>
+        <button class="cta" id="payButton">Get instant access</button>
+        <div class="cta-row">
+          <a href="/ebook/preview" class="mini-cta">Read preview</a>
+        </div>
         <div class="secure-note">Secure direct wallet payment • instant delivery after confirmation</div>
 
         <div class="wallet-box" id="walletBox" style="display:none;">
@@ -356,7 +383,7 @@
         <div class="status" id="status"></div>
 
         <div class="tiny">
-          After creating your order, send the exact BTC amount to the wallet above. Then paste the transaction hash in the confirmation prompt. Access is unlocked immediately after confirmation.
+          After sending the exact BTC amount, paste the transaction hash to confirm your payment. Your access is unlocked immediately after confirmation.
         </div>
       </aside>
     </div>
@@ -365,16 +392,20 @@
       <div class="mini-card">
         <h3>What you’ll learn</h3>
         <ul>
-          <li>How to structure your learning so it compounds into real income.</li>
-          <li>How to build small, valuable products instead of random side-projects.</li>
-          <li>How to position your work for trust, authority, and consistent demand.</li>
-          <li>How to create a strong revenue engine without trading your time for everything.</li>
-          <li>How to think like a founder, not a beginner coder.</li>
+          <li>How to stop collecting information and start building what actually matters.</li>
+          <li>How to turn a skill into a real product, service, or system with leverage.</li>
+          <li>How to explain your work clearly and sell it without feeling uncomfortable.</li>
+          <li>How to validate ideas before wasting time on dead ends or random side projects.</li>
+          <li>How to think like a founder and build a business that compounds over time.</li>
         </ul>
       </div>
 
       <div class="mini-card">
-        <h3>What readers are saying</h3>
+        <h3>Why this book works</h3>
+        <p>It is built for people who are serious about moving from learning into action.</p>
+        <p>It cuts through the noise and focuses on the real decisions that change outcomes.</p>
+        <p>It turns complexity into simple, clear, useful next steps.</p>
+        <h3 style="margin-top:18px;">What readers are saying</h3>
         <p class="quote">“This is the kind of guidance that changes how you build. It helped me stop jumping between ideas and start creating what actually sells.”</p>
         <div class="meta-name">— Product-minded developer</div>
         <br />
