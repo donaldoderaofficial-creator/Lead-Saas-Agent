@@ -150,3 +150,7 @@
 {"timestamp":"2026-09-01T21:38:14.265Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"2ms"}
 {"timestamp":"2026-09-01T21:40:30.682Z","level":"info","message":"GET /ebook/preview","statusCode":200,"duration":"6ms"}
 {"timestamp":"2026-09-01T21:40:38.984Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T21:46:29.859Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-01T21:46:29.865Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-01T21:46:29.876Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-01T21:46:29.879Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
