@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Preview | The Builder's Blueprint</title>
+  <style>
+    :root {
+      --bg: #06141d;
+      --panel: rgba(12, 25, 35, 0.92);
+      --line: rgba(148, 163, 184, 0.18);
+      --text: #edf5ff;
+      --muted: #a7b8ce;
+      --brand: #4ade80;
+      --gold: #fbbf24;
+      --warm: #f97316;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(180deg, #051219, #06141d);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 840px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.25);
+    }
+    .eyebrow {
+      display: inline-block;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(74, 222, 128, 0.10);
+      border: 1px solid rgba(74, 222, 128, 0.24);
+      padding: 7px 12px;
+      border-radius: 999px;
+      color: var(--brand);
+      font-size: 11px;
+      font-weight: 800;
+    }
+    h1 {
+      margin: 18px 0 8px;
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      line-height: 1.08;
+      letter-spacing: -0.04em;
+    }
+    .intro {
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 1.02rem;
+      margin-bottom: 18px;
+    }
+    .preview-box {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.02);
+      padding: 18px 20px;
+      margin-top: 18px;
+    }
+    h2 {
+      margin-top: 0;
+      font-size: 1.1rem;
+    }
+    p, li {
+      color: var(--muted);
+      line-height: 1.8;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 22px;
+    }
+    .btn {
+      display: inline-block;
+      padding: 12px 16px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 800;
+    }
+    .primary {
+      background: linear-gradient(135deg, var(--gold), var(--warm));
+      color: #1a160d;
+    }
+    .secondary {
+      color: var(--brand);
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <div class="eyebrow">Book preview</div>
+      <h1>The Builder's Blueprint</h1>
+      <div class="intro">
+        Most people don’t fail because they can’t code. They fail because they don’t know how to turn code into a system, a reputation, and a business. This preview shows the mindset behind that shift.
+      </div>
+
+      <div class="preview-box">
+        <h2>Chapter 1 — Build for leverage, not applause</h2>
+        <p>
+          The biggest mistake early builders make is confusing activity with progress. They collect tutorials, stack unfinished projects, and admire their effort without ever creating value that compounds. The goal is not to look busy; it is to build assets that get more useful over time.
+        </p>
+        <p>
+          Real leverage means creating work that helps people, solves a real problem, and can be refined into a product, a service, or a system that scales. When you build for leverage, you stop chasing validation and start creating outcomes.
+        </p>
+      </div>
+
+      <div class="preview-box">
+        <h2>Chapter 2 — Sell what solves a painful problem</h2>
+        <p>
+          People buy clarity, speed, confidence, and relief. They do not pay for effort alone. A product that helps people save time, reduce risk, or improve results will always be easier to sell than a project that only reflects your interests.
+        </p>
+        <p>
+          The most profitable builders are not necessarily the most talented. They are the ones who understand value creation and can communicate it clearly.
+        </p>
+      </div>
+
+      <div class="actions">
+        <a class="btn primary" href="/ebook.html">Buy the full book</a>
+        <a class="btn secondary" href="/">Back to platform</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
