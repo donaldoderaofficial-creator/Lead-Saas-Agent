@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#06141d" />
   <title>The Builder's Blueprint | Premium BTC Checkout</title>
   <style>
     :root {
@@ -30,6 +31,8 @@
         radial-gradient(circle at bottom right, rgba(251, 191, 36, 0.10), transparent 30%),
         linear-gradient(180deg, #051219, var(--bg));
       color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
     }
     .shell {
       max-width: 1180px;
@@ -201,8 +204,11 @@
       border: 1px solid var(--line);
       border-radius: 10px;
       color: var(--text);
-      padding: 12px 14px;
-      font-size: 1rem;
+      padding: 14px 16px;
+      font-size: 16px;
+      min-height: 52px;
+      appearance: none;
+      -webkit-appearance: none;
     }
     .cta {
       width: 100%;
@@ -212,11 +218,13 @@
       color: #1a160d;
       font-weight: 900;
       font-size: 1rem;
-      padding: 15px 18px;
+      padding: 17px 18px;
       border-radius: 12px;
       cursor: pointer;
       transition: transform 0.15s ease, box-shadow 0.15s ease;
       box-shadow: 0 18px 30px rgba(251, 191, 36, 0.22);
+      min-height: 54px;
+      touch-action: manipulation;
     }
     .cta:hover { transform: translateY(-1px); }
     .secure-note {
@@ -318,9 +326,15 @@
       .checkout-box { position: static; }
     }
     @media (max-width: 740px) {
+      .shell { padding: 16px 14px 48px; }
       .features { grid-template-columns: 1fr; }
-      .panel, .checkout-box { padding: 20px; }
+      .panel, .checkout-box { padding: 18px 16px; border-radius: 18px; }
       .topbar { flex-direction: column; align-items: flex-start; }
+      .price strong { font-size: 2.4rem; }
+      h1 { font-size: clamp(2.2rem, 11vw, 3.2rem); }
+      .lead { font-size: 1rem; }
+      .cta, .mini-cta { min-height: 54px; }
+      .mini-cta { font-size: 0.95rem; }
     }
   </style>
 </head>
@@ -368,7 +382,13 @@
         <label for="email">Email (optional)</label>
         <input id="email" type="email" placeholder="you@example.com (optional)" />
 
-        <button class="cta" id="payButton">Copy wallet and pay</button>
+        <label for="txHash">Transaction hash or payment note</label>
+        <input id="txHash" type="text" placeholder="Paste tx hash or payment note" />
+
+        <label for="depositProof">Deposit screenshot (optional)</label>
+        <input id="depositProof" type="file" accept="image/*" />
+
+        <button class="cta" id="payButton">Send payment proof</button>
         <div class="cta-row">
           <a href="/ebook/preview" class="mini-cta">Read preview</a>
         </div>
@@ -466,39 +486,22 @@
         setStatus(`Copy this wallet address and send ${payload.amountBtc} BTC: ${payload.walletAddress}`, 'success');
       }
 
-      const txHashInput = window.prompt('After sending the BTC payment, paste the transaction hash. If you prefer, leave it blank and upload a screenshot of the deposit below.', '');
-      const txHash = (txHashInput || '').trim();
+      const txHashInput = document.getElementById('txHash');
+      const fileInput = document.getElementById('depositProof');
+      const txHash = (txHashInput.value || '').trim();
 
       let screenshotData = null;
-      const fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      fileInput.accept = 'image/*';
-      fileInput.style.display = 'none';
-      document.body.appendChild(fileInput);
-
-      const hasScreenshot = await new Promise((resolve) => {
-        const onChange = () => {
-          const file = fileInput.files && fileInput.files[0];
-          if (!file) {
-            resolve(false);
-            return;
-          }
-          const reader = new FileReader();
-          reader.onload = () => {
-            screenshotData = String(reader.result || '');
-            resolve(true);
-          };
-          reader.onerror = () => {
-            resolve(false);
-          };
+      const file = fileInput.files && fileInput.files[0];
+      if (file) {
+        const reader = new FileReader();
+        screenshotData = await new Promise((resolve, reject) => {
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = () => reject(new Error('Could not read payment screenshot'));
           reader.readAsDataURL(file);
-        };
-        fileInput.addEventListener('change', onChange, { once: true });
-        fileInput.click();
-      });
-      fileInput.remove();
+        });
+      }
 
-      if (!txHash && !hasScreenshot) {
+      if (!txHash && !screenshotData) {
         setStatus('Payment not confirmed yet. Send BTC, then provide either the transaction hash or a screenshot of the deposit.', 'error');
         return;
       }
