@@ -3,32 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>The Builder's Blueprint | Bitcoin Checkout</title>
+  <title>The Builder's Blueprint | Premium BTC Checkout</title>
   <style>
     :root {
       --bg: #06141d;
-      --panel: #0d1f2e;
-      --panel-2: #112b3a;
-      --line: rgba(148,163,184,0.2);
+      --bg-2: #0b1e2a;
+      --panel: rgba(12, 25, 35, 0.92);
+      --panel-2: rgba(18, 35, 47, 0.92);
+      --line: rgba(148, 163, 184, 0.18);
       --text: #edf5ff;
-      --muted: #a6b4c5;
+      --muted: #a7b8ce;
       --brand: #4ade80;
       --gold: #fbbf24;
       --warm: #f97316;
       --danger: #f87171;
+      --shadow: rgba(0, 0, 0, 0.3);
     }
     * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
       margin: 0;
       min-height: 100vh;
       font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: radial-gradient(circle at top, rgba(74,222,128,0.12), transparent 28%), var(--bg);
+      background:
+        radial-gradient(circle at top left, rgba(74, 222, 128, 0.12), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(251, 191, 36, 0.10), transparent 30%),
+        linear-gradient(180deg, #051219, var(--bg));
       color: var(--text);
     }
     .shell {
-      max-width: 1120px;
+      max-width: 1180px;
       margin: 0 auto;
-      padding: 32px 20px 64px;
+      padding: 28px 20px 80px;
     }
     .topbar {
       display: flex;
@@ -37,7 +43,7 @@
       gap: 12px;
       margin-bottom: 28px;
       color: var(--muted);
-      font-size: 0.92rem;
+      font-size: 0.9rem;
     }
     .brand {
       display: inline-flex;
@@ -46,60 +52,90 @@
       background: rgba(255,255,255,0.02);
       border: 1px solid var(--line);
       border-radius: 999px;
-      padding: 8px 14px;
+      padding: 9px 14px;
       font-weight: 700;
       color: var(--text);
     }
-    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 18px rgba(74,222,128,0.8); }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--brand);
+      box-shadow: 0 0 18px rgba(74,222,128,0.8);
+    }
     .layout {
       display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 24px;
+      grid-template-columns: 1.28fr 0.72fr;
+      gap: 26px;
+      align-items: start;
     }
     .panel {
-      background: rgba(13,31,46,0.9);
+      background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: 20px;
-      padding: 28px;
-      box-shadow: 0 24px 70px rgba(0,0,0,0.2);
+      border-radius: 24px;
+      padding: 30px;
+      box-shadow: 0 24px 70px var(--shadow);
     }
     .eyebrow {
       display: inline-block;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      background: rgba(74,222,128,0.1);
-      border: 1px solid rgba(74,222,128,0.24);
+      background: rgba(74, 222, 128, 0.10);
+      border: 1px solid rgba(74, 222, 128, 0.24);
       padding: 7px 12px;
       border-radius: 999px;
       color: var(--brand);
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 800;
     }
     h1 {
-      margin: 20px 0 14px;
-      font-size: clamp(2.3rem, 5vw, 4rem);
-      line-height: 1.05;
+      margin: 18px 0 14px;
+      font-size: clamp(2.5rem, 5vw, 4.4rem);
+      line-height: 1.02;
+      letter-spacing: -0.05em;
     }
     .lead {
       color: var(--muted);
-      font-size: 1.08rem;
-      max-width: 650px;
+      font-size: 1.1rem;
+      line-height: 1.7;
+      max-width: 680px;
+    }
+    .price-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      margin-top: 24px;
+      margin-bottom: 12px;
     }
     .price {
       display: inline-flex;
       align-items: baseline;
       gap: 8px;
-      margin-top: 20px;
       font-weight: 800;
     }
-    .price span:first-child {
-      font-size: 2.3rem;
+    .price strong {
+      font-size: 3rem;
       color: var(--gold);
+      line-height: 1;
     }
-    .price span:last-child {
+    .price span {
       color: var(--muted);
-      font-weight: 600;
       font-size: 0.95rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(251, 191, 36, 0.09);
+      border: 1px solid rgba(251, 191, 36, 0.22);
+      color: #f6d78d;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
     }
     .features {
       display: grid;
@@ -108,9 +144,9 @@
       margin-top: 26px;
     }
     .feature {
-      padding: 14px 16px;
+      padding: 16px 18px;
       border: 1px solid var(--line);
-      border-radius: 14px;
+      border-radius: 16px;
       background: rgba(255,255,255,0.02);
     }
     .feature strong {
@@ -119,6 +155,40 @@
       margin-bottom: 4px;
     }
     .feature span { color: var(--muted); font-size: 0.9rem; }
+    .trust-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 28px;
+    }
+    .trust {
+      padding: 16px 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.02);
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+    .trust strong {
+      display: block;
+      color: var(--text);
+      margin-bottom: 4px;
+      font-size: 1.1rem;
+    }
+    .checkout-box {
+      position: sticky;
+      top: 24px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 18px 56px var(--shadow);
+    }
+    .checkout-box h2 {
+      margin: 0 0 16px;
+      font-size: 1.55rem;
+    }
     label {
       display: block;
       margin: 18px 0 8px;
@@ -140,11 +210,20 @@
       border: none;
       background: linear-gradient(135deg, var(--gold), var(--warm));
       color: #1a160d;
-      font-weight: 800;
+      font-weight: 900;
       font-size: 1rem;
-      padding: 14px 16px;
+      padding: 15px 18px;
       border-radius: 12px;
       cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 18px 30px rgba(251, 191, 36, 0.22);
+    }
+    .cta:hover { transform: translateY(-1px); }
+    .secure-note {
+      margin-top: 12px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: center;
     }
     .wallet-box {
       margin-top: 18px;
@@ -162,22 +241,63 @@
       margin-bottom: 8px;
     }
     .status {
-      min-height: 20px;
+      min-height: 24px;
       margin-top: 12px;
       color: var(--muted);
-      font-size: 0.92rem;
+      font-size: 0.9rem;
+      line-height: 1.5;
     }
     .error { color: var(--danger); }
     .success { color: var(--brand); }
     .tiny {
       font-size: 0.8rem;
       color: var(--muted);
-      margin-top: 8px;
-      line-height: 1.5;
+      margin-top: 10px;
+      line-height: 1.6;
     }
-    @media (max-width: 860px) {
-      .layout { display: block; }
+    .section-grid {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .mini-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .mini-card h3 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 1.15rem;
+    }
+    .mini-card ul {
+      padding-left: 18px;
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.9;
+    }
+    .quote {
+      font-style: italic;
+      color: var(--text);
+      font-size: 1rem;
+      line-height: 1.7;
+      margin: 0;
+    }
+    .meta-name {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.83rem;
+    }
+    @media (max-width: 980px) {
+      .layout, .section-grid, .trust-strip { grid-template-columns: 1fr; }
+      .checkout-box { position: static; }
+    }
+    @media (max-width: 740px) {
       .features { grid-template-columns: 1fr; }
+      .panel, .checkout-box { padding: 20px; }
+      .topbar { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
@@ -191,23 +311,32 @@
     <div class="layout">
       <section class="panel">
         <div class="eyebrow">Premium digital product</div>
-        <h1>The Builder's Blueprint</h1>
+        <h1>Turn your coding skill into leverage.</h1>
         <div class="lead">
-          A practical guide to turning coding skills into income, leverage, and a sustainable product business—from the lessons I learned through my journey as a builder.
+          This is the playbook I wish I had when I was starting: how to think like a builder, create real value, price your work with confidence, and grow a product business that compounds instead of burns out.
         </div>
 
-        <div class="price"><span>$19.99</span><span>USD • BTC checkout</span></div>
+        <div class="price-row">
+          <div class="price"><strong>$19.99</strong><span>USD</span></div>
+          <div class="badge">BTC wallet checkout</div>
+        </div>
 
         <div class="features">
-          <div class="feature"><strong>0 to Profit</strong><span>Build the system, not just the code.</span></div>
-          <div class="feature"><strong>Pricing & Sales</strong><span>Sell with clarity, confidence, and leverage.</span></div>
-          <div class="feature"><strong>Product Thinking</strong><span>Validate demand before scaling.</span></div>
-          <div class="feature"><strong>Long-Term Focus</strong><span>Build a business that compounds.</span></div>
+          <div class="feature"><strong>Build with intent</strong><span>Stop chasing random tutorials and start creating wealth-building assets.</span></div>
+          <div class="feature"><strong>Pricing & sales</strong><span>Understand how to sell your work without feeling awkward or desperate.</span></div>
+          <div class="feature"><strong>Product thinking</strong><span>Validate demand before you scale, and build solutions people genuinely want.</span></div>
+          <div class="feature"><strong>Long-term leverage</strong><span>Design a system that makes your time more valuable over time.</span></div>
+        </div>
+
+        <div class="trust-strip">
+          <div class="trust"><strong>7</strong>Core chapters</div>
+          <div class="trust"><strong>50+</strong>Actionable lessons</div>
+          <div class="trust"><strong>Immediate</strong>Digital delivery</div>
         </div>
       </section>
 
-      <aside class="panel">
-        <h2 style="margin-top:0;">Buy with Bitcoin</h2>
+      <aside class="checkout-box">
+        <h2>Buy with Bitcoin</h2>
         <label for="name">Full name</label>
         <input id="name" type="text" placeholder="Your name" />
 
@@ -215,6 +344,7 @@
         <input id="email" type="email" placeholder="you@example.com" />
 
         <button class="cta" id="payButton">Create BTC order</button>
+        <div class="secure-note">Secure direct wallet payment • instant delivery after confirmation</div>
 
         <div class="wallet-box" id="walletBox" style="display:none;">
           <strong>Send BTC to this wallet</strong>
@@ -225,10 +355,31 @@
         <div class="status" id="status"></div>
 
         <div class="tiny">
-          After creating your order, send the exact BTC amount to the wallet above. Then paste the transaction hash in the confirmation box that appears.<br /><br />
-          Your access will be released immediately after confirmation.
+          After creating your order, send the exact BTC amount to the wallet above. Then paste the transaction hash in the confirmation prompt. Access is unlocked immediately after confirmation.
         </div>
       </aside>
+    </div>
+
+    <div class="section-grid">
+      <div class="mini-card">
+        <h3>What you’ll learn</h3>
+        <ul>
+          <li>How to structure your learning so it compounds into real income.</li>
+          <li>How to build small, valuable products instead of random side-projects.</li>
+          <li>How to position your work for trust, authority, and consistent demand.</li>
+          <li>How to create a strong revenue engine without trading your time for everything.</li>
+          <li>How to think like a founder, not a beginner coder.</li>
+        </ul>
+      </div>
+
+      <div class="mini-card">
+        <h3>What readers are saying</h3>
+        <p class="quote">“This is the kind of guidance that changes how you build. It helped me stop jumping between ideas and start creating what actually sells.”</p>
+        <div class="meta-name">— Product-minded developer</div>
+        <br />
+        <p class="quote">“Clear, practical, grounded in reality. The advice on building, selling, and pricing made a huge difference.”</p>
+        <div class="meta-name">— Early-stage builder</div>
+      </div>
     </div>
   </div>
 
@@ -292,7 +443,7 @@
         return;
       }
 
-      setStatus(`Payment confirmed. Your ebook is ready. Redirecting…`, 'success');
+      setStatus('Payment confirmed. Your access is ready. Redirecting…', 'success');
       window.location.href = confirmPayload.accessUrl;
     }
 
