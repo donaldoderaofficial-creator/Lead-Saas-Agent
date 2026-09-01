@@ -75,3 +75,14 @@ test('allows ebook payment origins for buyer checkout', () => {
   assert.equal(app.isOriginAllowed('http://localhost:3000', '/api/ebook/confirm'), true);
   assert.equal(app.isOriginAllowed('https://evil.example', '/api/ebook/order'), false);
 });
+
+test('builds a simple wallet-only ebook checkout payload without email friction', () => {
+  const { buildEbookCheckoutPayload } = require('../server');
+
+  const payload = buildEbookCheckoutPayload({ name: 'Simple Buyer' });
+
+  assert.equal(payload.amountUsd, 19.99);
+  assert.equal(payload.walletAddress, 'bc1qwalletbitcoinaddress');
+  assert.match(payload.instructions, /copy/i);
+  assert.match(payload.instructions, /3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k|bc1qwalletbitcoinaddress/);
+});

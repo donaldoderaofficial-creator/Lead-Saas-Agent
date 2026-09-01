@@ -139,6 +139,28 @@ function getEbookBtcAmount() {
   return (EBOOK_PRICE_USD / BTC_USD_PRICE).toFixed(8);
 }
 
+function buildEbookCheckoutPayload({ name, email, reference } = {}) {
+  const amountUsd = Number(config.ebook?.priceUsd || 19.99);
+  const amountBtc = getEbookBtcAmount();
+  const walletAddress = config.ebook?.walletAddress || config.wallets.bitcoin.address || '3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k';
+  const buyerName = name || 'Customer';
+  const orderReference = reference || crypto.randomUUID();
+
+  return {
+    status: 'pending',
+    reference: orderReference,
+    product: config.ebook?.title || "The Builder's Blueprint",
+    buyerName,
+    buyerEmail: email || 'wallet-customer@not-provided.local',
+    amountUsd,
+    amountBtc,
+    walletAddress,
+    instructions: `Copy this wallet address: ${walletAddress}. Send exactly ${amountBtc} BTC (about $${amountUsd.toFixed(2)} USD) to it, then paste the transaction hash here to unlock your ebook.`,
+  };
+}
+
+app.buildEbookCheckoutPayload = buildEbookCheckoutPayload;
+
 // ---- Health Check Endpoint ----
 app.get('/health', (req, res) => {
   res.json({
@@ -215,27 +237,22 @@ app.get('/api/ebook/product', (req, res) => {
 
 app.post('/api/ebook/order', (req, res) => {
   const { name, email } = req.body || {};
-  if (!email || !email.includes('@')) {
-    return res.status(400).json({ error: 'A valid email address is required.' });
-  }
-
+  const buyerName = name || 'Customer';
+  const buyerEmail = email && email.includes('@') ? email : 'wallet-customer@not-provided.local';
   const reference = crypto.randomUUID();
+
   pendingLeads.set(reference, {
-    name: name || 'Customer',
-    email,
+    name: buyerName,
+    email: buyerEmail,
     paymentMethod: 'bitcoin-ebook',
     product: 'ebook',
   });
 
-  res.json({
-    status: 'pending',
+  res.json(buildEbookCheckoutPayload({
+    name: buyerName,
+    email: buyerEmail,
     reference,
-    product: config.ebook?.title,
-    amountUsd: Number(config.ebook?.priceUsd || 19.99),
-    amountBtc: getEbookBtcAmount(),
-    walletAddress: config.ebook?.walletAddress || config.wallets.bitcoin.address,
-    instructions: `Send ${getEbookBtcAmount()} BTC to the wallet address above, then submit the transaction hash to unlock access.`,
-  });
+  }));
 });
 
 app.post('/api/ebook/confirm', async (req, res) => {
@@ -877,38 +894,47 @@ app.use(errorHandler);
 const PORT = config.port;
 const HOST = config.host;
 
-const server = app.listen(PORT, HOST, () => {
-  logger.info(`Dispatch Pro API listening on ${HOST}:${PORT}`, {
-    env: config.env,
-    isProd: config.isProd,
+function startServer() {
+  const server = app.listen(PORT, HOST, () => {
+    logger.info(`Dispatch Pro API listening on ${HOST}:${PORT}`, {
+      env: config.env,
+      isProd: config.isProd,
+    });
   });
-});
 
-// ---- Graceful Shutdown (Resilience) ----
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM received, shutting down gracefully');
-  server.close(() => {
-    logger.info('Server closed');
-    process.exit(0);
+  app.server = server;
+
+  process.on('SIGTERM', () => {
+    logger.info('SIGTERM received, shutting down gracefully');
+    server.close(() => {
+      logger.info('Server closed');
+      process.exit(0);
+    });
   });
-});
 
-process.on('SIGINT', () => {
-  logger.info('SIGINT received, shutting down gracefully');
-  server.close(() => {
-    logger.info('Server closed');
-    process.exit(0);
+  process.on('SIGINT', () => {
+    logger.info('SIGINT received, shutting down gracefully');
+    server.close(() => {
+      logger.info('Server closed');
+      process.exit(0);
+    });
   });
-});
 
-process.on('uncaughtException', (err) => {
-  logger.error('Uncaught exception', { error: err.message, stack: err.stack });
-  process.exit(1);
-});
+  process.on('uncaughtException', (err) => {
+    logger.error('Uncaught exception', { error: err.message, stack: err.stack });
+    process.exit(1);
+  });
 
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled rejection', { reason, promise });
-  process.exit(1);
-});
+  process.on('unhandledRejection', (reason, promise) => {
+    logger.error('Unhandled rejection', { reason, promise });
+    process.exit(1);
+  });
+
+  return server;
+}
+
+if (require.main === module) {
+  startServer();
+}
 
 module.exports = app;
