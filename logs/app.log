@@ -64,3 +64,10 @@
 {"timestamp":"2026-09-01T16:45:05.469Z","level":"info","message":"POST /api/ebook/order","statusCode":403,"duration":"1ms"}
 {"timestamp":"2026-09-01T16:51:42.775Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
 {"timestamp":"2026-09-01T16:52:38.202Z","level":"info","message":"POST /api/ebook/order","statusCode":403,"duration":"0ms"}
+{"timestamp":"2026-09-01T16:54:42.518Z","level":"info","message":"GET /favicon.ico","statusCode":404,"duration":"5ms"}
+{"timestamp":"2026-09-01T16:54:44.735Z","level":"info","message":"GET /","statusCode":200,"duration":"4ms"}
+{"timestamp":"2026-09-01T16:54:52.524Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T16:55:24.616Z","level":"info","message":"POST /api/ebook/order","statusCode":403,"duration":"7ms"}
+{"timestamp":"2026-09-01T16:55:54.355Z","level":"info","message":"GET /","statusCode":304,"duration":"1ms"}
+{"timestamp":"2026-09-01T16:56:00.825Z","level":"info","message":"GET /ebook.html","statusCode":304,"duration":"1ms"}
+{"timestamp":"2026-09-01T16:56:11.540Z","level":"info","message":"POST /api/ebook/order","statusCode":403,"duration":"1ms"}
