@@ -42,3 +42,27 @@ test('exposes direct bitcoin and ethereum wallet payment options', () => {
   assert.equal(config.wallets.bitcoin.address, 'bc1qwalletbitcoinaddress');
   assert.equal(config.wallets.ethereum.address, '0x1234567890abcdef1234567890abcdef12345678');
 });
+
+test('allows repeated ebook report writes without finalized statement errors', () => {
+  const { completedReports } = require('../store');
+
+  const first = {
+    type: 'ebook',
+    title: "The Builder's Blueprint",
+    buyer: { name: 'Writer', email: 'writer@example.com' },
+    amountUsd: 19.99,
+    purchasedAt: new Date().toISOString(),
+  };
+
+  const second = {
+    ...first,
+    buyer: { name: 'Writer 2', email: 'writer2@example.com' },
+    purchasedAt: new Date().toISOString(),
+  };
+
+  completedReports.set('ebook-repeat-test-1', first);
+  completedReports.set('ebook-repeat-test-2', second);
+
+  assert.equal(completedReports.has('ebook-repeat-test-1'), true);
+  assert.equal(completedReports.has('ebook-repeat-test-2'), true);
+});
