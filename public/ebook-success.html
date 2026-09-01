@@ -107,6 +107,7 @@
 
     <div class="actions">
       <a class="btn primary" href="/ebook/access?ref=__REF__">Open the ebook</a>
+      <a class="btn secondary" href="/ebook/download.pdf?ref=__REF__" target="_blank" rel="noopener noreferrer">Open PDF</a>
       <a class="btn secondary" href="/">Back to platform</a>
     </div>
 
@@ -117,8 +118,10 @@
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
     const openLink = document.querySelector('.primary');
+    const pdfLink = document.querySelector('.btn.secondary[href*="/ebook/download.pdf"]');
     if (ref) {
       openLink.href = `/ebook/access?ref=${encodeURIComponent(ref)}`;
+      pdfLink.href = `/ebook/download.pdf?ref=${encodeURIComponent(ref)}`;
     }
   </script>
 </body>
