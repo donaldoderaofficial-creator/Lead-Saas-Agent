@@ -126,10 +126,10 @@ test('redirects legacy ebook links to the current live ebook page', async () => 
 
   try {
     const responses = await Promise.all([
-      fetch(`http://127.0.0.1:${port}/ebook-success.html`),
-      fetch(`http://127.0.0.1:${port}/ebook-reader.html`),
-      fetch(`http://127.0.0.1:${port}/ebook/access`),
-      fetch(`http://127.0.0.1:${port}/ebook/download.pdf`),
+      fetch(`http://127.0.0.1:${port}/ebook-success.html`, { redirect: 'manual' }),
+      fetch(`http://127.0.0.1:${port}/ebook-reader.html`, { redirect: 'manual' }),
+      fetch(`http://127.0.0.1:${port}/ebook/access`, { redirect: 'manual' }),
+      fetch(`http://127.0.0.1:${port}/ebook/download.pdf`, { redirect: 'manual' }),
     ]);
 
     const locations = responses.map((response) => response.headers.get('location'));
