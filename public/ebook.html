@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#06141d" />
   <title>The Builder's Blueprint | Premium BTC Checkout</title>
   <style>
     :root {
@@ -30,6 +31,8 @@
         radial-gradient(circle at bottom right, rgba(251, 191, 36, 0.10), transparent 30%),
         linear-gradient(180deg, #051219, var(--bg));
       color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
     }
     .shell {
       max-width: 1180px;
@@ -201,8 +204,11 @@
       border: 1px solid var(--line);
       border-radius: 10px;
       color: var(--text);
-      padding: 12px 14px;
-      font-size: 1rem;
+      padding: 14px 16px;
+      font-size: 16px;
+      min-height: 52px;
+      appearance: none;
+      -webkit-appearance: none;
     }
     .cta {
       width: 100%;
@@ -212,11 +218,13 @@
       color: #1a160d;
       font-weight: 900;
       font-size: 1rem;
-      padding: 15px 18px;
+      padding: 17px 18px;
       border-radius: 12px;
       cursor: pointer;
       transition: transform 0.15s ease, box-shadow 0.15s ease;
       box-shadow: 0 18px 30px rgba(251, 191, 36, 0.22);
+      min-height: 54px;
+      touch-action: manipulation;
     }
     .cta:hover { transform: translateY(-1px); }
     .secure-note {
@@ -318,9 +326,15 @@
       .checkout-box { position: static; }
     }
     @media (max-width: 740px) {
+      .shell { padding: 16px 14px 48px; }
       .features { grid-template-columns: 1fr; }
-      .panel, .checkout-box { padding: 20px; }
+      .panel, .checkout-box { padding: 18px 16px; border-radius: 18px; }
       .topbar { flex-direction: column; align-items: flex-start; }
+      .price strong { font-size: 2.4rem; }
+      h1 { font-size: clamp(2.2rem, 11vw, 3.2rem); }
+      .lead { font-size: 1rem; }
+      .cta, .mini-cta { min-height: 54px; }
+      .mini-cta { font-size: 0.95rem; }
     }
   </style>
 </head>
@@ -336,12 +350,12 @@
         <div class="eyebrow">The system behind real product growth</div>
         <h1>Stop learning forever. Start building something that matters.</h1>
         <div class="lead">
-          This is the exact playbook I wish I had when I was starting: how to think like a builder, create real value, price your work with confidence, and turn coding skill into leverage instead of endless loops of tutorials and unfinished projects.
+          This is the exact playbook I wish I had when I was starting. It shows you how to stop getting lost in tutorials, build with intention, and turn skill into value. You’ll learn how to think like a builder, price your work with confidence, and create real leverage instead of endless unfinished projects.
         </div>
 
         <div class="price-row">
           <div class="price"><strong>$19.99</strong><span>USD</span></div>
-          <div class="badge">Up to 300 pages • practical, actionable, direct</div>
+          <div class="badge">0.000257 BTC • Instant digital access</div>
         </div>
 
         <div class="features">
@@ -360,30 +374,38 @@
 
       <aside class="checkout-box">
         <h2>Buy the ebook with Bitcoin</h2>
-        <p style="margin:0 0 8px; color:var(--muted); line-height:1.7;">If you want to stop spinning and start building with clarity, this book is for you.</p>
+        <p style="margin:0 0 8px; color:var(--muted); line-height:1.7;">Copy the wallet address below, send the BTC amount, then paste the transaction hash to unlock your copy instantly.</p>
 
         <label for="name">Full name</label>
         <input id="name" type="text" placeholder="Your name" />
 
-        <label for="email">Email</label>
-        <input id="email" type="email" placeholder="you@example.com" />
+        <label for="email">Email (optional)</label>
+        <input id="email" type="email" placeholder="you@example.com (optional)" />
 
-        <button class="cta" id="payButton">Get instant access</button>
+        <label for="txHash">Transaction hash or payment note</label>
+        <input id="txHash" type="text" placeholder="Paste tx hash or payment note" />
+
+        <label for="depositProof">Deposit screenshot (optional)</label>
+        <input id="depositProof" type="file" accept="image/*" />
+
+        <button class="cta" id="payButton">Send payment proof</button>
         <div class="cta-row">
           <a href="/ebook/preview" class="mini-cta">Read preview</a>
         </div>
-        <div class="secure-note">Secure direct wallet payment • instant delivery after confirmation</div>
+        <div class="secure-note">No complicated checkout • just copy, send, and confirm</div>
 
         <div class="wallet-box" id="walletBox" style="display:none;">
           <strong>Send BTC to this wallet</strong>
           <div class="address" id="walletAddress">3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k</div>
-          <div>Amount: <strong id="btcAmount">0.00028571 BTC</strong></div>
+          <div>Amount: <strong id="btcAmount">0.00025700 BTC</strong></div>
         </div>
 
         <div class="status" id="status"></div>
 
         <div class="tiny">
-          After sending the exact BTC amount, paste the transaction hash to confirm your payment. Your access is unlocked immediately after confirmation.
+          Wallet: 3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k<br />
+          Amount: 0.000257 BTC<br />
+          After sending the exact amount, paste the transaction hash to confirm your payment and unlock the ebook immediately.
         </div>
       </aside>
     </div>
@@ -430,18 +452,14 @@
     }
 
     async function createOrder() {
-      const name = document.getElementById('name').value.trim();
+      const name = document.getElementById('name').value.trim() || 'Customer';
       const email = document.getElementById('email').value.trim();
-      if (!email || !email.includes('@')) {
-        setStatus('Please enter a valid email address.', 'error');
-        return;
-      }
 
-      setStatus('Creating your BTC order…');
+      setStatus('Preparing your wallet payment instructions…');
       const response = await fetch('/api/ebook/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email })
+        body: JSON.stringify({ name, email: email || undefined })
       });
       const payload = await response.json();
 
@@ -457,16 +475,47 @@
       btcAmountEl.textContent = `${payload.amountBtc} BTC`;
       walletBox.style.display = 'block';
 
-      const txHash = window.prompt('Paste the Bitcoin transaction hash after sending the BTC payment:', '');
-      if (!txHash || !txHash.trim()) {
-        setStatus('Payment not confirmed yet. Send BTC first and paste the transaction hash to finish the order.', 'error');
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(payload.walletAddress);
+          setStatus(`Wallet address copied to clipboard. Send ${payload.amountBtc} BTC to ${payload.walletAddress}.`, 'success');
+        } catch (_) {
+          setStatus(`Copy this wallet address and send ${payload.amountBtc} BTC: ${payload.walletAddress}`, 'success');
+        }
+      } else {
+        setStatus(`Copy this wallet address and send ${payload.amountBtc} BTC: ${payload.walletAddress}`, 'success');
+      }
+
+      const txHashInput = document.getElementById('txHash');
+      const fileInput = document.getElementById('depositProof');
+      const txHash = (txHashInput.value || '').trim();
+
+      let screenshotData = null;
+      const file = fileInput.files && fileInput.files[0];
+      if (file) {
+        const reader = new FileReader();
+        screenshotData = await new Promise((resolve, reject) => {
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = () => reject(new Error('Could not read payment screenshot'));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      if (!txHash && !screenshotData) {
+        setStatus('Payment not confirmed yet. Send BTC, then provide either the transaction hash or a screenshot of the deposit.', 'error');
         return;
       }
 
       const confirmResp = await fetch('/api/ebook/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reference: state.reference, txHash: txHash.trim(), name, email })
+        body: JSON.stringify({
+          reference: state.reference,
+          txHash: txHash || undefined,
+          screenshotData: screenshotData || undefined,
+          name,
+          email: email || undefined,
+        })
       });
       const confirmPayload = await confirmResp.json();
 
@@ -475,7 +524,12 @@
         return;
       }
 
-      setStatus('Payment confirmed. Your access is ready. Redirecting…', 'success');
+      if (confirmPayload.status === 'pending_review') {
+        setStatus('Payment proof received. We will release your ebook after verifying the transfer.', 'success');
+        return;
+      }
+
+      setStatus('Payment confirmed. Your e-book is ready. Redirecting…', 'success');
       window.location.href = confirmPayload.accessUrl;
     }
 

@@ -44,3 +44,177 @@
 {"timestamp":"2026-09-01T16:06:34.914Z","level":"error","message":"Uncaught exception","error":"statement has been finalized","stack":"/workspaces/Lead-Saas-Agent/store.js:199\n    stmts.insertReport.run(ref, JSON.stringify(report));\n                       ^\n\nError: statement has been finalized\n    at Object.set (/workspaces/Lead-Saas-Agent/store.js:199:24)\n    at [stdin]:5:18\n    at runScriptInThisContext (node:internal/vm:209:10)\n    at node:internal/process/execution:449:12\n    at [stdin]-wrapper:6:24\n    at runScriptInContext (node:internal/process/execution:447:60)\n    at evalFunction (node:internal/process/execution:87:30)\n    at evalScript (node:internal/process/execution:99:3)\n    at node:internal/main/eval_stdin:53:5\n    at ReadStream.<anonymous> (node:internal/process/execution:200:5)"}
 {"timestamp":"2026-09-01T16:09:10.922Z","level":"error","message":"Uncaught exception","error":"listen EADDRINUSE: address already in use ::1:4303","stack":"Error: listen EADDRINUSE: address already in use ::1:4303\n    at Server.setupListenHandle [as _listen2] (node:net:1939:16)\n    at listenInCluster (node:net:1996:12)\n    at GetAddrInfoReqWrap.callback (node:net:2205:7)\n    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8)"}
 {"timestamp":"2026-09-01T16:09:29.747Z","level":"error","message":"Uncaught exception","error":"listen EADDRINUSE: address already in use ::1:4410","stack":"Error: listen EADDRINUSE: address already in use ::1:4410\n    at Server.setupListenHandle [as _listen2] (node:net:1939:16)\n    at listenInCluster (node:net:1996:12)\n    at GetAddrInfoReqWrap.callback (node:net:2205:7)\n    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8)"}
+{"timestamp":"2026-09-01T16:15:26.571Z","level":"info","message":"Dispatch Pro API listening on localhost:4305","env":"development","isProd":false}
+{"timestamp":"2026-09-01T16:16:24.716Z","level":"error","message":"Uncaught exception","error":"listen EADDRINUSE: address already in use ::1:4306","stack":"Error: listen EADDRINUSE: address already in use ::1:4306\n    at Server.setupListenHandle [as _listen2] (node:net:1939:16)\n    at listenInCluster (node:net:1996:12)\n    at GetAddrInfoReqWrap.callback (node:net:2205:7)\n    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8)"}
+{"timestamp":"2026-09-01T16:22:30.228Z","level":"error","message":"Uncaught exception","error":"listen EADDRINUSE: address already in use ::1:4311","stack":"Error: listen EADDRINUSE: address already in use ::1:4311\n    at Server.setupListenHandle [as _listen2] (node:net:1939:16)\n    at listenInCluster (node:net:1996:12)\n    at GetAddrInfoReqWrap.callback (node:net:2205:7)\n    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8)"}
+{"timestamp":"2026-09-01T16:22:53.589Z","level":"error","message":"Uncaught exception","error":"listen EADDRINUSE: address already in use ::1:4312","stack":"Error: listen EADDRINUSE: address already in use ::1:4312\n    at Server.setupListenHandle [as _listen2] (node:net:1939:16)\n    at listenInCluster (node:net:1996:12)\n    at GetAddrInfoReqWrap.callback (node:net:2205:7)\n    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8)"}
+{"timestamp":"2026-09-01T16:23:32.212Z","level":"error","message":"Uncaught exception","error":"listen EADDRINUSE: address already in use ::1:4319","stack":"Error: listen EADDRINUSE: address already in use ::1:4319\n    at Server.setupListenHandle [as _listen2] (node:net:1939:16)\n    at listenInCluster (node:net:1996:12)\n    at GetAddrInfoReqWrap.callback (node:net:2205:7)\n    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8)"}
+{"timestamp":"2026-09-01T16:23:54.709Z","level":"error","message":"Uncaught exception","error":"listen EADDRINUSE: address already in use ::1:3000","stack":"Error: listen EADDRINUSE: address already in use ::1:3000\n    at Server.setupListenHandle [as _listen2] (node:net:1939:16)\n    at listenInCluster (node:net:1996:12)\n    at GetAddrInfoReqWrap.callback (node:net:2205:7)\n    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8)"}
+{"timestamp":"2026-09-01T16:32:26.264Z","level":"error","message":"Uncaught exception","error":"listen EADDRINUSE: address already in use ::1:3000","stack":"Error: listen EADDRINUSE: address already in use ::1:3000\n    at Server.setupListenHandle [as _listen2] (node:net:1939:16)\n    at listenInCluster (node:net:1996:12)\n    at GetAddrInfoReqWrap.callback (node:net:2205:7)\n    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8)"}
+{"timestamp":"2026-09-01T16:33:07.056Z","level":"info","message":"Dispatch Pro API listening on localhost:3001","env":"development","isProd":false}
+{"timestamp":"2026-09-01T16:34:44.185Z","level":"info","message":"Dispatch Pro API listening on localhost:4500","env":"development","isProd":false}
+{"timestamp":"2026-09-01T16:35:04.317Z","level":"info","message":"GET /","statusCode":200,"duration":"6ms"}
+{"timestamp":"2026-09-01T16:35:06.755Z","level":"info","message":"GET /favicon.ico","statusCode":404,"duration":"4ms"}
+{"timestamp":"2026-09-01T16:36:32.020Z","level":"info","message":"GET /ebook/preview","statusCode":200,"duration":"5ms"}
+{"timestamp":"2026-09-01T16:40:45.920Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T16:41:07.960Z","level":"info","message":"POST /api/ebook/order","statusCode":403,"duration":"31ms"}
+{"timestamp":"2026-09-01T16:43:08.545Z","level":"error","message":"Uncaught exception","error":"listen EADDRINUSE: address already in use ::1:3000","stack":"Error: listen EADDRINUSE: address already in use ::1:3000\n    at Server.setupListenHandle [as _listen2] (node:net:1939:16)\n    at listenInCluster (node:net:1996:12)\n    at GetAddrInfoReqWrap.callback (node:net:2205:7)\n    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8)"}
+{"timestamp":"2026-09-01T16:43:18.014Z","level":"info","message":"POST /api/ebook/order","statusCode":403,"duration":"1ms"}
+{"timestamp":"2026-09-01T16:44:24.927Z","level":"info","message":"Dispatch Pro API listening on localhost:3210","env":"development","isProd":false}
+{"timestamp":"2026-09-01T16:45:05.469Z","level":"info","message":"POST /api/ebook/order","statusCode":403,"duration":"1ms"}
+{"timestamp":"2026-09-01T16:51:42.775Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T16:52:38.202Z","level":"info","message":"POST /api/ebook/order","statusCode":403,"duration":"0ms"}
+{"timestamp":"2026-09-01T16:54:42.518Z","level":"info","message":"GET /favicon.ico","statusCode":404,"duration":"5ms"}
+{"timestamp":"2026-09-01T16:54:44.735Z","level":"info","message":"GET /","statusCode":200,"duration":"4ms"}
+{"timestamp":"2026-09-01T16:54:52.524Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T16:55:24.616Z","level":"info","message":"POST /api/ebook/order","statusCode":403,"duration":"7ms"}
+{"timestamp":"2026-09-01T16:55:54.355Z","level":"info","message":"GET /","statusCode":304,"duration":"1ms"}
+{"timestamp":"2026-09-01T16:56:00.825Z","level":"info","message":"GET /ebook.html","statusCode":304,"duration":"1ms"}
+{"timestamp":"2026-09-01T16:56:11.540Z","level":"info","message":"POST /api/ebook/order","statusCode":403,"duration":"1ms"}
+{"timestamp":"2026-09-01T16:59:25.944Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T16:59:38.141Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"2ms"}
+{"timestamp":"2026-09-01T16:59:48.256Z","level":"info","message":"POST /api/ebook/order","statusCode":403,"duration":"0ms"}
+{"timestamp":"2026-09-01T17:07:12.903Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"2ms"}
+{"timestamp":"2026-09-01T17:07:53.605Z","level":"info","message":"GET /favicon.ico","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:07:54.677Z","level":"info","message":"GET /apple-touch-icon-120x120-precomposed.png","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:07:56.560Z","level":"info","message":"GET /apple-touch-icon-120x120.png","statusCode":404,"duration":"2ms"}
+{"timestamp":"2026-09-01T17:07:57.275Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:07:58.507Z","level":"info","message":"GET /apple-touch-icon-precomposed.png","statusCode":404,"duration":"0ms"}
+{"timestamp":"2026-09-01T17:07:59.647Z","level":"info","message":"GET /apple-touch-icon.png","statusCode":404,"duration":"0ms"}
+{"timestamp":"2026-09-01T17:08:00.340Z","level":"info","message":"GET /favicon.ico","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:08:02.286Z","level":"info","message":"GET /apple-touch-icon-120x120-precomposed.png","statusCode":404,"duration":"0ms"}
+{"timestamp":"2026-09-01T17:08:03.154Z","level":"info","message":"GET /apple-touch-icon-120x120.png","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:08:04.316Z","level":"info","message":"GET /apple-touch-icon-precomposed.png","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:08:05.097Z","level":"info","message":"GET /apple-touch-icon.png","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:08:06.280Z","level":"info","message":"GET /favicon.ico","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:11:18.137Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"2ms"}
+{"timestamp":"2026-09-01T17:11:20.211Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:11:20.729Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"2ms"}
+{"timestamp":"2026-09-01T17:11:30.651Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:11:36.600Z","level":"info","message":"GET /favicon.ico","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:11:36.803Z","level":"info","message":"GET /apple-touch-icon-precomposed.png","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:11:36.957Z","level":"info","message":"GET /apple-touch-icon.png","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:11:39.223Z","level":"info","message":"GET /apple-touch-icon-precomposed.png","statusCode":404,"duration":"0ms"}
+{"timestamp":"2026-09-01T17:11:39.499Z","level":"info","message":"GET /favicon.ico","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:11:40.696Z","level":"info","message":"GET /apple-touch-icon.png","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:12:03.142Z","level":"info","message":"GET /favicon.ico","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:12:03.529Z","level":"info","message":"GET /apple-touch-icon.png","statusCode":404,"duration":"0ms"}
+{"timestamp":"2026-09-01T17:12:04.480Z","level":"info","message":"GET /apple-touch-icon-precomposed.png","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:12:07.992Z","level":"info","message":"GET /apple-touch-icon.png","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:12:08.163Z","level":"info","message":"GET /apple-touch-icon-precomposed.png","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:12:08.745Z","level":"info","message":"GET /favicon.ico","statusCode":404,"duration":"0ms"}
+{"timestamp":"2026-09-01T17:20:21.413Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"3ms"}
+{"timestamp":"2026-09-01T17:20:21.443Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:20:21.981Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:20:21.984Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"3ms"}
+{"timestamp":"2026-09-01T17:20:22.007Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:20:22.010Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:20:22.101Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:20:22.138Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"3ms"}
+{"timestamp":"2026-09-01T17:20:22.672Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"2ms"}
+{"timestamp":"2026-09-01T17:20:22.680Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:20:22.770Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:20:22.797Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:20:22.836Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"0ms"}
+{"timestamp":"2026-09-01T17:20:22.853Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"2ms"}
+{"timestamp":"2026-09-01T17:20:22.974Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:20:23.426Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:25:04.605Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"3ms"}
+{"timestamp":"2026-09-01T17:25:05.278Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"2ms"}
+{"timestamp":"2026-09-01T17:25:08.364Z","level":"info","message":"GET /favicon.ico","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:25:42.436Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:26:04.844Z","level":"info","message":"GET /robots.txt","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-01T17:48:47.213Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T18:11:59.026Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"4ms"}
+{"timestamp":"2026-09-01T18:11:59.031Z","level":"info","message":"GET /ebook-success.html","statusCode":200,"duration":"12ms"}
+{"timestamp":"2026-09-01T18:11:59.031Z","level":"info","message":"GET /ebook-reader.html","statusCode":200,"duration":"12ms"}
+{"timestamp":"2026-09-01T18:11:59.033Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"4ms"}
+{"timestamp":"2026-09-01T18:11:59.059Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"5ms"}
+{"timestamp":"2026-09-01T18:11:59.062Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"8ms"}
+{"timestamp":"2026-09-01T18:12:46.860Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-01T18:12:46.866Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-01T18:12:46.878Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-01T18:12:46.880Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-01T18:12:46.891Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"9ms"}
+{"timestamp":"2026-09-01T18:12:46.892Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"8ms"}
+{"timestamp":"2026-09-01T18:12:46.894Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"7ms"}
+{"timestamp":"2026-09-01T18:12:46.895Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"7ms"}
+{"timestamp":"2026-09-01T18:13:18.136Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-01T18:13:18.140Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-01T18:13:18.149Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-01T18:13:18.151Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-01T21:36:03.371Z","level":"info","message":"Dispatch Pro API listening on localhost:4500","env":"development","isProd":false}
+{"timestamp":"2026-09-01T21:36:56.417Z","level":"info","message":"HEAD /ebook.html","statusCode":200,"duration":"2ms"}
+{"timestamp":"2026-09-01T21:37:29.446Z","level":"info","message":"GET /","statusCode":200,"duration":"7ms"}
+{"timestamp":"2026-09-01T21:37:49.510Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T21:38:14.265Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"2ms"}
+{"timestamp":"2026-09-01T21:40:30.682Z","level":"info","message":"GET /ebook/preview","statusCode":200,"duration":"6ms"}
+{"timestamp":"2026-09-01T21:40:38.984Z","level":"info","message":"GET /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T21:46:29.859Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-01T21:46:29.865Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-01T21:46:29.876Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-01T21:46:29.879Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-01T21:47:17.365Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T21:47:36.766Z","level":"info","message":"GET /","statusCode":200,"duration":"2ms"}
+{"timestamp":"2026-09-01T21:51:20.354Z","level":"info","message":"HEAD /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T21:51:58.595Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:4500","env":"development","isProd":false}
+{"timestamp":"2026-09-01T21:52:05.000Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T21:52:17.439Z","level":"info","message":"HEAD /ebook.html","statusCode":200,"duration":"2ms"}
+{"timestamp":"2026-09-01T21:52:17.463Z","level":"info","message":"HEAD /ebook.html","statusCode":200,"duration":"0ms"}
+{"timestamp":"2026-09-01T21:52:18.717Z","level":"info","message":"GET /","statusCode":200,"duration":"2ms"}
+{"timestamp":"2026-09-02T07:00:34.848Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-02T07:00:34.852Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T07:00:34.860Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-02T07:00:34.862Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T07:03:18.663Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-02T07:03:18.667Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T07:03:18.675Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T07:03:18.677Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:34:06.971Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-02T12:34:06.978Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:34:06.992Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-02T12:34:06.997Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:36:57.354Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-02T12:36:57.358Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-02T12:36:57.365Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:36:57.367Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:42:41.566Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-02T12:42:41.569Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:42:41.577Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-02T12:42:41.580Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-02T12:42:55.911Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-02T12:42:55.916Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:42:55.926Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:42:55.929Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:53:49.421Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"3ms"}
+{"timestamp":"2026-09-02T12:53:49.431Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:53:49.444Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-02T12:53:49.447Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:54:41.227Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-02T12:54:41.231Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:54:41.240Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:54:41.243Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-02T12:55:02.195Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-02T12:55:02.199Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:55:02.207Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:55:02.209Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:58:21.380Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-02T12:58:21.384Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:58:21.392Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:58:21.394Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:59:00.211Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-02T12:59:00.217Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-02T12:59:00.228Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T12:59:00.231Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-02T13:03:30.328Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-02T13:03:30.331Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T13:03:30.339Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T13:03:30.342Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T13:07:04.560Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-02T13:07:04.564Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T13:07:04.572Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T13:07:04.575Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T13:09:06.881Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-02T13:09:06.884Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-02T13:09:06.892Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-02T13:09:06.894Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}

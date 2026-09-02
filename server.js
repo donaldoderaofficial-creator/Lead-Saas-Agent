@@ -37,6 +37,38 @@ const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = requir
 const app = express();
 const DISPATCH_PRO = config.company;
 
+function matchesAllowedOrigin(origin, allowedOrigins) {
+  if (!origin) return true;
+  return allowedOrigins.some((pattern) => {
+    if (pattern === '*') return true;
+    if (pattern.includes('*')) {
+      const regex = new RegExp(`^${pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`);
+      return regex.test(origin);
+    }
+    return origin === pattern;
+  });
+}
+
+function isOriginAllowed(origin, path = '') {
+  if (!origin) return true;
+  if (matchesAllowedOrigin(origin, config.security.corsOrigins)) return true;
+
+  try {
+    const { hostname } = new URL(origin);
+    const isLocalDevelopmentHost = ['localhost', '127.0.0.1', '::1'].includes(hostname) || hostname.endsWith('.localhost');
+    if (isLocalDevelopmentHost) return true;
+    if (path.startsWith('/api/ebook/') || path.startsWith('/ebook/')) {
+      return hostname.endsWith('.netlify.app') || hostname.endsWith('.vercel.app') || hostname.endsWith('.pages.dev');
+    }
+  } catch (_) {
+    return false;
+  }
+
+  return false;
+}
+
+app.isOriginAllowed = isOriginAllowed;
+
 // ---- Middleware: Performance & Scalability ----
 if (config.performance.enableCompression) {
   app.use(compression()); // GZIP compression for efficient data transfer
@@ -45,12 +77,21 @@ if (config.performance.enableCompression) {
 app.use(requestLogger); // Request logging for monitoring
 app.set('trust proxy', config.isProd ? 1 : false);
 app.use(express.json());
+
+app.use((req, res, next) => {
+  const legacyEbookPaths = ['/ebook-success.html', '/ebook-reader.html', '/ebook/access', '/ebook/download.pdf', '/ebook/read'];
+  if (legacyEbookPaths.includes(req.path)) {
+    return res.redirect(302, '/ebook.html');
+  }
+  next();
+});
+
 app.use(express.static('public'));
 
 app.use((req, res, next) => {
   const requestOrigin = req.get('origin');
   if (!requestOrigin) return next();
-  if (!config.security.corsOrigins.includes(requestOrigin)) {
+  if (!app.isOriginAllowed(requestOrigin, req.path)) {
     return res.status(403).json({ error: 'Origin is not allowed' });
   }
   res.setHeader('Access-Control-Allow-Origin', requestOrigin);
@@ -103,9 +144,32 @@ const EBOOK_PRICE_USD = Number(config.ebook?.priceUsd || 19.99);
 const BTC_USD_PRICE = Number(process.env.BTC_USD_PRICE || 70000);
 
 function getEbookBtcAmount() {
-  if (!Number.isFinite(BTC_USD_PRICE) || BTC_USD_PRICE <= 0) return '0.00028571';
-  return (EBOOK_PRICE_USD / BTC_USD_PRICE).toFixed(8);
+  if (!Number.isFinite(BTC_USD_PRICE) || BTC_USD_PRICE <= 0) return '0.00025700';
+  const btcValue = EBOOK_PRICE_USD / BTC_USD_PRICE;
+  return btcValue < 0.000257 ? '0.00025700' : btcValue.toFixed(8);
 }
+
+function buildEbookCheckoutPayload({ name, email, reference } = {}) {
+  const amountUsd = Number(config.ebook?.priceUsd || 19.99);
+  const amountBtc = getEbookBtcAmount();
+  const walletAddress = config.ebook?.walletAddress || config.wallets.bitcoin.address || '3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k';
+  const buyerName = name || 'Customer';
+  const orderReference = reference || crypto.randomUUID();
+
+  return {
+    status: 'pending',
+    reference: orderReference,
+    product: config.ebook?.title || "The Builder's Blueprint",
+    buyerName,
+    buyerEmail: email || 'wallet-customer@not-provided.local',
+    amountUsd,
+    amountBtc,
+    walletAddress,
+    instructions: `Copy this wallet address: ${walletAddress}. Send exactly ${amountBtc} BTC (about $${amountUsd.toFixed(2)} USD) to it, then paste the transaction hash here to unlock your ebook.`,
+  };
+}
+
+app.buildEbookCheckoutPayload = buildEbookCheckoutPayload;
 
 // ---- Health Check Endpoint ----
 app.get('/health', (req, res) => {
@@ -183,33 +247,28 @@ app.get('/api/ebook/product', (req, res) => {
 
 app.post('/api/ebook/order', (req, res) => {
   const { name, email } = req.body || {};
-  if (!email || !email.includes('@')) {
-    return res.status(400).json({ error: 'A valid email address is required.' });
-  }
-
+  const buyerName = name || 'Customer';
+  const buyerEmail = email && email.includes('@') ? email : 'wallet-customer@not-provided.local';
   const reference = crypto.randomUUID();
+
   pendingLeads.set(reference, {
-    name: name || 'Customer',
-    email,
+    name: buyerName,
+    email: buyerEmail,
     paymentMethod: 'bitcoin-ebook',
     product: 'ebook',
   });
 
-  res.json({
-    status: 'pending',
+  res.json(buildEbookCheckoutPayload({
+    name: buyerName,
+    email: buyerEmail,
     reference,
-    product: config.ebook?.title,
-    amountUsd: Number(config.ebook?.priceUsd || 19.99),
-    amountBtc: getEbookBtcAmount(),
-    walletAddress: config.ebook?.walletAddress || config.wallets.bitcoin.address,
-    instructions: `Send ${getEbookBtcAmount()} BTC to the wallet address above, then submit the transaction hash to unlock access.`,
-  });
+  }));
 });
 
 app.post('/api/ebook/confirm', async (req, res) => {
-  const { reference, txHash, name, email } = req.body || {};
-  if (!reference || !txHash) {
-    return res.status(400).json({ error: 'reference and txHash are required.' });
+  const { reference, txHash, screenshotData, screenshotUrl, name, email } = req.body || {};
+  if (!reference || (!txHash && !screenshotData && !screenshotUrl)) {
+    return res.status(400).json({ error: 'reference and either a txHash or a deposit screenshot are required.' });
   }
 
   const order = pendingLeads.get(reference);
@@ -227,38 +286,41 @@ app.post('/api/ebook/confirm', async (req, res) => {
     amountUsd: Number(config.ebook?.priceUsd || 19.99),
     amountBtc: getEbookBtcAmount(),
     walletAddress: config.ebook?.walletAddress || config.wallets.bitcoin.address,
-    txHash,
+    txHash: txHash || null,
+    screenshotData: screenshotData || null,
+    screenshotUrl: screenshotUrl || null,
     status: 'paid',
     purchasedAt: new Date().toISOString(),
   };
 
-  completedReports.set(reference, receipt);
-  pendingLeads.delete(reference);
   payments.record({
     provider: 'bitcoin-ebook',
-    transactionId: txHash,
+    transactionId: txHash || screenshotData || screenshotUrl || reference,
     reference,
     amount: receipt.amountUsd,
     currency: 'USD',
-    status: 'confirmed',
+    status: 'pending_review',
     raw: receipt,
   });
 
-  res.json({
-    status: 'confirmed',
+  return res.status(202).json({
+    status: 'pending_review',
     reference,
-    title: config.ebook?.title,
-    accessUrl: `/ebook/success?ref=${encodeURIComponent(reference)}`,
-    txHash,
-    amountUsd: receipt.amountUsd,
+    message: 'Payment proof received. Ebook access will be released after payment verification.',
   });
 });
 
-app.get('/ebook/preview', (req, res) => {
+const ebookReadLimiter = new RateLimiter({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: 'Too many ebook access requests, please try again in a minute.' },
+});
+
+app.get('/ebook/preview', ebookReadLimiter.middleware(), (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'ebook-preview.html'));
 });
 
-app.get('/ebook/success', (req, res) => {
+app.get('/ebook/success', ebookReadLimiter.middleware(), (req, res) => {
   const reference = req.query.ref;
   const report = completedReports.get(reference);
   if (!report || report.type !== 'ebook') {
@@ -268,14 +330,113 @@ app.get('/ebook/success', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'ebook-success.html'));
 });
 
-app.get('/ebook/access', (req, res) => {
+app.get('/ebook/access', ebookReadLimiter.middleware(), (req, res) => {
   const reference = req.query.ref;
   const report = completedReports.get(reference);
   if (!report || report.type !== 'ebook') {
-    return res.status(404).send('This ebook purchase is not recognized or has not been confirmed yet.');
+    return res.status(401).send('This page is only available to confirmed ebook buyers.');
   }
 
-  res.sendFile(path.join(__dirname, 'public', 'ebook-content.html'));
+  res.sendFile(path.join(__dirname, 'public', 'ebook-reader.html'));
+});
+
+app.get('/ebook/read', ebookReadLimiter.middleware(), (req, res) => {
+  const reference = req.query.ref;
+  const report = completedReports.get(reference);
+  if (!report || report.type !== 'ebook') {
+    return res.status(401).send('This page is only available to confirmed ebook buyers.');
+  }
+
+  res.sendFile(path.join(__dirname, 'public', 'ebook-reader.html'));
+});
+
+function buildEbookPdf() {
+  const chapters = [
+    'Chapter 1: The first time I realized I was not lazy',
+    'The first real insight is that confusion is not the same as lack of talent. I was not lazy; I was overwhelmed by too many tutorials, too many ideas, and no system for turning effort into value.',
+    'I had to learn that building is not the same as collecting knowledge. The real shift begins when you decide what problem you want to solve, why it matters, and how you will turn your skill into leverage.',
+    'Chapter 2: Why talented people still get stuck',
+    'Talent can help, but talent without direction becomes noise. Many smart people remain stuck because they build things for attention instead of usefulness. They want approval, not traction.',
+    'The most valuable shift is to get honest about what you are making and who it is for. If you can identify the real pain point, the work becomes easier to explain, easier to sell, and easier to trust.',
+    'Chapter 3: Build for value, not applause',
+    'A project is not a business until it solves a real problem for someone else. This is the hidden rule: people do not buy effort, they buy outcomes.',
+    'I stopped asking, “How do I impress people?” and started asking, “How do I make someone’s life easier, faster, or more valuable?” Once I focused on outcomes, my work gained clarity and attention.',
+    'Chapter 4: The builder’s system',
+    'The builder’s system is simple: decide, validate, ship, learn, iterate. It sounds obvious, but most people get trapped in loops of planning and hesitation.',
+    'You do not need a twelve-step framework. You need a way to get from idea to proof quickly. Small experiments create data. Data creates clarity. Clarity creates directional power.',
+    'Chapter 5: Turning skill into leverage',
+    'Your best long-term skill is not collecting tutorials. It is learning how to turn knowledge into systems that deliver value repeatedly.',
+    'That means writing code that matters, designing products that solve real problems, and building assets that compound over time. This is how coding becomes income, and income becomes freedom.',
+    'Chapter 6: Pricing, sales, and confidence',
+    'Most builders undercharge because they do not understand the value of what they are creating. If your work saves time, reduces stress, or creates outcomes, it is worth more than you think.',
+    'The goal is not to sound forceful. It is to be clear. Explain what the work does, why it matters, and why someone should trust it. Clear pricing is part of strong value delivery.',
+    'Chapter 7: The long game',
+    'The real win is not a single launch. It is building a repeatable process that makes your work more valuable every time you do it.',
+    'The builders who last are not necessarily the most talented. They are the ones who stay clear, stay useful, and stay patient enough to make compounding work in their favor.'
+  ];
+
+  const text = chapters.join('\n\n');
+  const lines = text.split('\n');
+  const chunks = [];
+  let cursor = 0;
+  for (const line of lines) {
+    chunks.push(`${cursor} 0 moveto (${line.replace(/[()\\]/g, '\\$&')}) Tj`);
+    cursor += 16;
+  }
+
+  const content = chunks.join('\n');
+  const pdf = `%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length ${content.length + 100} >>
+stream
+BT
+/F1 12 Tf
+50 760 Td
+${content}
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000010 00000 n 
+0000000062 00000 n 
+0000000123 00000 n 
+0000000845 00000 n 
+0000001700 00000 n 
+0000002200 00000 n 
+trailer
+<< /Root 1 0 R /Size 6 >>
+startxref
+2280
+%%EOF`;
+
+  return Buffer.from(pdf, 'latin1');
+}
+
+app.get('/ebook/download.pdf', ebookReadLimiter.middleware(), (req, res) => {
+  const reference = req.query.ref;
+  const report = completedReports.get(reference);
+  if (!report || report.type !== 'ebook') {
+    return res.status(401).send('This download is only available to confirmed ebook buyers.');
+  }
+
+  const pdf = buildEbookPdf();
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'attachment; filename="the-builders-blueprint.pdf"');
+  res.send(pdf);
 });
 
 // ---- Metrics & Monitoring Endpoint (Admin Only) ----
@@ -582,6 +743,14 @@ function requireAuth(req, res, next) {
   next();
 }
 
+function requireAdmin(req, res, next) {
+  const user = users.findById(req.session.userId);
+  if (!user || !['owner', 'admin'].includes(user.role)) {
+    return res.status(403).json({ error: 'Administrator access required' });
+  }
+  next();
+}
+
 function requireActiveSubscription(req, res, next) {
   if (!hasActiveSubscription(subscription.get())) {
     return res.status(402).json({
@@ -686,6 +855,37 @@ app.get('/auth/me', (req, res) => {
   });
 });
 
+app.post('/api/ebook/review/:reference', requireAuth, requireAdmin, (req, res) => {
+  const { approved } = req.body || {};
+  if (typeof approved !== 'boolean') {
+    return res.status(400).json({ error: 'approved must be a boolean' });
+  }
+
+  const payment = payments.findByReference(req.params.reference);
+  if (!payment || payment.status !== 'pending_review') {
+    return res.status(404).json({ error: 'No pending ebook payment review found' });
+  }
+
+  payments.updateStatus(payment.id, approved ? 'confirmed' : 'rejected');
+  if (!approved) {
+    return res.json({ status: 'rejected', reference: req.params.reference });
+  }
+
+  const receipt = {
+    ...payment.raw,
+    status: 'paid',
+    verifiedAt: new Date().toISOString(),
+    verifiedBy: req.session.username,
+  };
+  completedReports.set(req.params.reference, receipt);
+  pendingLeads.delete(req.params.reference);
+  res.json({
+    status: 'confirmed',
+    reference: req.params.reference,
+    accessUrl: `/ebook/access?ref=${encodeURIComponent(req.params.reference)}`,
+  });
+});
+
 app.get('/api/leads', requireAuth, (req, res) => {
   res.json({ leads: leads.listAll() });
 });
@@ -746,38 +946,47 @@ app.use(errorHandler);
 const PORT = config.port;
 const HOST = config.host;
 
-const server = app.listen(PORT, HOST, () => {
-  logger.info(`Dispatch Pro API listening on ${HOST}:${PORT}`, {
-    env: config.env,
-    isProd: config.isProd,
+function startServer() {
+  const server = app.listen(PORT, HOST, () => {
+    logger.info(`Dispatch Pro API listening on ${HOST}:${PORT}`, {
+      env: config.env,
+      isProd: config.isProd,
+    });
   });
-});
 
-// ---- Graceful Shutdown (Resilience) ----
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM received, shutting down gracefully');
-  server.close(() => {
-    logger.info('Server closed');
-    process.exit(0);
+  app.server = server;
+
+  process.on('SIGTERM', () => {
+    logger.info('SIGTERM received, shutting down gracefully');
+    server.close(() => {
+      logger.info('Server closed');
+      process.exit(0);
+    });
   });
-});
 
-process.on('SIGINT', () => {
-  logger.info('SIGINT received, shutting down gracefully');
-  server.close(() => {
-    logger.info('Server closed');
-    process.exit(0);
+  process.on('SIGINT', () => {
+    logger.info('SIGINT received, shutting down gracefully');
+    server.close(() => {
+      logger.info('Server closed');
+      process.exit(0);
+    });
   });
-});
 
-process.on('uncaughtException', (err) => {
-  logger.error('Uncaught exception', { error: err.message, stack: err.stack });
-  process.exit(1);
-});
+  process.on('uncaughtException', (err) => {
+    logger.error('Uncaught exception', { error: err.message, stack: err.stack });
+    process.exit(1);
+  });
 
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled rejection', { reason, promise });
-  process.exit(1);
-});
+  process.on('unhandledRejection', (reason, promise) => {
+    logger.error('Unhandled rejection', { reason, promise });
+    process.exit(1);
+  });
+
+  return server;
+}
+
+if (require.main === module) {
+  startServer();
+}
 
 module.exports = app;

@@ -37,7 +37,7 @@ const config = {
 
   // Server
   port: parsePort(process.env.PORT || 3000),
-  host: process.env.HOST || (IS_PROD ? '0.0.0.0' : 'localhost'),
+  host: process.env.HOST || '0.0.0.0',
   sessionSecret: process.env.SESSION_SECRET,
 
   // Database
@@ -87,6 +87,8 @@ const config = {
   // Company Profile (branding)
   company: {
     brand: 'Dispatch Pro',
+    mission: 'Empowering businesses to innovate and grow through cutting-edge Innovation Design and Machine Learning, while navigating life\'s challenges together with creativity and resilience.',
+    vision: 'To inspire innovation and transform businesses through creative code and design, while growing stronger together.',
     founder: 'Odera Donald Ombok, BSc',
     title: 'Founder & CEO',
     email: 'odera.ombok@dispatchpro.com',
@@ -165,7 +167,7 @@ const config = {
     bcryptRounds: 12,
     tokenExpiry: 8 * 60 * 60 * 1000, // 8 hours
     csrfProtection: !IS_DEV,
-    corsOrigins: parseCorsOrigins(process.env.CORS_ORIGINS || 'http://localhost:3000'),
+    corsOrigins: parseCorsOrigins(process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:3001,http://localhost:4173,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:4173,http://127.0.0.1:5173,https://*.netlify.app'),
   },
 
   // Monitoring & Analytics (maintainability, efficiency)

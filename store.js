@@ -172,6 +172,20 @@ const payments = {
     });
     return result.changes === 1;
   },
+  findByReference(reference) {
+    const row = db.prepare(`
+      SELECT id, status, raw_json
+      FROM payment_transactions
+      WHERE provider = 'bitcoin-ebook' AND reference = ?
+      ORDER BY id DESC
+      LIMIT 1
+    `).get(reference);
+    if (!row) return undefined;
+    return { id: row.id, status: row.status, raw: row.raw_json ? JSON.parse(row.raw_json) : null };
+  },
+  updateStatus(id, status) {
+    db.prepare('UPDATE payment_transactions SET status = ? WHERE id = ?').run(status, id);
+  },
 };
 
 const leads = {

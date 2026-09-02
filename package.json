@@ -10,6 +10,7 @@
   },
   "scripts": {
     "start": "node server.js",
+    "start:prod": "NODE_ENV=production PORT=${PORT:-3000} SESSION_SECRET=${SESSION_SECRET:-change-me-in-production} node server.js",
     "dev": "nodemon server.js",
     "check": "node --check server.js && node --check store.js && node --check compliance.js && node --check auth.js && node --check lead-pipeline.js && node --check paypal-client.js && node --check mpesa-client.js && node --check explorium-client.js",
     "test": "npm run check && node --test",
