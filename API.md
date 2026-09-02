@@ -239,6 +239,11 @@ transfer.
 The endpoint returns `400` when the reference or proof is missing and `404` for
 an unknown or already-processed order reference.
 
+#### `POST /api/ebook/review/:reference`
+Administrator-only payment review endpoint. Set `approved` to `true` after
+independently verifying the wallet transfer, or `false` to reject the proof.
+Approved orders are moved to `confirmed` and receive an ebook access URL.
+
 ---
 
 #### `POST /payments/mpesa/qr`

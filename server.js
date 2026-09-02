@@ -308,28 +308,6 @@ app.post('/api/ebook/confirm', async (req, res) => {
     reference,
     message: 'Payment proof received. Ebook access will be released after payment verification.',
   });
-
-  completedReports.set(reference, receipt);
-  pendingLeads.delete(reference);
-  payments.record({
-    provider: 'bitcoin-ebook',
-    transactionId: txHash || screenshotData || screenshotUrl || reference,
-    reference,
-    amount: receipt.amountUsd,
-    currency: 'USD',
-    status: 'confirmed',
-    raw: receipt,
-  });
-
-  res.json({
-    status: 'confirmed',
-    reference,
-    title: config.ebook?.title,
-    accessUrl: `/ebook/access?ref=${encodeURIComponent(reference)}`,
-    txHash: txHash || null,
-    screenshotProvided: Boolean(screenshotData || screenshotUrl),
-    amountUsd: receipt.amountUsd,
-  });
 });
 
 app.get('/ebook/preview', (req, res) => {
@@ -765,6 +743,14 @@ function requireAuth(req, res, next) {
   next();
 }
 
+function requireAdmin(req, res, next) {
+  const user = users.findById(req.session.userId);
+  if (!user || !['owner', 'admin'].includes(user.role)) {
+    return res.status(403).json({ error: 'Administrator access required' });
+  }
+  next();
+}
+
 function requireActiveSubscription(req, res, next) {
   if (!hasActiveSubscription(subscription.get())) {
     return res.status(402).json({
@@ -866,6 +852,37 @@ app.get('/auth/me', (req, res) => {
     companyProfile: req.session.companyProfile,
     founder: DISPATCH_PRO.founder,
     founderTitle: DISPATCH_PRO.title,
+  });
+});
+
+app.post('/api/ebook/review/:reference', requireAuth, requireAdmin, (req, res) => {
+  const { approved } = req.body || {};
+  if (typeof approved !== 'boolean') {
+    return res.status(400).json({ error: 'approved must be a boolean' });
+  }
+
+  const payment = payments.findByReference(req.params.reference);
+  if (!payment || payment.status !== 'pending_review') {
+    return res.status(404).json({ error: 'No pending ebook payment review found' });
+  }
+
+  payments.updateStatus(payment.id, approved ? 'confirmed' : 'rejected');
+  if (!approved) {
+    return res.json({ status: 'rejected', reference: req.params.reference });
+  }
+
+  const receipt = {
+    ...payment.raw,
+    status: 'paid',
+    verifiedAt: new Date().toISOString(),
+    verifiedBy: req.session.username,
+  };
+  completedReports.set(req.params.reference, receipt);
+  pendingLeads.delete(req.params.reference);
+  res.json({
+    status: 'confirmed',
+    reference: req.params.reference,
+    accessUrl: `/ebook/access?ref=${encodeURIComponent(req.params.reference)}`,
   });
 });
 
