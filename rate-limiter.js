@@ -10,9 +10,12 @@ const { config } = require('./config');
  * Track API usage per user with TTL-based reset.
  */
 class RateLimiter {
-  constructor() {
+  constructor({ windowMs = 60 * 60 * 1000, max = 1000, message = { error: 'Too many requests.' } } = {}) {
     this.userLimits = new Map(); // userId -> { count, resetTime }
     this.globalLimits = new Map(); // endpoint -> { count, resetTime }
+    this.windowMs = windowMs;
+    this.max = max;
+    this.message = message;
   }
 
   /**
@@ -63,6 +66,15 @@ class RateLimiter {
    */
   clear() {
     this.userLimits.clear();
+  }
+
+  middleware() {
+    return (req, res, next) => {
+      if (this.isLimited(req.ip, this.max, this.windowMs)) {
+        return res.status(429).json(this.message);
+      }
+      next();
+    };
   }
 }
 
