@@ -310,11 +310,17 @@ app.post('/api/ebook/confirm', async (req, res) => {
   });
 });
 
-app.get('/ebook/preview', (req, res) => {
+const ebookReadLimiter = new RateLimiter({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: 'Too many ebook access requests, please try again in a minute.' },
+});
+
+app.get('/ebook/preview', ebookReadLimiter.middleware(), (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'ebook-preview.html'));
 });
 
-app.get('/ebook/success', (req, res) => {
+app.get('/ebook/success', ebookReadLimiter.middleware(), (req, res) => {
   const reference = req.query.ref;
   const report = completedReports.get(reference);
   if (!report || report.type !== 'ebook') {
@@ -322,12 +328,6 @@ app.get('/ebook/success', (req, res) => {
   }
 
   res.sendFile(path.join(__dirname, 'public', 'ebook-success.html'));
-});
-
-const ebookReadLimiter = new RateLimiter({
-  windowMs: 60 * 1000,
-  max: 30,
-  message: { error: 'Too many ebook access requests, please try again in a minute.' },
 });
 
 app.get('/ebook/access', ebookReadLimiter.middleware(), (req, res) => {
@@ -426,7 +426,7 @@ startxref
   return Buffer.from(pdf, 'latin1');
 }
 
-app.get('/ebook/download.pdf', (req, res) => {
+app.get('/ebook/download.pdf', ebookReadLimiter.middleware(), (req, res) => {
   const reference = req.query.ref;
   const report = completedReports.get(reference);
   if (!report || report.type !== 'ebook') {
