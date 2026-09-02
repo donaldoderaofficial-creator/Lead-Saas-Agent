@@ -14,6 +14,32 @@ Move the project from a feature-rich MVP into a production-ready SaaS system wit
 - Make every production change observable and reversible.
 - Prefer migration-safe schema evolution over ad hoc table edits.
 
+## Optional broker-adapter pattern
+
+The supplied pillar-strategy prototype contains a few useful product and
+engineering ideas that can inform a future broker integration without adding
+trading execution to this SaaS:
+
+- **Bounded configuration:** keep exposure, thresholds, symbols, and operating
+   limits explicit and reviewable rather than hidden in route logic.
+- **Explicit state transitions:** model `created`, `pending`, `verified`,
+   `active`, `paused`, and `closed` states with allowed transitions and clear
+   decision gates.
+- **Basket-level accounting:** evaluate a related operation as one auditable
+   unit, recording its inputs, outcome, costs, and owner together.
+- **Reset and recovery:** provide deliberate pause, close, reset, and retry
+   paths after an outcome or failure instead of relying on implicit state.
+- **Observability:** record every decision, external response, rejection, and
+   operator action with correlation IDs and useful metrics.
+
+These principles are documentation and architecture guidance only. The product
+must not execute the supplied strategy as-is: unattended leveraged trading,
+unbounded averaging, missing loss controls, unvalidated price units, and
+unchecked broker responses are excluded. Any future adapter requires a separate
+simulation or paper-trading phase, explicit drawdown and margin limits, broker
+and symbol validation, idempotent commands, an operator kill switch, and
+independent security and compliance review.
+
 ---
 
 ## Phase 1: Stabilize the API surface (Weeks 1-2)
