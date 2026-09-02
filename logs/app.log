@@ -157,3 +157,8 @@
 {"timestamp":"2026-09-01T21:47:17.365Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
 {"timestamp":"2026-09-01T21:47:36.766Z","level":"info","message":"GET /","statusCode":200,"duration":"2ms"}
 {"timestamp":"2026-09-01T21:51:20.354Z","level":"info","message":"HEAD /ebook.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T21:51:58.595Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:4500","env":"development","isProd":false}
+{"timestamp":"2026-09-01T21:52:05.000Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-01T21:52:17.439Z","level":"info","message":"HEAD /ebook.html","statusCode":200,"duration":"2ms"}
+{"timestamp":"2026-09-01T21:52:17.463Z","level":"info","message":"HEAD /ebook.html","statusCode":200,"duration":"0ms"}
+{"timestamp":"2026-09-01T21:52:18.717Z","level":"info","message":"GET /","statusCode":200,"duration":"2ms"}
