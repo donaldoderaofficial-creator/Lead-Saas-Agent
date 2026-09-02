@@ -121,6 +121,34 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(provider, transaction_id)
   );
+
+  CREATE TABLE IF NOT EXISTS edrms_records (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    record_type TEXT NOT NULL,
+    classification TEXT NOT NULL DEFAULT 'internal',
+    status TEXT NOT NULL DEFAULT 'draft',
+    owner TEXT NOT NULL,
+    retention_until TEXT,
+    storage_uri TEXT,
+    checksum TEXT,
+    metadata_json TEXT NOT NULL DEFAULT '{}',
+    created_by INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (created_by) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS edrms_audit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    record_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    actor_id INTEGER NOT NULL,
+    details TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (record_id) REFERENCES edrms_records(id),
+    FOREIGN KEY (actor_id) REFERENCES users(id)
+  );
 `);
 
 const pendingLeads = {
@@ -213,6 +241,79 @@ const leads = {
       INSERT INTO followups (ref, status, notes, updated_at) VALUES (?, ?, ?, datetime('now'))
       ON CONFLICT(ref) DO UPDATE SET status = excluded.status, notes = excluded.notes, updated_at = datetime('now')
     `).run(ref, status, notes || '');
+  },
+};
+
+const records = {
+  create({ id, title, recordType, classification = 'internal', owner, retentionUntil = null, storageUri = null, checksum = null, metadata = {}, createdBy }) {
+    db.prepare(`
+      INSERT INTO edrms_records
+        (id, title, record_type, classification, owner, retention_until, storage_uri, checksum, metadata_json, created_by)
+      VALUES (@id, @title, @recordType, @classification, @owner, @retentionUntil, @storageUri, @checksum, @metadataJson, @createdBy)
+    `).run({
+      id,
+      title,
+      recordType,
+      classification,
+      owner,
+      retentionUntil,
+      storageUri,
+      checksum,
+      metadataJson: JSON.stringify(metadata),
+      createdBy,
+    });
+    this.audit(id, 'created', createdBy, { status: 'draft' });
+    return this.get(id);
+  },
+  get(id) {
+    const row = db.prepare('SELECT * FROM edrms_records WHERE id = ?').get(id);
+    if (!row) return undefined;
+    return {
+      id: row.id,
+      title: row.title,
+      recordType: row.record_type,
+      classification: row.classification,
+      status: row.status,
+      owner: row.owner,
+      retentionUntil: row.retention_until,
+      storageUri: row.storage_uri,
+      checksum: row.checksum,
+      metadata: JSON.parse(row.metadata_json),
+      createdBy: row.created_by,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  },
+  list({ status, recordType } = {}) {
+    const conditions = [];
+    const values = [];
+    if (status) { conditions.push('status = ?'); values.push(status); }
+    if (recordType) { conditions.push('record_type = ?'); values.push(recordType); }
+    const where = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : '';
+    return db.prepare(`SELECT * FROM edrms_records${where} ORDER BY updated_at DESC`).all(...values).map((row) => this.get(row.id));
+  },
+  transition(id, nextStatus, actorId) {
+    const record = this.get(id);
+    if (!record) return { ok: false, reason: 'not-found' };
+    const allowed = {
+      draft: ['active', 'archived'],
+      active: ['archived'],
+      archived: ['active', 'disposed'],
+      disposed: [],
+    };
+    if (!allowed[record.status]?.includes(nextStatus)) {
+      return { ok: false, reason: 'invalid-transition', status: record.status };
+    }
+    db.prepare("UPDATE edrms_records SET status = ?, updated_at = datetime('now') WHERE id = ?").run(nextStatus, id);
+    this.audit(id, `status-${nextStatus}`, actorId, { from: record.status, to: nextStatus });
+    return { ok: true, record: this.get(id) };
+  },
+  audit(recordId, action, actorId, details = {}) {
+    db.prepare('INSERT INTO edrms_audit (record_id, action, actor_id, details) VALUES (?, ?, ?, ?)')
+      .run(recordId, action, actorId, JSON.stringify(details));
+  },
+  listAudit(recordId) {
+    return db.prepare('SELECT * FROM edrms_audit WHERE record_id = ? ORDER BY created_at DESC').all(recordId);
   },
 };
 
@@ -396,6 +497,7 @@ module.exports = {
   completedReports,
   payments,
   leads,
+  records,
   users,
   subscription,
   compliance,

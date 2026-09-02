@@ -46,6 +46,30 @@ X-RateLimit-Reset: 1692123456
 
 ## Endpoints
 
+### Electronic Document and Records Management
+
+The EDRMS API stores document metadata and a reference to externally managed
+content. It does not accept raw file uploads. Records are created as `draft`,
+then moved through controlled `active`, `archived`, and `disposed` states by an
+authenticated administrator. Every creation and status change is audited.
+
+#### `POST /api/records`
+Create a record with `title`, `recordType`, and `owner`. Optional fields are
+`classification` (`public`, `internal`, `confidential`, or `restricted`),
+`retentionUntil` (`YYYY-MM-DD`), `storageUri`, `checksum`, and a JSON-object
+`metadata` field. Returns `201 Created`.
+
+#### `GET /api/records`
+List records. Administrators may filter with `status` or `recordType`.
+
+#### `PATCH /api/records/:id/status`
+Move a record through its lifecycle. Valid transitions are `draft` to `active`
+or `archived`, `active` to `archived`, and `archived` to `active` or `disposed`.
+Disposed records cannot be reactivated.
+
+#### `GET /api/records/:id/audit`
+Return the immutable lifecycle audit entries for a record.
+
 ### Authentication
 
 #### `POST /auth/register`

@@ -29,7 +29,7 @@ const { RateLimiter } = require('./rate-limiter');
 const { client, checkoutNodeJssdk, verifyWebhookSignature } = require('./paypal-client');
 const { generateDynamicQrCode, initiateSTKPush } = require('./mpesa-client');
 const { processLead } = require('./lead-pipeline');
-const { pendingLeads, completedReports, payments, leads, users, subscription, createSessionStore } = require('./store');
+const { pendingLeads, completedReports, payments, leads, records, users, subscription, createSessionStore } = require('./store');
 const { hasActiveSubscription } = require('./subscription-policy');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateQrCode } = require('./auth');
 const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = require('./explorium-client');
@@ -853,6 +853,71 @@ app.get('/auth/me', (req, res) => {
     founder: DISPATCH_PRO.founder,
     founderTitle: DISPATCH_PRO.title,
   });
+});
+
+app.post('/api/records', requireAuth, requireAdmin, (req, res) => {
+  const { title, recordType, classification, owner, retentionUntil, storageUri, checksum, metadata } = req.body || {};
+  const classifications = ['public', 'internal', 'confidential', 'restricted'];
+  if (!title || typeof title !== 'string' || title.length > 200) {
+    return res.status(400).json({ error: 'title is required and must be 200 characters or fewer' });
+  }
+  if (!recordType || typeof recordType !== 'string' || recordType.length > 100) {
+    return res.status(400).json({ error: 'recordType is required and must be 100 characters or fewer' });
+  }
+  if (!owner || typeof owner !== 'string' || owner.length > 200) {
+    return res.status(400).json({ error: 'owner is required and must be 200 characters or fewer' });
+  }
+  if (classification && !classifications.includes(classification)) {
+    return res.status(400).json({ error: `classification must be one of ${classifications.join(', ')}` });
+  }
+  if (retentionUntil && (!/^\d{4}-\d{2}-\d{2}$/.test(retentionUntil) || Number.isNaN(Date.parse(`${retentionUntil}T00:00:00Z`)))) {
+    return res.status(400).json({ error: 'retentionUntil must be a valid YYYY-MM-DD date' });
+  }
+  if (metadata !== undefined && (!metadata || typeof metadata !== 'object' || Array.isArray(metadata))) {
+    return res.status(400).json({ error: 'metadata must be a JSON object' });
+  }
+  try {
+    const record = records.create({
+      id: crypto.randomUUID(),
+      title,
+      recordType,
+      classification,
+      owner,
+      retentionUntil: retentionUntil || null,
+      storageUri: storageUri || null,
+      checksum: checksum || null,
+      metadata: metadata || {},
+      createdBy: req.session.userId,
+    });
+    res.status(201).json(record);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/records', requireAuth, requireAdmin, (req, res) => {
+  const allowedStatuses = ['draft', 'active', 'archived', 'disposed'];
+  if (req.query.status && !allowedStatuses.includes(req.query.status)) {
+    return res.status(400).json({ error: `status must be one of ${allowedStatuses.join(', ')}` });
+  }
+  res.json({ records: records.list({ status: req.query.status, recordType: req.query.recordType }) });
+});
+
+app.get('/api/records/:id/audit', requireAuth, requireAdmin, (req, res) => {
+  if (!records.get(req.params.id)) return res.status(404).json({ error: 'Record not found' });
+  res.json({ audit: records.listAudit(req.params.id) });
+});
+
+app.patch('/api/records/:id/status', requireAuth, requireAdmin, (req, res) => {
+  const { status } = req.body || {};
+  if (!['active', 'archived', 'disposed'].includes(status)) {
+    return res.status(400).json({ error: 'status must be one of active, archived, disposed' });
+  }
+  const result = records.transition(req.params.id, status, req.session.userId);
+  if (!result.ok) {
+    return res.status(result.reason === 'not-found' ? 404 : 409).json({ error: result.reason });
+  }
+  res.json(result.record);
 });
 
 app.post('/api/ebook/review/:reference', requireAuth, requireAdmin, (req, res) => {
