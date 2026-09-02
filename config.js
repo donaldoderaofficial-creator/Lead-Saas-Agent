@@ -88,6 +88,7 @@ const config = {
   company: {
     brand: 'Dispatch Pro',
     mission: 'Empowering businesses to innovate and grow through cutting-edge Innovation Design and Machine Learning, while navigating life\'s challenges together with creativity and resilience.',
+    vision: 'To inspire innovation and transform businesses through creative code and design, while growing stronger together.',
     founder: 'Odera Donald Ombok, BSc',
     title: 'Founder & CEO',
     email: 'odera.ombok@dispatchpro.com',
