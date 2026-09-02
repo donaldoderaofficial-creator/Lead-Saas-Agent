@@ -45,6 +45,7 @@ The app is built around a **centralized configuration system** and scalable pers
 ### Core Modules
 - **[config.js](config.js)** — Centralized configuration for all environments, pricing tiers, and feature flags
 - **[store.js](store.js)** — SQLite persistence: leads, reports, users, subscriptions, compliance audit trail
+- **EDRMS records** — Admin-managed document metadata, retention dates, lifecycle states, and audit history
 - **[cache.js](cache.js)** — In-memory cache with TTL to reduce database load
 - **[logger.js](logger.js)** — Structured logging and request metrics for monitoring
 - **[rate-limiter.js](rate-limiter.js)** — Rate limiting and quota enforcement for profitability
