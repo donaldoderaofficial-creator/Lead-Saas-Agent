@@ -7,6 +7,12 @@ Event-driven lead-qualification agent with dual payment gateway integration
 (PayPal + M-Pesa STK Push), a persistent leads dashboard with 2FA-protected
 login, and a rule-based compliance assistant — built for global scalability.
 
+## Mission
+
+Empowering businesses to innovate and grow through cutting-edge Innovation
+Design and Machine Learning, while navigating life's challenges together with
+creativity and resilience.
+
 ---
 
 ## What it does
