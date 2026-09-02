@@ -10,6 +10,7 @@ for (const suffix of ['', '-wal', '-shm']) {
 }
 process.env.PORT = '3210';
 process.env.DB_PATH = dbPath;
+process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-only-session-secret';
 process.env.BITCOIN_WALLET_ADDRESS = 'bc1qwalletbitcoinaddress';
 process.env.ETHEREUM_WALLET_ADDRESS = '0x1234567890abcdef1234567890abcdef12345678';
 
