@@ -330,7 +330,13 @@ app.get('/ebook/success', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'ebook-success.html'));
 });
 
-app.get('/ebook/access', (req, res) => {
+const ebookReadLimiter = new RateLimiter({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: 'Too many ebook access requests, please try again in a minute.' },
+});
+
+app.get('/ebook/access', ebookReadLimiter.middleware(), (req, res) => {
   const reference = req.query.ref;
   const report = completedReports.get(reference);
   if (!report || report.type !== 'ebook') {
@@ -340,7 +346,7 @@ app.get('/ebook/access', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'ebook-reader.html'));
 });
 
-app.get('/ebook/read', (req, res) => {
+app.get('/ebook/read', ebookReadLimiter.middleware(), (req, res) => {
   const reference = req.query.ref;
   const report = completedReports.get(reference);
   if (!report || report.type !== 'ebook') {
