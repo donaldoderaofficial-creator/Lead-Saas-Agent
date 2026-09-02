@@ -217,6 +217,28 @@ or (M-Pesa):
 }
 ```
 
+#### `POST /api/ebook/order`
+Create a Bitcoin ebook order. Email is optional. The response contains a unique
+reference, the configured wallet address, and the exact BTC amount to send.
+
+#### `POST /api/ebook/confirm`
+Submit a transaction hash or deposit screenshot for manual payment review.
+Wallet proof is not treated as verified payment: the order remains pending and
+the ebook is not released until an administrator independently confirms the
+transfer.
+
+**Response:** `202 Accepted`
+```json
+{
+  "status": "pending_review",
+  "reference": "order-reference",
+  "message": "Payment proof received. Ebook access will be released after payment verification."
+}
+```
+
+The endpoint returns `400` when the reference or proof is missing and `404` for
+an unknown or already-processed order reference.
+
 ---
 
 #### `POST /payments/mpesa/qr`

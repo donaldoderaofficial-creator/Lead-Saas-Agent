@@ -524,6 +524,11 @@
         return;
       }
 
+      if (confirmPayload.status === 'pending_review') {
+        setStatus('Payment proof received. We will release your ebook after verifying the transfer.', 'success');
+        return;
+      }
+
       setStatus('Payment confirmed. Your e-book is ready. Redirecting…', 'success');
       window.location.href = confirmPayload.accessUrl;
     }

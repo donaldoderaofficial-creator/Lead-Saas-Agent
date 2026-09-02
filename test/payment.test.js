@@ -112,9 +112,9 @@ test('accepts a deposit screenshot as ebook payment confirmation', () => {
 
   handler(req, res);
 
-  assert.equal(res.statusCode, 200);
-  assert.equal(res.jsonBody.status, 'confirmed');
-  assert.equal(completedReports.has(reference), true);
+  assert.equal(res.statusCode, 202);
+  assert.equal(res.jsonBody.status, 'pending_review');
+  assert.equal(completedReports.has(reference), false);
 });
 
 test('redirects legacy ebook links to the current live ebook page', async () => {

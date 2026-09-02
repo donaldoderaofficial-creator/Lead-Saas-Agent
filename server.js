@@ -293,6 +293,22 @@ app.post('/api/ebook/confirm', async (req, res) => {
     purchasedAt: new Date().toISOString(),
   };
 
+  payments.record({
+    provider: 'bitcoin-ebook',
+    transactionId: txHash || screenshotData || screenshotUrl || reference,
+    reference,
+    amount: receipt.amountUsd,
+    currency: 'USD',
+    status: 'pending_review',
+    raw: receipt,
+  });
+
+  return res.status(202).json({
+    status: 'pending_review',
+    reference,
+    message: 'Payment proof received. Ebook access will be released after payment verification.',
+  });
+
   completedReports.set(reference, receipt);
   pendingLeads.delete(reference);
   payments.record({
