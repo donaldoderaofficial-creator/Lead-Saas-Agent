@@ -15,7 +15,7 @@ process.env.BITCOIN_WALLET_ADDRESS = 'bc1qwalletbitcoinaddress';
 process.env.ETHEREUM_WALLET_ADDRESS = '0x1234567890abcdef1234567890abcdef12345678';
 
 const { config } = require('../config');
-const { payments } = require('../store');
+const { payments, pendingLeads, subscription } = require('../store');
 const { hasActiveSubscription } = require('../subscription-policy');
 
 test('requires an active paid package before service access', () => {
@@ -43,6 +43,30 @@ test('exposes direct bitcoin and ethereum wallet payment options', () => {
   assert.equal(config.wallets.ethereum.enabled, true);
   assert.equal(config.wallets.bitcoin.address, 'bc1qwalletbitcoinaddress');
   assert.equal(config.wallets.ethereum.address, '0x1234567890abcdef1234567890abcdef12345678');
+});
+
+test('crypto subscription proof does not activate access until admin approval', () => {
+  const app = require('../server');
+  const reference = 'crypto-subscription-review-test';
+  pendingLeads.set(reference, { name: 'Subscriber', email: 'subscriber@example.com' });
+
+  const confirmRoute = app._router.stack.find((layer) => layer.route?.path === '/api/billing/crypto/confirm');
+  const confirm = confirmRoute.route.stack.at(-1).handle;
+  const pendingResponse = { statusCode: 200, body: null, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
+  confirm({ body: { reference, txHash: '0xcrypto-proof', method: 'ethereum', plan: 'starter' } }, pendingResponse);
+
+  assert.equal(pendingResponse.statusCode, 202);
+  assert.equal(hasActiveSubscription(subscription.get()), false);
+  assert.equal(payments.findByReference(reference, 'ethereum-subscription').status, 'pending_review');
+
+  const reviewRoute = app._router.stack.find((layer) => layer.route?.path === '/api/billing/crypto/review/:reference');
+  const review = reviewRoute.route.stack.at(-1).handle;
+  const approvedResponse = { statusCode: 200, body: null, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
+  review({ params: { reference }, body: { approved: true }, session: { username: 'admin' } }, approvedResponse);
+
+  assert.equal(approvedResponse.body.status, 'confirmed');
+  assert.equal(subscription.get().billingType, 'crypto');
+  assert.equal(hasActiveSubscription(subscription.get()), true);
 });
 
 test('allows repeated ebook report writes without finalized statement errors', () => {

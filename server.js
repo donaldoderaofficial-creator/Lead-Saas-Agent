@@ -777,6 +777,9 @@ app.post('/api/payments/wallet/confirm', async (req, res) => {
 
 // ---- Step 2: fetch the report once payment has been confirmed ----
 app.get('/leads/report/:ref', (req, res) => {
+  if (!hasActiveSubscription(subscription.get())) {
+    return res.status(402).json({ error: 'An active Dispatch Pro package is required for this service.', code: 'subscription_required', plansUrl: '/billing.html' });
+  }
   const report = completedReports.get(req.params.ref);
   if (report) return res.json(report);
   if (pendingLeads.has(req.params.ref)) {
@@ -1023,7 +1026,7 @@ app.get('/api/leads', requireAuth, requireActiveSubscription, (req, res) => {
   res.json({ leads: leads.listAll() });
 });
 
-app.patch('/api/leads/:ref/followup', requireAuth, (req, res) => {
+app.patch('/api/leads/:ref/followup', requireAuth, requireActiveSubscription, (req, res) => {
   const { status, notes } = req.body || {};
   const allowed = ['new', 'contacted', 'won', 'lost'];
   if (!allowed.includes(status)) {
