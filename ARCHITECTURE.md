@@ -122,10 +122,21 @@ Dispatch Pro is a **scalable, maintainable, and profitable SaaS platform** for l
 - **Purpose**: Core business logic for lead qualification
 - **Features**:
   - Lead enrichment from external APIs
-  - Scoring and qualification logic
+  - Deterministic neural scoring through `lead-model.js`
   - Recommendation generation
   - Async event-driven architecture
 - **Adaptability**: Event emitter enables extension
+
+### 7a. **Controlled ML Loop** (`lead-model.js`)
+- The model uses a small feed-forward network with sigmoid activation and
+  bounded backpropagation; it does not require an external ML service.
+- Features are limited to explicit business signals such as declared company
+  size and urgency. Sensitive personal attributes are not used for scoring.
+- Training must use explicit outcome labels and remains bounded by epoch and
+  learning-rate limits. The model does not set prices, deny access, or change
+  payment rules automatically.
+- `npm run harness` repeats syntax checks, tests, and whitespace validation so
+  model changes remain reproducible and reviewable before merge.
 
 ### 8. **Compliance & Risk** (`compliance.js`)
 - **Purpose**: Risk screening and compliance enforcement
