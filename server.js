@@ -123,6 +123,10 @@ app.use(session({
 
 // ---- Rate Limiting: Profitability & Security ----
 const rateLimiter = new RateLimiter();
+const serviceAccessLimiter = new RateLimiter({
+  max: config.rateLimiting.apiLimit,
+  message: { error: 'Service usage limit reached for this hour. Please try again later.' },
+});
 const loginAttempts = new Map(); // username -> [timestamps]
 
 function isRateLimited(username, req) {
@@ -547,14 +551,7 @@ async function finalizeLead(ref, payment) {
   pendingLeads.delete(ref);
 }
 // ---- Step 1: submit a lead, get a payment reference back ----
-app.post('/api/lead', async (req, res) => {
-  if (!hasActiveSubscription(subscription.get())) {
-    return res.status(402).json({
-      error: 'An active Dispatch Pro package is required before lead services can be used.',
-      code: 'subscription_required',
-      plansUrl: '/billing.html',
-    });
-  }
+app.post('/api/lead', requireActiveSubscription, async (req, res) => {
   const { name, email, phone, method } = req.body || {};
   if (!name || !email) return res.status(400).json({ error: 'Missing name or email' });
 
@@ -791,10 +788,7 @@ app.post('/api/payments/wallet/confirm', async (req, res) => {
 });
 
 // ---- Step 2: fetch the report once payment has been confirmed ----
-app.get('/leads/report/:ref', (req, res) => {
-  if (!hasActiveSubscription(subscription.get())) {
-    return res.status(402).json({ error: 'An active Dispatch Pro package is required for this service.', code: 'subscription_required', plansUrl: '/billing.html' });
-  }
+app.get('/leads/report/:ref', requireActiveSubscription, (req, res) => {
   const report = completedReports.get(req.params.ref);
   if (report) return res.json(report);
   if (pendingLeads.has(req.params.ref)) {
@@ -804,14 +798,7 @@ app.get('/leads/report/:ref', (req, res) => {
 });
 
 // ---- Internal lead processing: package gate applies before this route ----
-app.post('/leads', async (req, res) => {
-  if (!hasActiveSubscription(subscription.get())) {
-    return res.status(402).json({
-      error: 'An active Dispatch Pro package is required before lead services can be used.',
-      code: 'subscription_required',
-      plansUrl: '/billing.html',
-    });
-  }
+app.post('/leads', requireActiveSubscription, async (req, res) => {
   try {
     const outcome = await processLead(req.body);
     res.json(outcome);
@@ -845,6 +832,17 @@ function requireActiveSubscription(req, res, next) {
       plansUrl: '/billing.html',
     });
   }
+  const clientKey = req.session?.userId ? `user:${req.session.userId}` : `ip:${req.ip}`;
+  if (serviceAccessLimiter.isLimited(clientKey, config.rateLimiting.apiLimit, 60 * 60 * 1000)) {
+    const resetAt = Date.now() + 60 * 60 * 1000;
+    res.setHeader('Retry-After', '3600');
+    res.setHeader('X-RateLimit-Limit', String(config.rateLimiting.apiLimit));
+    res.setHeader('X-RateLimit-Remaining', '0');
+    res.setHeader('X-RateLimit-Reset', String(Math.floor(resetAt / 1000)));
+    return res.status(429).json(serviceAccessLimiter.message);
+  }
+  res.setHeader('X-RateLimit-Limit', String(config.rateLimiting.apiLimit));
+  res.setHeader('X-RateLimit-Remaining', String(serviceAccessLimiter.getRemaining(clientKey, config.rateLimiting.apiLimit, 60 * 60 * 1000)));
   next();
 }
 
