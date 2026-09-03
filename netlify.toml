@@ -1,6 +1,9 @@
 [build]
   publish = "public"
 
+# Replace the temporary Codespaces host below with a permanent HTTPS backend
+# before deploying a revenue-producing production site.
+
 [[redirects]]
   from = "/api/*"
   to = "https://ideal-spork-qv9jg97vwwrvc44qw-3000.app.github.dev/api/:splat"

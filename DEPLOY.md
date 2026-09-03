@@ -56,6 +56,27 @@ up from the dashboard:
 5. Deploy — Railway gives you a permanent `https://<project>.up.railway.app` URL
 6. Same as step 5 above: update your callback/webhook URLs to the real domain
 
+## 3b. Deploy on Render Free (no hosting charge)
+
+Use `render-free.yaml` when you need a no-cost validation environment. Create
+a Render Blueprint from that file and set the prompted `sync: false` values,
+including the exact BTC and ETH wallet addresses. Render Free services sleep
+after inactivity and their local filesystem is ephemeral, so do not use this
+option as the only store for paid customer records. The free service is best
+for demos, checkout testing, and early validation.
+
+For persistent production data without a recurring hosting bill, use the
+Oracle Always Free VM instructions in `ORACLE_DEPLOY.md`. You remain
+responsible for operating-system updates, backups, TLS, and monitoring.
+
+## 3c. Keep hosting options separate from customer options
+
+The service supports BTC and ETH wallet checkout, PayPal, and M-Pesa where
+credentials are configured. Customers can choose the payment method that fits
+their market, while the same subscription entitlement and manual verification
+rules apply across all methods. Hosting providers do not process or guarantee
+payment; configure callbacks and webhooks against the permanent backend URL.
+
 ## 4. Switch from sandbox to real payments (when ready)
 
 - `PAYPAL_ENV=live` with your live PayPal app credentials

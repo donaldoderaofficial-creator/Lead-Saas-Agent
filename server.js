@@ -153,7 +153,7 @@ function getEbookBtcAmount() {
 function buildEbookCheckoutPayload({ name, email, reference } = {}) {
   const amountUsd = Number(config.ebook?.priceUsd || 19.99);
   const amountBtc = getEbookBtcAmount();
-  const walletAddress = config.ebook?.walletAddress || config.wallets.bitcoin.address || '3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k';
+  const walletAddress = config.ebook?.walletAddress || config.wallets.bitcoin.address;
   const buyerName = name || 'Customer';
   const orderReference = reference || crypto.randomUUID();
 
@@ -197,6 +197,7 @@ function buildSubscriptionCheckoutPayload({ plan = 'starter', method = 'bitcoin'
 }
 
 app.buildEbookCheckoutPayload = buildEbookCheckoutPayload;
+app.buildSubscriptionCheckoutPayload = buildSubscriptionCheckoutPayload;
 
 // ---- Health Check Endpoint ----
 app.get('/health', (req, res) => {
@@ -275,25 +276,39 @@ app.post('/api/billing/crypto/order', (req, res) => {
   if (!config.wallets[walletType].address) return res.status(400).json({ error: `${config.wallets[walletType].label} payments are not configured.` });
   const reference = crypto.randomUUID();
   const checkout = buildSubscriptionCheckoutPayload({ plan, method, name, email, reference });
-  pendingLeads.set(reference, { name: checkout.buyerName, email: checkout.buyerEmail });
+  pendingLeads.set(reference, {
+    name: checkout.buyerName,
+    email: checkout.buyerEmail,
+    product: 'subscription',
+    paymentMethod: method,
+    plan,
+    amountCrypto: checkout.amountCrypto,
+  });
   res.json(checkout);
 });
 
 app.post('/api/billing/crypto/confirm', (req, res) => {
-  const { reference, txHash, method, plan = 'starter', amount } = req.body || {};
+  const { reference, txHash, method, plan, amount } = req.body || {};
   if (!reference || !txHash || !method) return res.status(400).json({ error: 'reference, txHash, and method are required' });
   if (!['bitcoin', 'ethereum'].includes(method)) return res.status(400).json({ error: 'method must be bitcoin or ethereum' });
-  if (!['starter', 'growth'].includes(plan)) return res.status(400).json({ error: 'plan must be starter or growth' });
-  if (!pendingLeads.has(reference)) return res.status(404).json({ error: 'Unknown payment reference' });
-  const walletType = method === 'bitcoin' ? 'bitcoin' : 'ethereum';
+  const order = pendingLeads.get(reference);
+  if (!order || order.product !== 'subscription') return res.status(404).json({ error: 'Unknown subscription payment reference' });
+  if (method !== order.paymentMethod || plan !== order.plan) return res.status(409).json({ error: 'Payment method or plan does not match the original order' });
+  const submittedAmount = Number(amount);
+  const expectedAmount = Number(order.amountCrypto);
+  if (!Number.isFinite(submittedAmount) || submittedAmount <= 0) return res.status(400).json({ error: 'amount is required in the selected cryptocurrency' });
+  if (!Number.isFinite(expectedAmount) || Math.abs(submittedAmount - expectedAmount) / expectedAmount > 0.01) {
+    return res.status(400).json({ error: `amount must be approximately ${order.amountCrypto} ${config.wallets[method].currency}` });
+  }
+  const walletType = order.paymentMethod === 'bitcoin' ? 'bitcoin' : 'ethereum';
   payments.record({
-    provider: `${method}-subscription`,
+    provider: `${order.paymentMethod}-subscription`,
     transactionId: txHash,
     reference,
-    amount: Number(amount) || Number(PRICING.usd[plan].price),
+    amount: submittedAmount,
     currency: config.wallets[walletType].currency,
     status: 'pending_review',
-    raw: { txHash, method, plan, amount: Number(amount) || Number(PRICING.usd[plan].price) },
+    raw: { txHash, method: order.paymentMethod, plan: order.plan, amount: submittedAmount, amountCrypto: order.amountCrypto },
   });
   res.status(202).json({ status: 'pending_review', reference, message: 'Payment proof received. Service access will be enabled after payment verification.' });
 });

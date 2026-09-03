@@ -270,6 +270,23 @@
       color: var(--muted);
       font-size: 0.8rem;
     }
+    .experience {
+      margin-top: 28px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.03);
+    }
+    .experience h2 { margin: 0 0 8px; font-size: 1.25rem; }
+    .experience p { color: var(--muted); line-height: 1.7; margin: 0 0 16px; }
+    .experience-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .experience-button {
+      border: 1px solid var(--line); border-radius: 10px; padding: 11px 14px;
+      background: rgba(255,255,255,0.04); color: var(--text); cursor: pointer;
+      font: inherit; font-weight: 700;
+    }
+    .experience-button:hover, .experience-button[aria-pressed="true"] { border-color: var(--brand); color: var(--brand); }
+    .experience-result { margin-top: 18px; color: var(--muted); line-height: 1.7; }
     @media (max-width: 980px) {
       .hero, .lower-grid { grid-template-columns: 1fr; }
       .checkout-box { order: -1; }
@@ -314,6 +331,17 @@
           <div class="proof"><strong>50+</strong>Actionable lessons</div>
           <div class="proof"><strong>Instant</strong>Access delivery</div>
         </div>
+
+        <section class="experience" aria-labelledby="experience-title">
+          <h2 id="experience-title">Choose your next move</h2>
+          <p id="experience-copy">Pick a path and get a focused starting page for the work ahead.</p>
+          <div class="experience-actions">
+            <button class="experience-button" type="button" data-experience="builder">Build a product</button>
+            <button class="experience-button" type="button" data-experience="leads">Find better leads</button>
+            <button class="experience-button" type="button" data-experience="leverage">Create leverage</button>
+          </div>
+          <div class="experience-result" id="experience-result" aria-live="polite"></div>
+        </section>
       </section>
 
       <aside class="checkout-box">
@@ -351,5 +379,48 @@
       </div>
     </div>
   </div>
+  <script>
+    const experiences = {
+      builder: {
+        title: 'Build a product',
+        copy: 'Start with a focused idea, validate the pain, and turn useful code into a product people can trust.',
+        action: 'Read the builder playbook',
+        href: '/ebook.html',
+      },
+      leads: {
+        title: 'Find better leads',
+        copy: 'Use the Lead SaaS workflow to score opportunities, enrich contacts, and keep every follow-up visible.',
+        action: 'View subscription options',
+        href: '/billing.html',
+      },
+      leverage: {
+        title: 'Create leverage',
+        copy: 'Build repeatable systems around your best work, then compound the value through clear offers and dependable delivery.',
+        action: 'Read the builder playbook',
+        href: '/ebook.html',
+      },
+    };
+
+    function renderExperience(name, updateUrl = true) {
+      const experience = experiences[name] || experiences.builder;
+      if (updateUrl) history.pushState({ experience: name }, '', `/?experience=${encodeURIComponent(name)}`);
+      document.title = `${experience.title} | Lead SaaS Agent`;
+      document.getElementById('experience-title').textContent = experience.title;
+      document.getElementById('experience-copy').textContent = experience.copy;
+      document.getElementById('experience-result').innerHTML = `<a class="btn secondary" href="${experience.href}">${experience.action}</a>`;
+      document.querySelectorAll('[data-experience]').forEach((button) => {
+        button.setAttribute('aria-pressed', String(button.dataset.experience === name));
+      });
+    }
+
+    const selectedExperience = new URLSearchParams(window.location.search).get('experience');
+    if (selectedExperience) renderExperience(selectedExperience, false);
+    document.querySelectorAll('[data-experience]').forEach((button) => {
+      button.addEventListener('click', () => renderExperience(button.dataset.experience));
+    });
+    window.addEventListener('popstate', () => {
+      renderExperience(new URLSearchParams(window.location.search).get('experience') || 'builder', false);
+    });
+  </script>
 </body>
 </html>

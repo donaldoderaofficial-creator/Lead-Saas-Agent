@@ -208,6 +208,7 @@ el('btnMonthly').addEventListener('click', () => setBillingMode('monthly'));
 el('btnAnnual').addEventListener('click', () => setBillingMode('annual'));
 
 let cryptoReference = '';
+let cryptoAmount = '';
 el('cryptoOrder').addEventListener('click', async () => {
   setStatus('Creating wallet payment…');
   const res = await fetch('/api/billing/crypto/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
@@ -216,12 +217,13 @@ el('cryptoOrder').addEventListener('click', async () => {
   const data = await res.json();
   if (!res.ok) return setStatus(data.error || 'Unable to create wallet payment.', true);
   cryptoReference = data.reference;
+  cryptoAmount = data.amountCrypto;
   el('cryptoWallet').innerHTML = `Send exactly <strong>${data.amountCrypto} ${data.currency}</strong> to <strong>${data.walletAddress}</strong>.<br>Reference: ${data.reference}`;
   el('cryptoWallet').style.display = 'block'; el('cryptoTxHash').style.display = 'block'; el('cryptoConfirm').style.display = 'block';
   setStatus('Send the amount, then submit the transaction hash for review.');
 });
 el('cryptoConfirm').addEventListener('click', async () => {
-  const res = await fetch('/api/billing/crypto/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference: cryptoReference, txHash: el('cryptoTxHash').value.trim(), plan: el('cryptoPlan').value, method: el('cryptoMethod').value }) });
+  const res = await fetch('/api/billing/crypto/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference: cryptoReference, txHash: el('cryptoTxHash').value.trim(), amount: cryptoAmount, plan: el('cryptoPlan').value, method: el('cryptoMethod').value }) });
   const data = await res.json();
   setStatus(res.ok ? 'Payment submitted. Service access starts after verification.' : (data.error || 'Unable to submit payment.'), !res.ok);
 });
