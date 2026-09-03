@@ -24,13 +24,15 @@ jobs:
         run: npm ci
 
       - name: Validate JavaScript
-        run: npm test
+        run: npm run harness
 
       - name: Smoke test health endpoint
         env:
           SESSION_SECRET: ci-only-session-secret-with-at-least-32-characters
           DB_PATH: /tmp/lead-agent-ci.db
           NODE_ENV: production
+          BITCOIN_WALLET_ADDRESS: ci-only-bitcoin-wallet
+          ETHEREUM_WALLET_ADDRESS: ci-only-ethereum-wallet
         run: |
           node server.js > /tmp/lead-agent.log 2>&1 &
           PID=$!
