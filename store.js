@@ -76,6 +76,8 @@ db.exec(`
     plan TEXT NOT NULL DEFAULT 'none',
     billing_type TEXT,
     paypal_subscription_id TEXT,
+    crypto_payment_reference TEXT,
+    crypto_transaction_id TEXT,
     status TEXT NOT NULL DEFAULT 'inactive',
     current_period_end TEXT,
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -151,6 +153,10 @@ db.exec(`
   );
 `);
 
+for (const column of ['crypto_payment_reference', 'crypto_transaction_id']) {
+  try { db.exec(`ALTER TABLE subscription ADD COLUMN ${column} TEXT`); } catch (_) {}
+}
+
 const pendingLeads = {
   set(ref, lead) {
     db.prepare('INSERT OR REPLACE INTO pending_leads (ref, name, email, phone) VALUES (?, ?, ?, ?)')
@@ -200,14 +206,14 @@ const payments = {
     });
     return result.changes === 1;
   },
-  findByReference(reference) {
+  findByReference(reference, provider = 'bitcoin-ebook') {
     const row = db.prepare(`
       SELECT id, status, raw_json
       FROM payment_transactions
-      WHERE provider = 'bitcoin-ebook' AND reference = ?
+      WHERE provider = ? AND reference = ?
       ORDER BY id DESC
       LIMIT 1
-    `).get(reference);
+    `).get(provider, reference);
     if (!row) return undefined;
     return { id: row.id, status: row.status, raw: row.raw_json ? JSON.parse(row.raw_json) : null };
   },
@@ -351,17 +357,21 @@ const subscription = {
       status: row.status,
       billingType: row.billing_type,
       paypalSubscriptionId: row.paypal_subscription_id,
+      cryptoPaymentReference: row.crypto_payment_reference,
+      cryptoTransactionId: row.crypto_transaction_id,
       currentPeriodEnd: row.current_period_end,
     };
   },
-  set({ plan, billingType, paypalSubscriptionId, status, currentPeriodEnd }) {
+  set({ plan, billingType, paypalSubscriptionId, cryptoPaymentReference, cryptoTransactionId, status, currentPeriodEnd }) {
     db.prepare(`
-      INSERT INTO subscription (id, plan, billing_type, paypal_subscription_id, status, current_period_end, updated_at)
-      VALUES (1, @plan, @billingType, @paypalSubscriptionId, @status, @currentPeriodEnd, datetime('now'))
+      INSERT INTO subscription (id, plan, billing_type, paypal_subscription_id, crypto_payment_reference, crypto_transaction_id, status, current_period_end, updated_at)
+      VALUES (1, @plan, @billingType, @paypalSubscriptionId, @cryptoPaymentReference, @cryptoTransactionId, @status, @currentPeriodEnd, datetime('now'))
       ON CONFLICT(id) DO UPDATE SET
         plan = @plan,
         billing_type = @billingType,
         paypal_subscription_id = @paypalSubscriptionId,
+        crypto_payment_reference = @cryptoPaymentReference,
+        crypto_transaction_id = @cryptoTransactionId,
         status = @status,
         current_period_end = @currentPeriodEnd,
         updated_at = datetime('now')
@@ -369,6 +379,8 @@ const subscription = {
       plan,
       billingType: billingType || null,
       paypalSubscriptionId: paypalSubscriptionId || null,
+      cryptoPaymentReference: cryptoPaymentReference || null,
+      cryptoTransactionId: cryptoTransactionId || null,
       status,
       currentPeriodEnd: currentPeriodEnd || null,
     });
