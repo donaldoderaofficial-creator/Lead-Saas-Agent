@@ -186,16 +186,35 @@ Get current authenticated user info.
 
 ### Lead Management
 
-All lead-generation and prospecting services require an active Dispatch Pro
-package. Without one, service requests return `402 Payment Required` with
-`code: "subscription_required"` and a link to the package page. PayPal
-subscription activation and cancellation are applied from verified webhooks.
+All lead-generation, prospecting, report, and dashboard services require an
+active Dispatch Pro package. Without one, service requests return `402 Payment
+Required` with `code: "subscription_required"` and a link to the package page.
+PayPal subscription activation and cancellation are applied from verified
+webhooks. Bitcoin and Ethereum subscriptions use the same manual-review model
+as the e-book: a transaction hash is held as `pending_review` until an
+authenticated owner or administrator verifies the wallet transfer.
+
+#### `POST /api/billing/crypto/order`
+Create a BTC or ETH subscription order. The request accepts `plan` (`starter`
+or `growth`), `method` (`bitcoin` or `ethereum`), and optional buyer `name` and
+`email`. The response includes the wallet address, estimated exact display
+amount, and a unique reference.
+
+#### `POST /api/billing/crypto/confirm`
+Submit the order `reference`, `txHash`, `method`, and `plan` after sending the
+funds. Returns `202 Accepted` with `status: "pending_review"`. This endpoint
+never activates service access.
+
+#### `POST /api/billing/crypto/review/:reference`
+Owner/admin only. Submit `{ "approved": true }` after independently checking
+the transaction on the relevant blockchain, or `false` to reject it. Approval
+sets the subscription to `status: "active"` and `billingType: "crypto"`.
 
 #### `GET /api/payments/options`
 Returns the payment providers configured for the current deployment. PayPal
 handles international USD checkout; M-Pesa handles KES STK Push and dynamic
-QR payments. These providers settle independently and cannot transfer funds
-directly between PayPal and M-Pesa.
+QR payments; Bitcoin and Ethereum use manual wallet verification. These
+providers settle independently.
 
 **Response:** `200 OK`
 ```json
