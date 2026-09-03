@@ -92,6 +92,21 @@
     </div>
 
     <div id="status"></div>
+
+    <div class="plan-card" style="margin-top:16px;">
+      <p class="plan-name">Pay with Bitcoin or Ethereum</p>
+      <p class="plan-desc">Wallet payments remain pending until an administrator verifies the transaction.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <input id="cryptoName" placeholder="Name" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:8px;">
+        <input id="cryptoEmail" type="email" placeholder="Email" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:8px;">
+        <select id="cryptoPlan" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:8px;"><option value="starter">Starter</option><option value="growth">Growth</option></select>
+        <select id="cryptoMethod" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:8px;"><option value="bitcoin">Bitcoin (BTC)</option><option value="ethereum">Ethereum (ETH)</option></select>
+      </div>
+      <button class="plan-btn" id="cryptoOrder" style="margin-top:12px;">Create wallet payment</button>
+      <div id="cryptoWallet" style="display:none;margin-top:14px;font-size:13px;line-height:1.6;"></div>
+      <input id="cryptoTxHash" placeholder="Paste transaction hash after sending" style="display:none;width:100%;margin-top:10px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:8px;">
+      <button class="plan-btn" id="cryptoConfirm" style="display:none;margin-top:10px;">Submit payment for review</button>
+    </div>
   </div>
 
 <script>
@@ -191,6 +206,25 @@ function setBillingMode(mode) {
 
 el('btnMonthly').addEventListener('click', () => setBillingMode('monthly'));
 el('btnAnnual').addEventListener('click', () => setBillingMode('annual'));
+
+let cryptoReference = '';
+el('cryptoOrder').addEventListener('click', async () => {
+  setStatus('Creating wallet payment…');
+  const res = await fetch('/api/billing/crypto/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+    name: el('cryptoName').value.trim(), email: el('cryptoEmail').value.trim(), plan: el('cryptoPlan').value, method: el('cryptoMethod').value,
+  }) });
+  const data = await res.json();
+  if (!res.ok) return setStatus(data.error || 'Unable to create wallet payment.', true);
+  cryptoReference = data.reference;
+  el('cryptoWallet').innerHTML = `Send exactly <strong>${data.amountCrypto} ${data.currency}</strong> to <strong>${data.walletAddress}</strong>.<br>Reference: ${data.reference}`;
+  el('cryptoWallet').style.display = 'block'; el('cryptoTxHash').style.display = 'block'; el('cryptoConfirm').style.display = 'block';
+  setStatus('Send the amount, then submit the transaction hash for review.');
+});
+el('cryptoConfirm').addEventListener('click', async () => {
+  const res = await fetch('/api/billing/crypto/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference: cryptoReference, txHash: el('cryptoTxHash').value.trim(), plan: el('cryptoPlan').value, method: el('cryptoMethod').value }) });
+  const data = await res.json();
+  setStatus(res.ok ? 'Payment submitted. Service access starts after verification.' : (data.error || 'Unable to submit payment.'), !res.ok);
+});
 
 // Handle returning from an annual PayPal approval redirect
 (async function handleReturn() {
