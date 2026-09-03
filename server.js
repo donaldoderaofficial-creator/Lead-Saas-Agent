@@ -243,8 +243,16 @@ app.get('/api/config', (req, res) => {
   res.json({
     paypalClientId: config.payment.paypal.clientId || null,
     plans: {
-      starter: { paypalPlanId: process.env.PAYPAL_PLAN_STARTER_MONTHLY || null },
-      growth: { paypalPlanId: process.env.PAYPAL_PLAN_GROWTH_MONTHLY || null },
+      starter: {
+        paypalPlanId: process.env.PAYPAL_PLAN_STARTER_MONTHLY || null,
+        priceMonthly: PRICING.usd.starter.price,
+        priceAnnual: (Number(PRICING.usd.starter.price) * 10).toFixed(2),
+      },
+      growth: {
+        paypalPlanId: process.env.PAYPAL_PLAN_GROWTH_MONTHLY || null,
+        priceMonthly: PRICING.usd.growth.price,
+        priceAnnual: (Number(PRICING.usd.growth.price) * 10).toFixed(2),
+      },
     },
     ebook: {
       enabled: config.ebook?.enabled,
