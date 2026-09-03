@@ -142,6 +142,7 @@ function recordFailedAttempt(username, req) {
 const PRICING = config.pricing;
 const EBOOK_PRICE_USD = Number(config.ebook?.priceUsd || 19.99);
 const BTC_USD_PRICE = Number(process.env.BTC_USD_PRICE || 70000);
+const ETH_USD_PRICE = Number(process.env.ETH_USD_PRICE || 3500);
 
 function getEbookBtcAmount() {
   if (!Number.isFinite(BTC_USD_PRICE) || BTC_USD_PRICE <= 0) return '0.00025700';
@@ -166,6 +167,32 @@ function buildEbookCheckoutPayload({ name, email, reference } = {}) {
     amountBtc,
     walletAddress,
     instructions: `Copy this wallet address: ${walletAddress}. Send exactly ${amountBtc} BTC (about $${amountUsd.toFixed(2)} USD) to it, then paste the transaction hash here to unlock your ebook.`,
+  };
+}
+
+function getCryptoAmount(amountUsd, method) {
+  const price = method === 'bitcoin' ? BTC_USD_PRICE : ETH_USD_PRICE;
+  if (!Number.isFinite(price) || price <= 0) return null;
+  return (Number(amountUsd) / price).toFixed(method === 'bitcoin' ? 8 : 6);
+}
+
+function buildSubscriptionCheckoutPayload({ plan = 'starter', method = 'bitcoin', name, email, reference } = {}) {
+  const walletType = method === 'bitcoin' ? 'bitcoin' : 'ethereum';
+  const amountUsd = Number(PRICING.usd[plan]?.price);
+  const amountCrypto = getCryptoAmount(amountUsd, method);
+  const walletAddress = config.wallets[walletType].address;
+  const orderReference = reference || crypto.randomUUID();
+  return {
+    status: 'pending',
+    reference: orderReference,
+    plan,
+    buyerName: name || 'Customer',
+    buyerEmail: email || 'wallet-customer@not-provided.local',
+    amountUsd,
+    amountCrypto,
+    walletAddress,
+    currency: config.wallets[walletType].currency,
+    instructions: `Copy this wallet address: ${walletAddress}. Send exactly ${amountCrypto} ${config.wallets[walletType].currency} (about $${amountUsd.toFixed(2)} USD) to it, then paste the transaction hash here for manual verification.`,
   };
 }
 
@@ -230,6 +257,37 @@ app.get('/api/config', (req, res) => {
 
 app.get('/api/billing/status', (req, res) => {
   res.json(subscription.get());
+});
+
+app.post('/api/billing/crypto/order', (req, res) => {
+  const { plan = 'starter', method = 'bitcoin', name, email } = req.body || {};
+  if (!['starter', 'growth'].includes(plan)) return res.status(400).json({ error: 'plan must be starter or growth' });
+  if (!['bitcoin', 'ethereum'].includes(method)) return res.status(400).json({ error: 'method must be bitcoin or ethereum' });
+  const walletType = method === 'bitcoin' ? 'bitcoin' : 'ethereum';
+  if (!config.wallets[walletType].address) return res.status(400).json({ error: `${config.wallets[walletType].label} payments are not configured.` });
+  const reference = crypto.randomUUID();
+  const checkout = buildSubscriptionCheckoutPayload({ plan, method, name, email, reference });
+  pendingLeads.set(reference, { name: checkout.buyerName, email: checkout.buyerEmail });
+  res.json(checkout);
+});
+
+app.post('/api/billing/crypto/confirm', (req, res) => {
+  const { reference, txHash, method, plan = 'starter', amount } = req.body || {};
+  if (!reference || !txHash || !method) return res.status(400).json({ error: 'reference, txHash, and method are required' });
+  if (!['bitcoin', 'ethereum'].includes(method)) return res.status(400).json({ error: 'method must be bitcoin or ethereum' });
+  if (!['starter', 'growth'].includes(plan)) return res.status(400).json({ error: 'plan must be starter or growth' });
+  if (!pendingLeads.has(reference)) return res.status(404).json({ error: 'Unknown payment reference' });
+  const walletType = method === 'bitcoin' ? 'bitcoin' : 'ethereum';
+  payments.record({
+    provider: `${method}-subscription`,
+    transactionId: txHash,
+    reference,
+    amount: Number(amount) || Number(PRICING.usd[plan].price),
+    currency: config.wallets[walletType].currency,
+    status: 'pending_review',
+    raw: { txHash, method, plan, amount: Number(amount) || Number(PRICING.usd[plan].price) },
+  });
+  res.status(202).json({ status: 'pending_review', reference, message: 'Payment proof received. Service access will be enabled after payment verification.' });
 });
 
 app.get('/api/ebook/product', (req, res) => {
@@ -697,14 +755,16 @@ app.post('/api/payments/wallet/confirm', async (req, res) => {
   if (!lead) {
     return res.status(404).json({ error: 'Unknown payment reference' });
   }
-  await finalizeLead(reference, {
-    provider: method,
+  payments.record({
+    provider: `${method}-subscription`,
     transactionId: txHash,
-    amount: Number(amount) || PRICING.usd.starter.price,
+    reference,
+    amount: Number(amount) || Number(PRICING.usd.starter.price),
     currency: config.wallets[method].currency,
-    raw: { txHash, method, amount: Number(amount) || PRICING.usd.starter.price },
+    status: 'pending_review',
+    raw: { txHash, method, amount: Number(amount) || Number(PRICING.usd.starter.price) },
   });
-  res.json({ status: 'confirmed', method, reference, txHash });
+  res.status(202).json({ status: 'pending_review', method, reference, txHash });
 });
 
 // ---- Step 2: fetch the report once payment has been confirmed ----
@@ -951,7 +1011,7 @@ app.post('/api/ebook/review/:reference', requireAuth, requireAdmin, (req, res) =
   });
 });
 
-app.get('/api/leads', requireAuth, (req, res) => {
+app.get('/api/leads', requireAuth, requireActiveSubscription, (req, res) => {
   res.json({ leads: leads.listAll() });
 });
 
@@ -963,6 +1023,27 @@ app.patch('/api/leads/:ref/followup', requireAuth, (req, res) => {
   }
   leads.setFollowup(req.params.ref, status, notes);
   res.json({ status: 'saved' });
+});
+
+app.post('/api/billing/crypto/review/:reference', requireAuth, requireAdmin, (req, res) => {
+  const { approved } = req.body || {};
+  if (typeof approved !== 'boolean') return res.status(400).json({ error: 'approved must be a boolean' });
+  const payment = payments.findByReference(req.params.reference, 'bitcoin-subscription')
+    || payments.findByReference(req.params.reference, 'ethereum-subscription');
+  if (!payment || payment.status !== 'pending_review') return res.status(404).json({ error: 'No pending crypto subscription payment found' });
+  payments.updateStatus(payment.id, approved ? 'confirmed' : 'rejected');
+  if (!approved) return res.json({ status: 'rejected', reference: req.params.reference });
+  const details = payment.raw || {};
+  subscription.set({
+    plan: details.plan || 'starter',
+    billingType: 'crypto',
+    cryptoPaymentReference: req.params.reference,
+    cryptoTransactionId: details.txHash,
+    status: 'active',
+    currentPeriodEnd: null,
+  });
+  pendingLeads.delete(req.params.reference);
+  res.json({ status: 'confirmed', reference: req.params.reference, plan: details.plan || 'starter' });
 });
 
 // ---- Prospecting: company/prospect data via Explorium, costs real credits per call ----
