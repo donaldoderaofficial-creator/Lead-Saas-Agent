@@ -45,6 +45,10 @@ db.exec(`
     name TEXT NOT NULL,
     email TEXT NOT NULL,
     phone TEXT,
+    product TEXT,
+    payment_method TEXT,
+    plan TEXT,
+    amount_crypto TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -156,16 +160,27 @@ db.exec(`
 for (const column of ['crypto_payment_reference', 'crypto_transaction_id']) {
   try { db.exec(`ALTER TABLE subscription ADD COLUMN ${column} TEXT`); } catch (_) {}
 }
+for (const column of ['product', 'payment_method', 'plan', 'amount_crypto']) {
+  try { db.exec(`ALTER TABLE pending_leads ADD COLUMN ${column} TEXT`); } catch (_) {}
+}
 
 const pendingLeads = {
   set(ref, lead) {
-    db.prepare('INSERT OR REPLACE INTO pending_leads (ref, name, email, phone) VALUES (?, ?, ?, ?)')
-      .run(ref, lead.name, lead.email, lead.phone || null);
+    db.prepare('INSERT OR REPLACE INTO pending_leads (ref, name, email, phone, product, payment_method, plan, amount_crypto) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(ref, lead.name, lead.email, lead.phone || null, lead.product || null, lead.paymentMethod || null, lead.plan || null, lead.amountCrypto || null);
   },
   get(ref) {
-    const row = db.prepare('SELECT name, email, phone FROM pending_leads WHERE ref = ?').get(ref);
+    const row = db.prepare('SELECT name, email, phone, product, payment_method, plan, amount_crypto FROM pending_leads WHERE ref = ?').get(ref);
     if (!row) return undefined;
-    return { name: row.name, email: row.email, ...(row.phone ? { phone: row.phone } : {}) };
+    return {
+      name: row.name,
+      email: row.email,
+      ...(row.phone ? { phone: row.phone } : {}),
+      ...(row.product ? { product: row.product } : {}),
+      ...(row.payment_method ? { paymentMethod: row.payment_method } : {}),
+      ...(row.plan ? { plan: row.plan } : {}),
+      ...(row.amount_crypto ? { amountCrypto: row.amount_crypto } : {}),
+    };
   },
   has(ref) {
     return !!db.prepare('SELECT name FROM pending_leads WHERE ref = ?').get(ref);

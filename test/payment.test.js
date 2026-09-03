@@ -48,12 +48,12 @@ test('exposes direct bitcoin and ethereum wallet payment options', () => {
 test('crypto subscription proof does not activate access until admin approval', () => {
   const app = require('../server');
   const reference = 'crypto-subscription-review-test';
-  pendingLeads.set(reference, { name: 'Subscriber', email: 'subscriber@example.com' });
+  pendingLeads.set(reference, { name: 'Subscriber', email: 'subscriber@example.com', product: 'subscription', paymentMethod: 'ethereum', plan: 'starter', amountCrypto: '0.002854' });
 
   const confirmRoute = app._router.stack.find((layer) => layer.route?.path === '/api/billing/crypto/confirm');
   const confirm = confirmRoute.route.stack.at(-1).handle;
   const pendingResponse = { statusCode: 200, body: null, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
-  confirm({ body: { reference, txHash: '0xcrypto-proof', method: 'ethereum', plan: 'starter' } }, pendingResponse);
+  confirm({ body: { reference, txHash: '0xcrypto-proof', method: 'ethereum', plan: 'starter', amount: 0.002854 } }, pendingResponse);
 
   assert.equal(pendingResponse.statusCode, 202);
   assert.equal(hasActiveSubscription(subscription.get()), false);

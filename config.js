@@ -25,8 +25,6 @@ function parseCorsOrigins(value) {
     .filter(Boolean);
 }
 
-const DEFAULT_BTC_WALLET = '3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k';
-
 // Application Configuration
 const config = {
   // Environment
@@ -124,8 +122,8 @@ const config = {
 
   wallets: {
     bitcoin: {
-      enabled: !!(process.env.BITCOIN_WALLET_ADDRESS || DEFAULT_BTC_WALLET),
-      address: process.env.BITCOIN_WALLET_ADDRESS || DEFAULT_BTC_WALLET,
+      enabled: !!process.env.BITCOIN_WALLET_ADDRESS,
+      address: process.env.BITCOIN_WALLET_ADDRESS || null,
       currency: 'BTC',
       label: 'Bitcoin',
     },
@@ -142,7 +140,7 @@ const config = {
     title: 'The Builder\'s Blueprint: From Zero to Profitable Product Engineer',
     subtitle: 'A practical guide to turning coding skills into income, systems, and leverage.',
     priceUsd: 19.99,
-    walletAddress: process.env.BITCOIN_WALLET_ADDRESS || DEFAULT_BTC_WALLET,
+    walletAddress: process.env.BITCOIN_WALLET_ADDRESS || null,
   },
 
   // Third-party APIs
@@ -194,6 +192,12 @@ function validate() {
   }
   if (config.payment.mpesa.enabled && !config.payment.mpesa.consumerKey) {
     console.warn('M-Pesa enabled but credentials missing');
+  }
+  if (config.isProd && !process.env.BITCOIN_WALLET_ADDRESS) {
+    throw new Error('BITCOIN_WALLET_ADDRESS must be configured in production');
+  }
+  if (config.isProd && !process.env.ETHEREUM_WALLET_ADDRESS) {
+    throw new Error('ETHEREUM_WALLET_ADDRESS must be configured in production');
   }
 }
 

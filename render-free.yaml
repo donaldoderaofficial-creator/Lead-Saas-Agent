@@ -1,0 +1,53 @@
+services:
+  - type: web
+    name: lead-agent-saas-free
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_PATH
+        value: ./data.db
+      - key: TZ
+        value: Africa/Nairobi
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+      - key: PUBLIC_APP_URL
+        sync: false
+      - key: BITCOIN_WALLET_ADDRESS
+        sync: false
+      - key: ETHEREUM_WALLET_ADDRESS
+        sync: false
+      - key: BTC_USD_PRICE
+        value: "70000"
+      - key: ETH_USD_PRICE
+        value: "3500"
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_ENV
+        value: sandbox
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: PAYPAL_PLAN_STARTER_MONTHLY
+        sync: false
+      - key: PAYPAL_PLAN_GROWTH_MONTHLY
+        sync: false
+      - key: MPESA_CONSUMER_KEY
+        sync: false
+      - key: MPESA_CONSUMER_SECRET
+        sync: false
+      - key: MPESA_SHORT_CODE
+        sync: false
+      - key: MPESA_PASSKEY
+        sync: false
+      - key: MPESA_ENV
+        value: sandbox
+      - key: MPESA_CALLBACK_URL
+        sync: false
