@@ -6,26 +6,24 @@
  */
 
 const EventEmitter = require('events');
+const { scoreLead } = require('./lead-model');
 
 class Agent extends EventEmitter {}
 
 // ---- Retrieval agent: enrich the raw lead ----
-// In production this hits a real service (Clearbit, LinkedIn, etc).
-// Simulated here with a random company-size guess, same as before.
+// In production this can be replaced by a consented enrichment provider.
 async function enrichLead(lead) {
-  const roll = Math.random();
+  const companySizeGuess = lead.companySize === 'enterprise' ? 'enterprise' : 'small';
   return {
     ...lead,
     company: lead.email.split('@')[1],
-    companySizeGuess: roll > 0.5 ? 'small' : 'enterprise',
-    _roll: roll,
+    companySizeGuess,
   };
 }
 
-// ---- Scoring agent: ML/NLP scoring ----
-// Simulated with the same rule as before; swap for a real model call.
+// ---- Scoring agent: bounded neural model ----
 function modelScore(lead) {
-  return lead.companySizeGuess === 'enterprise' ? 85 : 40;
+  return scoreLead(lead).score;
 }
 
 // ---- Validation agent: sanity-check before acting on the score ----
@@ -52,7 +50,7 @@ function processLead(lead) {
       log.push(`Got lead: ${l.name} <${l.email}>`);
       try {
         const enriched = await enrichLead(l);
-        log.push(`roll=${enriched._roll.toFixed(2)} -> ${enriched.companySizeGuess}`);
+        log.push(`features -> ${enriched.companySizeGuess}`);
         agent.emit('lead:enriched', enriched);
       } catch (err) {
         agent.emit('lead:error', { ...l, reason: `enrichment failed: ${err.message}` });
