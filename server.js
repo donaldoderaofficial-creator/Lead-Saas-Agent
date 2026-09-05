@@ -29,10 +29,11 @@ const { RateLimiter } = require('./rate-limiter');
 const { client, checkoutNodeJssdk, verifyWebhookSignature } = require('./paypal-client');
 const { generateDynamicQrCode, initiateSTKPush } = require('./mpesa-client');
 const { processLead } = require('./lead-pipeline');
-const { pendingLeads, completedReports, payments, leads, records, users, subscription, createSessionStore } = require('./store');
+const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, users, subscription, createSessionStore } = require('./store');
 const { hasActiveSubscription } = require('./subscription-policy');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateQrCode } = require('./auth');
 const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = require('./explorium-client');
+const { parseDataset, validateObservation } = require('./geospatial-safety');
 
 const app = express();
 const DISPATCH_PRO = config.company;
@@ -824,6 +825,58 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+app.post('/api/safety/incidents', requireAuth, requireAdmin, (req, res) => {
+  try {
+    const observation = validateObservation(req.body || {});
+    const incident = safetyIncidents.create({
+      id: crypto.randomUUID(),
+      ...observation,
+      createdBy: req.session.userId,
+    });
+    res.status(201).json(incident);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/safety/incidents', requireAuth, requireAdmin, (req, res) => {
+  res.json({ incidents: safetyIncidents.list() });
+});
+
+app.get('/api/safety/incidents/:id/audit', requireAuth, requireAdmin, (req, res) => {
+  if (!safetyIncidents.get(req.params.id)) return res.status(404).json({ error: 'Incident not found' });
+  res.json({ audit: safetyIncidents.listAudit(req.params.id) });
+});
+
+app.post('/api/safety/incidents/:id/escalate', requireAuth, requireAdmin, async (req, res) => {
+  const incident = safetyIncidents.get(req.params.id);
+  if (!incident) return res.status(404).json({ error: 'Incident not found' });
+  if (!config.geospatial.authorityEscalationUrl) {
+    return res.status(503).json({ error: 'AUTHORITY_ESCALATION_URL is not configured', incident });
+  }
+
+  try {
+    const response = await fetch(config.geospatial.authorityEscalationUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ type: 'business-injury-observation', incident }),
+    });
+    const responseBody = await response.text();
+    if (!response.ok) throw new Error(`Authority endpoint returned ${response.status}`);
+    const updated = safetyIncidents.markEscalated(
+      incident.id,
+      'submitted',
+      response.headers.get('x-reference') || null,
+      req.session.userId,
+      { authorityStatus: response.status, response: responseBody.slice(0, 500) },
+    );
+    res.json(updated);
+  } catch (err) {
+    safetyIncidents.markEscalated(incident.id, 'failed', null, req.session.userId, { error: err.message });
+    res.status(502).json({ error: 'Authority escalation failed', detail: err.message });
+  }
+});
+
 function requireActiveSubscription(req, res, next) {
   if (!hasActiveSubscription(subscription.get())) {
     return res.status(402).json({
@@ -1117,6 +1170,7 @@ const PORT = config.port;
 const HOST = config.host;
 
 function startServer() {
+  initializeSafetyDataset();
   const server = app.listen(PORT, HOST, () => {
     logger.info(`Dispatch Pro API listening on ${HOST}:${PORT}`, {
       env: config.env,
@@ -1153,6 +1207,16 @@ function startServer() {
   });
 
   return server;
+}
+
+function initializeSafetyDataset() {
+  const observations = parseDataset(config.geospatial.dataset);
+  observations.forEach((rawObservation, index) => {
+    const observation = validateObservation({ ...rawObservation, sourceDataset: rawObservation.sourceDataset || 'GEOSPATIAL_DATASET_JSON' });
+    const id = `init-${crypto.createHash('sha256').update(JSON.stringify(observation)).digest('hex').slice(0, 32)}`;
+    safetyIncidents.create({ ...observation, id, createdBy: 0 });
+  });
+  if (observations.length) logger.info(`Loaded ${observations.length} mapped safety observations from runtime initialization`);
 }
 
 if (require.main === module) {
