@@ -115,6 +115,35 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS safety_incidents (
+    id TEXT PRIMARY KEY,
+    business_id TEXT NOT NULL,
+    environment TEXT NOT NULL,
+    observed_at TEXT NOT NULL,
+    latitude REAL NOT NULL,
+    longitude REAL NOT NULL,
+    injury_type TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    description TEXT NOT NULL,
+    source_dataset TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'recorded',
+    escalation_status TEXT NOT NULL DEFAULT 'pending_configuration',
+    escalation_reference TEXT,
+    created_by INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (created_by) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS safety_incident_audit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    incident_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    actor_id INTEGER,
+    details TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (incident_id) REFERENCES safety_incidents(id)
+  );
+
   CREATE TABLE IF NOT EXISTS payment_transactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     provider TEXT NOT NULL,
@@ -338,6 +367,56 @@ const records = {
   },
 };
 
+const safetyIncidents = {
+  create({ id, businessId, environment, observedAt, latitude, longitude, injuryType, severity, description, sourceDataset, createdBy }) {
+    db.prepare(`
+      INSERT OR IGNORE INTO safety_incidents
+        (id, business_id, environment, observed_at, latitude, longitude, injury_type, severity, description, source_dataset, created_by)
+      VALUES (@id, @businessId, @environment, @observedAt, @latitude, @longitude, @injuryType, @severity, @description, @sourceDataset, @createdBy)
+    `).run({ id, businessId, environment, observedAt, latitude, longitude, injuryType, severity, description, sourceDataset, createdBy });
+    if (!this.listAudit(id).length) this.audit(id, 'recorded', createdBy, { sourceDataset });
+    return this.get(id);
+  },
+  get(id) {
+    const row = db.prepare('SELECT * FROM safety_incidents WHERE id = ?').get(id);
+    if (!row) return undefined;
+    return {
+      id: row.id,
+      businessId: row.business_id,
+      environment: row.environment,
+      observedAt: row.observed_at,
+      latitude: row.latitude,
+      longitude: row.longitude,
+      injuryType: row.injury_type,
+      severity: row.severity,
+      description: row.description,
+      sourceDataset: row.source_dataset,
+      status: row.status,
+      escalationStatus: row.escalation_status,
+      escalationReference: row.escalation_reference,
+      createdBy: row.created_by,
+      createdAt: row.created_at,
+    };
+  },
+  list() {
+    return db.prepare('SELECT id FROM safety_incidents ORDER BY created_at DESC').all().map(({ id }) => this.get(id));
+  },
+  markEscalated(id, escalationStatus, reference, actorId, details = {}) {
+    if (!this.get(id)) return undefined;
+    db.prepare('UPDATE safety_incidents SET escalation_status = ?, escalation_reference = ? WHERE id = ?')
+      .run(escalationStatus, reference || null, id);
+    this.audit(id, `escalation-${escalationStatus}`, actorId, details);
+    return this.get(id);
+  },
+  audit(incidentId, action, actorId, details = {}) {
+    db.prepare('INSERT INTO safety_incident_audit (incident_id, action, actor_id, details) VALUES (?, ?, ?, ?)')
+      .run(incidentId, action, actorId || null, JSON.stringify(details));
+  },
+  listAudit(id) {
+    return db.prepare('SELECT * FROM safety_incident_audit WHERE incident_id = ? ORDER BY created_at DESC').all(id);
+  },
+};
+
 const users = {
   create(username, passwordHash, totpSecret, role = 'user') {
     const info = db.prepare('INSERT INTO users (username, password_hash, totp_secret, role) VALUES (?, ?, ?, ?)')
@@ -525,6 +604,7 @@ module.exports = {
   payments,
   leads,
   records,
+  safetyIncidents,
   users,
   subscription,
   compliance,
