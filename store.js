@@ -129,7 +129,7 @@ db.exec(`
     status TEXT NOT NULL DEFAULT 'recorded',
     escalation_status TEXT NOT NULL DEFAULT 'pending_configuration',
     escalation_reference TEXT,
-    created_by INTEGER NOT NULL,
+    created_by INTEGER,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (created_by) REFERENCES users(id)
   );
@@ -373,7 +373,7 @@ const safetyIncidents = {
       INSERT OR IGNORE INTO safety_incidents
         (id, business_id, environment, observed_at, latitude, longitude, injury_type, severity, description, source_dataset, created_by)
       VALUES (@id, @businessId, @environment, @observedAt, @latitude, @longitude, @injuryType, @severity, @description, @sourceDataset, @createdBy)
-    `).run({ id, businessId, environment, observedAt, latitude, longitude, injuryType, severity, description, sourceDataset, createdBy });
+    `).run({ id, businessId, environment, observedAt, latitude, longitude, injuryType, severity, description, sourceDataset, createdBy: createdBy || null });
     if (!this.listAudit(id).length) this.audit(id, 'recorded', createdBy, { sourceDataset });
     return this.get(id);
   },
