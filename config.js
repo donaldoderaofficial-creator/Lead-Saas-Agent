@@ -152,6 +152,12 @@ const config = {
     },
   },
 
+  // Geospatial safety reporting
+  geospatial: {
+    dataset: process.env.GEOSPATIAL_DATASET_JSON || null,
+    authorityEscalationUrl: process.env.AUTHORITY_ESCALATION_URL || null,
+  },
+
   // Performance Optimization
   performance: {
     enableCompression: true,
