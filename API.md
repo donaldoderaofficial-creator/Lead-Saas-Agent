@@ -70,6 +70,27 @@ Disposed records cannot be reactivated.
 #### `GET /api/records/:id/audit`
 Return the immutable lifecycle audit entries for a record.
 
+### Geospatial safety observations
+
+Safety observations are administrator-only records created from actual mapped
+coordinates. `environment` is `micro` for the business site and immediate
+operating area, or `macro` for the wider surrounding context. Injury records
+retain their source dataset, and every escalation attempt is audited.
+
+#### `POST /api/safety/incidents`
+Create an observation with `businessId`, `environment`, `latitude`,
+`longitude`, `injuryType`, `severity`, and `description`. `observedAt` and
+`sourceDataset` are optional. Severity must be `low`, `moderate`, `high`, or
+`critical`.
+
+#### `GET /api/safety/incidents`
+List recorded mapped observations.
+
+#### `POST /api/safety/incidents/:id/escalate`
+Submit an observation to the explicitly configured `AUTHORITY_ESCALATION_URL`.
+If no endpoint is configured, the record remains available for human review;
+the service does not claim that an authority was contacted.
+
 ### Authentication
 
 #### `POST /auth/register`
