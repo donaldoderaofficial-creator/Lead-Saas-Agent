@@ -1,6 +1,12 @@
 [build]
   publish = "public"
 
+[[redirects]]
+  from = "/init"
+  to = "/"
+  status = 301
+  force = true
+
 # Replace the temporary Codespaces host below with a permanent HTTPS backend
 # before deploying a revenue-producing production site.
 
