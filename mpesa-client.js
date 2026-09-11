@@ -53,6 +53,14 @@ function timestamp() {
   );
 }
 
+function normalizePhoneNumber(phone) {
+  const compact = String(phone || '').trim().replace(/[\s-]/g, '');
+  if (compact.startsWith('+254')) return `254${compact.slice(4)}`;
+  if (compact.startsWith('254')) return compact;
+  if (compact.startsWith('0')) return `254${compact.slice(1)}`;
+  return compact;
+}
+
 async function getAccessToken() {
   const key = requireEnv('MPESA_CONSUMER_KEY');
   const secret = requireEnv('MPESA_CONSUMER_SECRET');
@@ -73,6 +81,10 @@ async function getAccessToken() {
  *   phone must be in 2547XXXXXXXX format (no '+', no leading 0).
  */
 async function initiateSTKPush({ phone, amount, accountReference, description }) {
+  const normalizedPhone = normalizePhoneNumber(phone);
+  if (!/^254[17]\d{8}$/.test(normalizedPhone)) {
+    throw new Error('phone must be a Kenyan number such as 0712345678 or 254712345678');
+  }
   const shortcode = process.env.MPESA_SHORT_CODE || process.env.MPESA_SHORTCODE;
   if (!shortcode) throw new Error('Missing MPESA_SHORT_CODE. Set it in your .env file.');
   const passkey = requireEnv('MPESA_PASSKEY');
@@ -93,9 +105,9 @@ async function initiateSTKPush({ phone, amount, accountReference, description })
       Timestamp: ts,
       TransactionType: 'CustomerPayBillOnline',
       Amount: amount,
-      PartyA: phone,
+      PartyA: normalizedPhone,
       PartyB: shortcode,
-      PhoneNumber: phone,
+      PhoneNumber: normalizedPhone,
       CallBackURL: callbackUrl,
       AccountReference: accountReference,
       TransactionDesc: description,
@@ -157,4 +169,4 @@ async function generateDynamicQrCode({ merchantName, reference, amount, transact
   return data;
 }
 
-module.exports = { generateDynamicQrCode, initiateSTKPush };
+module.exports = { generateDynamicQrCode, initiateSTKPush, normalizePhoneNumber };

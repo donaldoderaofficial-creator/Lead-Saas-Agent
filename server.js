@@ -27,7 +27,7 @@ const { RateLimiter } = require('./rate-limiter');
 
 // Core modules
 const { client, checkoutNodeJssdk, verifyWebhookSignature } = require('./paypal-client');
-const { generateDynamicQrCode, initiateSTKPush } = require('./mpesa-client');
+const { generateDynamicQrCode, initiateSTKPush, normalizePhoneNumber } = require('./mpesa-client');
 const { processLead } = require('./lead-pipeline');
 const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, users, subscription, createSessionStore } = require('./store');
 const { hasActiveSubscription } = require('./subscription-policy');
@@ -589,16 +589,17 @@ app.post('/api/lead', requireActiveSubscription, async (req, res) => {
     }
 
     if (method === 'mpesa') {
-      if (!phone || !/^254\d{9}$/.test(phone)) {
-        return res.status(400).json({ error: 'phone must be in 2547XXXXXXXX format' });
+      const normalizedPhone = normalizePhoneNumber(phone);
+      if (!/^254[17]\d{8}$/.test(normalizedPhone)) {
+        return res.status(400).json({ error: 'phone must be a Kenyan number such as 0712345678 or 254712345678' });
       }
       const stk = await initiateSTKPush({
-        phone,
+        phone: normalizedPhone,
         amount: PRICING.kes.starter.price,
         accountReference: 'PremiumLeadReport',
         description: 'Premium lead report',
       });
-      pendingLeads.set(stk.CheckoutRequestID, { name, email, phone });
+      pendingLeads.set(stk.CheckoutRequestID, { name, email, phone: normalizedPhone });
       return res.json({
         status: 'pending',
         method: 'mpesa',
