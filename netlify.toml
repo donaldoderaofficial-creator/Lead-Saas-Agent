@@ -17,6 +17,12 @@
   force = true
 
 [[redirects]]
+  from = "/auth/*"
+  to = "https://lead-agent-saas.onrender.com/auth/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/leads/*"
   to = "https://lead-agent-saas.onrender.com/leads/:splat"
   status = 200
@@ -33,3 +39,17 @@
   to = "https://lead-agent-saas.onrender.com/health"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/ebook/*"
+  to = "https://lead-agent-saas.onrender.com/ebook/:splat"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), geolocation=(), microphone=()"
