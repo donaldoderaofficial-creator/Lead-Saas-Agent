@@ -610,4 +610,4 @@ git commit -m "Prepare Netlify frontend for production"
 git push origin feat/ebook-sales-funnelhttps://agent-6a81dca937d9510b5c359--dispatch-lead-agent.netlify.app/init
 https://agent-6a81dca937d9510b5c359--dispatch-lead-agent.netlify.app/ebook/preview
 https://agent-6a81dca937d9510b5c359--dispatch-lead-agent.netlify.app/dashboard-v2.htmlEXPLORIUM_API_KEY=your_real_explorium_keyhttps://lead-agent-saas.onrender.com/healthe14284d refactor: Refactor and improve existing modules
-430c83a refactor: Refactor and improve existing modules
+430c83a refactor: Refactor and improve existing moduleshttps://lead-agent-saas.onrender.com/health
