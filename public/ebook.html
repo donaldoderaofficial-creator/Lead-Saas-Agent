@@ -402,10 +402,8 @@
 
         <div class="status" id="status"></div>
 
-        <div class="tiny">
-          Wallet: 3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k<br />
-          Amount: 0.000257 BTC<br />
-          After sending the exact amount, paste the transaction hash to confirm your payment and unlock the ebook immediately.
+        <div class="tiny" id="paymentInstructions">
+          Create an order to receive the current BTC amount and wallet address. After sending the exact amount, paste the transaction hash to confirm your payment.
         </div>
       </aside>
     </div>
@@ -438,11 +436,13 @@
   </div>
 
   <script>
-    const state = { reference: '', walletAddress: '3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k', amountBtc: '0.00028571' };
+    const state = { reference: '', walletAddress: '', amountBtc: '' };
     const statusEl = document.getElementById('status');
     const walletBox = document.getElementById('walletBox');
     const walletAddressEl = document.getElementById('walletAddress');
     const btcAmountEl = document.getElementById('btcAmount');
+    const paymentInstructionsEl = document.getElementById('paymentInstructions');
+    const payButton = document.getElementById('payButton');
 
     function setStatus(message, kind = 'info') {
       statusEl.className = 'status';
@@ -473,6 +473,7 @@
       state.amountBtc = payload.amountBtc;
       walletAddressEl.textContent = payload.walletAddress;
       btcAmountEl.textContent = `${payload.amountBtc} BTC`;
+      paymentInstructionsEl.textContent = `Wallet: ${payload.walletAddress} | Amount: ${payload.amountBtc} BTC. After sending the exact amount, paste the transaction hash to confirm your payment.`;
       walletBox.style.display = 'block';
 
       if (navigator.clipboard && window.isSecureContext) {
@@ -533,7 +534,16 @@
       window.location.href = confirmPayload.accessUrl;
     }
 
-    document.getElementById('payButton').addEventListener('click', createOrder);
+    payButton.addEventListener('click', async () => {
+      payButton.disabled = true;
+      try {
+        await createOrder();
+      } catch (_) {
+        setStatus('We could not reach the payment service. Please try again.', 'error');
+      } finally {
+        payButton.disabled = false;
+      }
+    });
   </script>
 </body>
 </html>
