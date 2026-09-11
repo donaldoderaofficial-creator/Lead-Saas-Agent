@@ -21,6 +21,8 @@ services:
         value: https://lead-saas-agent.netlify.app,https://agent-6a81dca937d9510b5c359--dispatch-lead-agent.netlify.app
       - key: PUBLIC_APP_URL
         value: https://lead-saas-agent.netlify.app
+      - key: EXPLORIUM_API_KEY
+        sync: false
       - key: BACKUP_DIR
         value: /data/backups
       - key: SESSION_SECRET
