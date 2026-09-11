@@ -594,8 +594,13 @@ const compliance = {
 };
 
 function createSessionStore(sessionLib) {
-  const SQLiteStore = require('connect-sqlite3')(sessionLib || require('express-session'));
-  return new SQLiteStore({ db: process.env.SESSION_DB_PATH || 'sessions.sqlite' });
+  const SqliteStore = require('better-sqlite3-session-store')(sessionLib || require('express-session'));
+  const BetterSqlite3 = require('better-sqlite3');
+  const sessionDb = new BetterSqlite3(process.env.SESSION_DB_PATH || 'sessions.sqlite');
+  return new SqliteStore({
+    client: sessionDb,
+    expired: { clear: true, intervalMs: 15 * 60 * 1000 },
+  });
 }
 
 module.exports = {
