@@ -68,6 +68,14 @@ Client → Express API → Config System → Business Logic
 - **Efficient**: Caching, query batching, compression reduces load by 60-90%
 - **Resilient**: Graceful error handling, proper shutdown, audit trails
 
+### Real lead generation
+
+The prospecting endpoints use Explorium for live company and contact data; they
+do not generate placeholder leads. Set `EXPLORIUM_API_KEY` in the Render
+service environment, then provision an active Dispatch Pro subscription before
+calling the authenticated prospecting endpoints. Readiness is reported by
+`GET /health` and `GET /api/config` without exposing the secret.
+
 ---
 
 ## Safety and compliance controls

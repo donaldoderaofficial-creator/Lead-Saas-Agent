@@ -210,6 +210,7 @@ app.get('/health', (req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
+    prospecting: Boolean(process.env.EXPLORIUM_API_KEY),
   });
 });
 
@@ -247,6 +248,10 @@ app.get('/api/payments/options', (req, res) => {
 
 app.get('/api/config', (req, res) => {
   res.json({
+    prospecting: {
+      enabled: Boolean(process.env.EXPLORIUM_API_KEY),
+      provider: 'Explorium',
+    },
     paypalClientId: config.payment.paypal.clientId || null,
     plans: {
       starter: {

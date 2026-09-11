@@ -19,6 +19,8 @@ services:
         sync: false
       - key: PUBLIC_APP_URL
         sync: false
+      - key: EXPLORIUM_API_KEY
+        sync: false
       - key: BITCOIN_WALLET_ADDRESS
         sync: false
       - key: ETHEREUM_WALLET_ADDRESS
