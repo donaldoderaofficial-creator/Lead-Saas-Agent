@@ -281,6 +281,12 @@ or (M-Pesa):
 }
 ```
 
+For M-Pesa, `phone` must belong to the client receiving the prompt. The API
+accepts Kenyan mobile numbers in `0712345678`, `0112345678`, `+254712345678`,
+or `254712345678` form and normalizes them before sending both `PartyA` and
+`PhoneNumber` to Safaricom. The website URL is used only for the callback and
+is never used as the payer phone number.
+
 #### `POST /api/ebook/order`
 Create a Bitcoin ebook order. Email is optional. The response contains a unique
 reference, the configured wallet address, and the exact BTC amount to send.
