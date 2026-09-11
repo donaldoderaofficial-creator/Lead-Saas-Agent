@@ -18,7 +18,27 @@ globalThis.fetch = async (url, options = {}) => {
   };
 };
 
-const { generateDynamicQrCode } = require('../mpesa-client');
+const { generateDynamicQrCode, initiateSTKPush, normalizePhoneNumber } = require('../mpesa-client');
+
+test('normalizes Kenyan phone numbers for STK prompts', () => {
+  assert.equal(normalizePhoneNumber('0712 345 678'), '254712345678');
+  assert.equal(normalizePhoneNumber('+254712345678'), '254712345678');
+  assert.equal(normalizePhoneNumber('254112345678'), '254112345678');
+});
+
+test('sends the client phone to Safaricom for an STK prompt', async () => {
+  await initiateSTKPush({
+    phone: '0712 345 678',
+    amount: 250,
+    accountReference: 'ORDER-123',
+    description: 'Dispatch Pro lead report',
+  });
+
+  const request = JSON.parse(qrRequest.options.body);
+  assert.equal(request.PartyA, '254712345678');
+  assert.equal(request.PhoneNumber, '254712345678');
+  assert.notEqual(request.PartyA, 'https://dispatch-lead-agent.netlify.app');
+});
 
 test('generates a dynamic M-Pesa QR request', async () => {
   const result = await generateDynamicQrCode({
