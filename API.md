@@ -603,4 +603,4 @@ git add netlify.toml public/ebook.html
 git commit -m "Prepare Netlify frontend for production"
 git push origin feat/ebook-sales-funnelhttps://agent-6a81dca937d9510b5c359--dispatch-lead-agent.netlify.app/init
 https://agent-6a81dca937d9510b5c359--dispatch-lead-agent.netlify.app/ebook/preview
-https://agent-6a81dca937d9510b5c359--dispatch-lead-agent.netlify.app/dashboard-v2.htmlEXPLORIUM_API_KEY=your_real_explorium_key
+https://agent-6a81dca937d9510b5c359--dispatch-lead-agent.netlify.app/dashboard-v2.htmlEXPLORIUM_API_KEY=your_real_explorium_keyhttps://lead-agent-saas.onrender.com/health
