@@ -23,8 +23,8 @@
   "dependencies": {
     "@paypal/checkout-server-sdk": "^1.0.3",
     "bcryptjs": "^3.0.3",
+    "better-sqlite3-session-store": "^0.1.0",
     "compression": "^1.8.1",
-    "connect-sqlite3": "^0.9.18",
     "cross-fetch": "^3.2.0",
     "dotenv": "^17.4.2",
     "express": "^4.19.2",
@@ -34,5 +34,8 @@
   },
   "optionalDependencies": {
     "better-sqlite3": "^13.0.3"
+  },
+  "overrides": {
+    "qs": "^6.16.0"
   }
 }
