@@ -48,7 +48,7 @@ services:
       - key: MPESA_PASSKEY
         sync: false
       - key: MPESA_ENV
-        value: sandbox
+        value: production
       - key: MPESA_CALLBACK_URL
         sync: false
       - key: COMPLIANCE_MPESA_NUMBER
