@@ -4,7 +4,9 @@ const test = require('node:test');
 process.env.MPESA_CONSUMER_KEY = 'test-consumer-key';
 process.env.MPESA_CONSUMER_SECRET = 'test-consumer-secret';
 process.env.MPESA_SHORT_CODE = '174379';
+process.env.MPESA_PASSKEY = 'test-passkey';
 process.env.MPESA_ENV = 'sandbox';
+process.env.MPESA_CALLBACK_URL = 'https://api.example.test/payments/mpesa/callback';
 
 let qrRequest;
 globalThis.fetch = async (url, options = {}) => {
