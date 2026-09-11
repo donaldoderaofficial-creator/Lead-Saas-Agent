@@ -599,3 +599,6 @@ Check `X-RateLimit-Remaining` header to proactively avoid hitting limits.
 
 **Last Updated:** August 18, 2026  
 **Version:** 1.0
+git add netlify.toml public/ebook.html
+git commit -m "Prepare Netlify frontend for production"
+git push origin feat/ebook-sales-funnel
