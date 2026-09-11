@@ -594,13 +594,48 @@ const compliance = {
 };
 
 function createSessionStore(sessionLib) {
-  const SqliteStore = require('better-sqlite3-session-store')(sessionLib || require('express-session'));
-  const BetterSqlite3 = require('better-sqlite3');
-  const sessionDb = new BetterSqlite3(process.env.SESSION_DB_PATH || 'sessions.sqlite');
-  return new SqliteStore({
-    client: sessionDb,
-    expired: { clear: true, intervalMs: 15 * 60 * 1000 },
-  });
+  const Store = (sessionLib || require('express-session')).Store;
+  const { DatabaseSync } = require('node:sqlite');
+  const sessionDb = new DatabaseSync(process.env.SESSION_DB_PATH || 'sessions.sqlite');
+  sessionDb.exec(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      sid TEXT PRIMARY KEY,
+      sess TEXT NOT NULL,
+      expired INTEGER NOT NULL
+    )
+  `);
+
+  class SqliteSessionStore extends Store {
+    get(sid, callback) {
+      try {
+        const row = sessionDb.prepare('SELECT sess FROM sessions WHERE sid = ? AND expired > ?').get(sid, Date.now());
+        callback(null, row ? JSON.parse(row.sess) : null);
+      } catch (error) { callback(error); }
+    }
+
+    set(sid, sess, callback) {
+      try {
+        sessionDb.prepare('INSERT OR REPLACE INTO sessions (sid, sess, expired) VALUES (?, ?, ?)')
+          .run(sid, JSON.stringify(sess), Date.now() + (sess.cookie?.maxAge || 0));
+        callback?.(null);
+      } catch (error) { callback?.(error); }
+    }
+
+    destroy(sid, callback) {
+      try { sessionDb.prepare('DELETE FROM sessions WHERE sid = ?').run(sid); callback?.(null); }
+      catch (error) { callback?.(error); }
+    }
+
+    touch(sid, sess, callback) {
+      try {
+        sessionDb.prepare('UPDATE sessions SET sess = ?, expired = ? WHERE sid = ?')
+          .run(JSON.stringify(sess), Date.now() + (sess.cookie?.maxAge || 0), sid);
+        callback?.(null);
+      } catch (error) { callback?.(error); }
+    }
+  }
+
+  return new SqliteSessionStore();
 }
 
 module.exports = {
