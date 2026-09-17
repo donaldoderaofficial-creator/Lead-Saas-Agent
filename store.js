@@ -638,6 +638,15 @@ function createSessionStore(sessionLib) {
   return new SqliteSessionStore();
 }
 
+function checkDatabase() {
+  try {
+    db.prepare('SELECT 1 AS ok').get();
+    return { status: 'ok' };
+  } catch (error) {
+    return { status: 'error', error: error.message };
+  }
+}
+
 module.exports = {
   pendingLeads,
   completedReports,
@@ -648,5 +657,6 @@ module.exports = {
   users,
   subscription,
   compliance,
+  checkDatabase,
   createSessionStore,
 };

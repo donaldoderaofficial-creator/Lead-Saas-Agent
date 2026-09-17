@@ -18,6 +18,7 @@ const path = require('node:path');
 const express = require('express');
 const session = require('express-session');
 const compression = require('compression');
+const helmet = require('helmet');
 
 // Scalability & Configuration
 const { config, isFeatureEnabled } = require('./config');
@@ -29,7 +30,7 @@ const { RateLimiter } = require('./rate-limiter');
 const { client, checkoutNodeJssdk, verifyWebhookSignature } = require('./paypal-client');
 const { generateDynamicQrCode, initiateSTKPush, normalizePhoneNumber } = require('./mpesa-client');
 const { processLead } = require('./lead-pipeline');
-const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, users, subscription, createSessionStore } = require('./store');
+const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, users, subscription, checkDatabase, createSessionStore } = require('./store');
 const { hasActiveSubscription } = require('./subscription-policy');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateQrCode } = require('./auth');
 const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = require('./explorium-client');
@@ -76,9 +77,11 @@ if (config.performance.enableCompression) {
   app.use(compression()); // GZIP compression for efficient data transfer
 }
 
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(requestLogger); // Request logging for monitoring
 app.set('trust proxy', config.isProd ? 1 : false);
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 
 app.use((req, res, next) => {
   const legacyEbookPaths = ['/ebook-success.html', '/ebook-reader.html', '/ebook/access', '/ebook/download.pdf', '/ebook/read'];
@@ -226,6 +229,16 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     prospecting: Boolean(process.env.EXPLORIUM_API_KEY),
+  });
+});
+
+app.get('/ready', (req, res) => {
+  const database = checkDatabase();
+  const ready = database.status === 'ok';
+  res.status(ready ? 200 : 503).json({
+    status: ready ? 'ready' : 'not_ready',
+    timestamp: new Date().toISOString(),
+    database,
   });
 });
 
