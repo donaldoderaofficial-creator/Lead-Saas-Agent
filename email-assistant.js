@@ -101,5 +101,4 @@ async function sendReply({ to, subject, text }) {
   return { sent: true, provider: 'resend', id: (await response.json()).id || null };
 }
 
-module.exports = { buildCustomReply, improveReplyWithAI, verifyWebhookSignature, sendReply, MINIMUM_CUSTOM_USD };
 module.exports = { buildCustomReply, buildMiaReply, improveReplyWithAI, verifyWebhookSignature, sendReply, MINIMUM_CUSTOM_USD };
