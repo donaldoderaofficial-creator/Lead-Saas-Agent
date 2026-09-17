@@ -63,7 +63,13 @@ Type=simple
 User=$USER
 WorkingDirectory=$APP_DIR
 ExecStart=$(which node) $APP_DIR/server.js
-Restart=on-failure
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=10
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
 EnvironmentFile=$APP_DIR/.env
 
 [Install]
@@ -87,7 +93,8 @@ sudo apt-get update -y && sudo apt-get install -y caddy
 
 sudo tee /etc/caddy/Caddyfile > /dev/null <<EOF
 $DOMAIN {
-    reverse_proxy localhost:3000
+  reverse_proxy localhost:8000
+  encode gzip
 }
 EOF
 sudo systemctl restart caddy
