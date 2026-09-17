@@ -32,9 +32,27 @@ function quoteCustomPackage({ currency = 'USD', budgetUsd = MINIMUM_CUSTOM_USD }
   };
 }
 
+function buildMiaReply(question) {
+  const text = String(question || '').trim();
+  const lower = text.toLowerCase();
+  if (!text) return 'Hi, I am Mia from Dispatch Pro. I am happy to help. Ask me about plans, custom packages, lead workflows, or BTC and ETH payments.';
+  if (/custom|enterprise|scale|10,?000|large package/.test(lower)) {
+    const currency = inferCurrency(text);
+    const quote = quoteCustomPackage({ currency, budgetUsd: inferBudget(text) });
+    const amount = quote.currency === 'USD' ? `$${quote.amount} USD` : `${quote.amount} ${quote.currency} (about $${quote.usd.toFixed(2)} USD at the current market rate)`;
+    return `That sounds like an exciting opportunity. The current custom-package starting estimate is ${amount}. Final scope is confirmed after discovery, and the minimum package value is $${MINIMUM_CUSTOM_USD.toLocaleString()} USD. What are your users, monthly lead volume, integrations, timeline, and preferred currency? You can also reach our team at hello@dispatchpro.ai.`;
+  }
+  if (/btc|bitcoin|eth|ethereum|crypto|pay/.test(lower)) return 'Absolutely. Dispatch Pro accepts BTC and ETH wallet payments. Starter and Growth quotes use live market rates, and payment proof is reviewed before access is enabled. Would you like a current Starter, Growth, or custom-package quote?';
+  if (/starter|growth|plan|pricing/.test(lower)) return 'I can help you compare them. Starter suits teams beginning their pipeline, while Growth supports larger lead volume, more sources, priority support, and custom qualification logic. How many leads do you expect each month?';
+  if (/lead|qualif|dashboard|workflow|integration/.test(lower)) return 'That is exactly the kind of workflow Dispatch Pro is built for. It captures inbound leads, qualifies them with structured business signals, and keeps follow-up work visible in one dashboard. Which sources or integrations do you need first?';
+  if (/thank|thanks|appreciate/.test(lower)) return 'You are very welcome. I am glad to help. What would you like to explore next?';
+  if (/hello|hi|hey|good morning|good afternoon/.test(lower)) return 'Hello, it is lovely to meet you. I am Mia from Dispatch Pro. What would you like to accomplish?';
+  return 'I want to make sure I point you in the right direction. I can help with plans, lead qualification, custom packages, crypto payment quotes, and next steps. What outcome matters most to your team?';
+}
+
 function buildCustomReply({ body = '', subject = '' } = {}) {
 
-  function buildMiaReply(question) {
+  function buildMiaReplyLegacy(question) {
     const text = String(question || '').trim();
     const lower = text.toLowerCase();
     if (!text) return 'Hi, I am Mia from Dispatch Pro. Ask me about plans, custom packages, lead workflows, or paying in BTC or ETH.';
