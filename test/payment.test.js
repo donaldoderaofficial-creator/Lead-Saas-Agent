@@ -96,7 +96,7 @@ test('allows repeated ebook report writes without finalized statement errors', (
     type: 'ebook',
     title: "The Builder's Blueprint",
     buyer: { name: 'Writer', email: 'writer@example.com' },
-    amountUsd: 19.99,
+      amountUsd: 9.99,
     purchasedAt: new Date().toISOString(),
   };
 
@@ -194,7 +194,7 @@ test('builds a simple wallet-only ebook checkout payload without email friction'
 
   const payload = buildEbookCheckoutPayload({ name: 'Simple Buyer' });
 
-  assert.equal(payload.amountUsd, 19.99);
+  assert.equal(payload.amountUsd, 9.99);
   assert.equal(payload.walletAddress, 'bc1qwalletbitcoinaddress');
   assert.match(payload.instructions, /copy/i);
   assert.match(payload.instructions, /3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k|bc1qwalletbitcoinaddress/);
