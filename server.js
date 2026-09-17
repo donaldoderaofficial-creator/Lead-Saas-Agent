@@ -36,6 +36,7 @@ const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, genera
 const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = require('./explorium-client');
 const { parseDataset, validateObservation } = require('./geospatial-safety');
 const { getBtcUsdRate, getCryptoUsdRate, startBtcUsdSync } = require('./crypto-rates');
+const { buildCustomReply, improveReplyWithAI, verifyWebhookSignature, sendReply } = require('./email-assistant');
 
 const app = express();
 const DISPATCH_PRO = config.company;
@@ -247,6 +248,32 @@ app.get('/ready', (req, res) => {
     database,
   });
 });
+
+app.post('/api/email/inbound', asyncHandler(async (req, res) => {
+  const signature = req.get('x-email-signature');
+  const rawBody = JSON.stringify(req.body || {});
+  if (!verifyWebhookSignature(rawBody, signature, process.env.EMAIL_WEBHOOK_SECRET)) {
+    return res.status(401).json({ error: 'Invalid email webhook signature' });
+  }
+  const { id, from, sender, subject, text, body } = req.body || {};
+  if (!id || !(from || sender) || !(text || body)) {
+    return res.status(400).json({ error: 'id, from, and text are required' });
+  }
+  if (emailThreads.find(id)) return res.json({ status: 'duplicate', id });
+  const draft = await improveReplyWithAI(buildCustomReply({ subject, body: text || body }));
+  const delivery = await sendReply({ to: from || sender, subject: subject || draft.subject, text: draft.reply });
+  emailThreads.create({
+    messageId: id,
+    sender: from || sender,
+    subject: subject || draft.subject,
+    body: text || body,
+    reply: draft.reply,
+    quote: draft.quote,
+    status: delivery.sent ? 'sent' : 'draft',
+  });
+  if (delivery.sent) emailThreads.markSent(id);
+  res.status(202).json({ status: delivery.sent ? 'sent' : 'draft', id, quote: draft.quote, delivery });
+}));
 
 // ---- Global payment capabilities ----
 app.get('/api/payments/options', (req, res) => {

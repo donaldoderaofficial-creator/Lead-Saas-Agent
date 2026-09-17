@@ -65,6 +65,19 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS email_threads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    message_id TEXT NOT NULL UNIQUE,
+    sender TEXT NOT NULL,
+    subject TEXT NOT NULL DEFAULT '',
+    body TEXT NOT NULL,
+    reply TEXT NOT NULL,
+    quote_json TEXT,
+    status TEXT NOT NULL DEFAULT 'draft',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    sent_at TEXT
+  );
+
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
@@ -647,6 +660,22 @@ function checkDatabase() {
   }
 }
 
+const emailThreads = {
+  create({ messageId, sender, subject, body, reply, quote, status = 'draft' }) {
+    db.prepare(`INSERT INTO email_threads
+      (message_id, sender, subject, body, reply, quote_json, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(messageId, sender, subject || '', body, reply, quote ? JSON.stringify(quote) : null, status);
+    return db.prepare('SELECT * FROM email_threads WHERE message_id = ?').get(messageId);
+  },
+  markSent(messageId) {
+    db.prepare("UPDATE email_threads SET status = 'sent', sent_at = datetime('now') WHERE message_id = ?").run(messageId);
+  },
+  find(messageId) {
+    return db.prepare('SELECT * FROM email_threads WHERE message_id = ?').get(messageId);
+  },
+};
+
 module.exports = {
   pendingLeads,
   completedReports,
@@ -657,6 +686,7 @@ module.exports = {
   users,
   subscription,
   compliance,
+  emailThreads,
   checkDatabase,
   createSessionStore,
 };
