@@ -423,3 +423,6 @@
 {"timestamp":"2026-09-17T10:36:34.826Z","level":"info","message":"GET /ready","statusCode":200,"duration":"2ms"}
 {"timestamp":"2026-09-17T10:36:34.845Z","level":"info","message":"POST /api/assistant/mia","statusCode":404,"duration":"7ms"}
 {"timestamp":"2026-09-17T10:41:48.995Z","level":"info","message":"POST /api/assistant/mia","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-17T10:43:25.812Z","level":"info","message":"SIGTERM received, shutting down gracefully"}
+{"timestamp":"2026-09-17T10:43:25.813Z","level":"info","message":"Server closed"}
+{"timestamp":"2026-09-17T10:43:26.038Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:8000","env":"development","isProd":false}
