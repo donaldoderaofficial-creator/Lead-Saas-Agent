@@ -159,11 +159,14 @@ Configure in [config.js](config.js) (or via environment variables):
 
 | Tier | Price | Leads/Month | API Calls/Hour |
 |------|-------|------------|----------------|
-| **Starter** | $9.99 | 500 | 1,000 |
-| **Growth** | $24.99 | 5,000 | 10,000 |
+| **Starter** | $79/month | 500 | 1,000 |
+| **Growth** | $249/month | 5,000 | 10,000 |
 | **Scale** | Custom | Unlimited | Unlimited |
 
 Automatic quota enforcement and upgrade recommendations included.
+
+The Builder's Blueprint ebook is sold separately for $9.99 and is not included
+in the Dispatch Pro SaaS subscription tiers above.
 
 ---
 

@@ -49,13 +49,13 @@ const config = {
   // Pricing Tiers (scalable, flexible)
   pricing: {
     usd: {
-      starter: { price: '9.99', leads: 500 },
-      growth: { price: '24.99', leads: 5000 },
+      starter: { price: '79.00', leads: 500 },
+      growth: { price: '249.00', leads: 5000 },
       scale: { price: 'custom', leads: 'unlimited' },
     },
     kes: {
-      starter: { price: 1300, leads: 500 },
-      growth: { price: 3200, leads: 5000 },
+      starter: { price: 10200, leads: 500 },
+      growth: { price: 32200, leads: 5000 },
       scale: { price: 'custom', leads: 'unlimited' },
     },
   },
@@ -140,7 +140,7 @@ const config = {
     enabled: true,
     title: 'The Builder\'s Blueprint: From Zero to Profitable Product Engineer',
     subtitle: 'A practical guide to turning coding skills into income, systems, and leverage.',
-    priceUsd: 19.99,
+    priceUsd: 9.99,
     walletAddress: process.env.BITCOIN_WALLET_ADDRESS || null,
   },
 
