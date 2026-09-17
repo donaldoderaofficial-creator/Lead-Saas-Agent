@@ -1,0 +1,1 @@
+cd /workspaces/Lead-Saas-Agent && cp public/index.html netlify-static/index.html && grep -n "Version 2.0\|Dispatch Pro v2.0" public/index.html netlify-static/index.html | head

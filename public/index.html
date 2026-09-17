@@ -1,426 +1,228 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>The Builder's Blueprint | Premium Ebook</title>
-  <meta name="description" content="A premium ebook for developers and builders who want to turn skill into leverage, products, and profitable systems." />
-  <style>
-    :root {
-      --bg: #06141d;
-      --bg-soft: #0d1d2a;
-      --panel: rgba(12, 25, 35, 0.94);
-      --panel-strong: rgba(18, 35, 47, 0.98);
-      --line: rgba(148, 163, 184, 0.2);
-      --text: #edf5ff;
-      --muted: #a9bbcf;
-      --brand: #65e6a0;
-      --brand-strong: #4ade80;
-      --gold: #fbbf24;
-      --warm: #f97316;
-      --shadow: rgba(0, 0, 0, 0.28);
-    }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(101, 230, 160, 0.14), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(251, 191, 36, 0.12), transparent 28%),
-        linear-gradient(180deg, #051219, var(--bg));
-      color: var(--text);
-    }
-    a { color: inherit; }
-    .shell {
-      width: min(1200px, calc(100% - 24px));
-      margin: 0 auto;
-      padding: 28px 0 72px;
-    }
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-      padding: 10px 0 22px;
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-    .brand {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 9px 14px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.02);
-      font-weight: 800;
-      color: var(--text);
-    }
-    .brand .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--brand-strong);
-      box-shadow: 0 0 22px rgba(74, 222, 128, 0.85);
-    }
-    .hero {
-      display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 24px;
-      align-items: stretch;
-    }
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      padding: clamp(22px, 4vw, 34px);
-      box-shadow: 0 24px 70px var(--shadow);
-    }
-    .kicker {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 12px;
-      border: 1px solid rgba(101, 230, 160, 0.26);
-      background: rgba(101, 230, 160, 0.09);
-      border-radius: 999px;
-      color: var(--brand);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      font-size: 11px;
-      font-weight: 800;
-    }
-    h1 {
-      margin: 18px 0 14px;
-      font-size: clamp(2.8rem, 6vw, 5rem);
-      line-height: 0.98;
-      letter-spacing: -0.06em;
-      max-width: 640px;
-    }
-    .lede {
-      max-width: 680px;
-      color: var(--muted);
-      font-size: 1.08rem;
-      line-height: 1.75;
-      margin: 0;
-    }
-    .price-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-      align-items: center;
-      margin-top: 24px;
-      margin-bottom: 18px;
-    }
-    .price {
-      display: inline-flex;
-      align-items: baseline;
-      gap: 8px;
-      font-weight: 800;
-    }
-    .price strong {
-      font-size: clamp(2.2rem, 5vw, 3.3rem);
-      color: var(--gold);
-      line-height: 1;
-    }
-    .price span {
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      font-size: 0.8rem;
-    }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      border-radius: 999px;
-      padding: 8px 12px;
-      border: 1px solid rgba(251, 191, 36, 0.28);
-      background: rgba(251, 191, 36, 0.08);
-      color: #f6d78d;
-      font-size: 0.8rem;
-      font-weight: 700;
-    }
-    .cta-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 24px;
-    }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 52px;
-      padding: 0 22px;
-      border-radius: 12px;
-      text-decoration: none;
-      font-weight: 800;
-      transition: transform 0.15s ease, opacity 0.15s ease;
-    }
-    .btn:hover { transform: translateY(-1px); }
-    .btn.primary {
-      background: linear-gradient(135deg, var(--gold), var(--warm));
-      color: #1a160d;
-      box-shadow: 0 16px 32px rgba(251, 191, 36, 0.2);
-    }
-    .btn.secondary {
-      color: var(--brand);
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.02);
-    }
-    .mini-proof {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-      margin-top: 26px;
-    }
-    .proof {
-      border-radius: 14px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.02);
-      text-align: center;
-      padding: 16px 12px;
-      color: var(--muted);
-      font-size: 0.82rem;
-    }
-    .proof strong {
-      display: block;
-      font-size: 1.18rem;
-      color: var(--text);
-      margin-bottom: 4px;
-    }
-    .checkout-box {
-      position: relative;
-      background: var(--panel-strong);
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      padding: 24px;
-      box-shadow: 0 18px 54px var(--shadow);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-    .checkout-box h2 {
-      margin-top: 0;
-      margin-bottom: 12px;
-      font-size: 1.55rem;
-    }
-    .checkout-box p {
-      color: var(--muted);
-      line-height: 1.7;
-      margin: 0 0 18px;
-    }
-    .feature-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      gap: 10px;
-    }
-    .feature-list li {
-      display: flex;
-      gap: 10px;
-      align-items: flex-start;
-      color: var(--muted);
-      line-height: 1.6;
-    }
-    .feature-list li::before {
-      content: '✓';
-      color: var(--brand);
-      font-weight: 800;
-      margin-top: 1px;
-    }
-    .lower-grid {
-      margin-top: 28px;
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 20px;
-    }
-    .info-card {
-      background: rgba(255,255,255,0.02);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 22px;
-    }
-    .info-card h3 {
-      margin-top: 0;
-      margin-bottom: 10px;
-      font-size: 1.15rem;
-    }
-    .info-card ul {
-      margin: 0;
-      padding-left: 18px;
-      color: var(--muted);
-      line-height: 1.9;
-    }
-    .info-card p {
-      margin: 0;
-      color: var(--muted);
-      line-height: 1.75;
-    }
-    .quote {
-      font-style: italic;
-      color: var(--text);
-      margin: 0 0 10px;
-      line-height: 1.7;
-    }
-    .meta {
-      color: var(--muted);
-      font-size: 0.8rem;
-    }
-    .experience {
-      margin-top: 28px;
-      padding: 22px;
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      background: rgba(255,255,255,0.03);
-    }
-    .experience h2 { margin: 0 0 8px; font-size: 1.25rem; }
-    .experience p { color: var(--muted); line-height: 1.7; margin: 0 0 16px; }
-    .experience-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-    .experience-button {
-      border: 1px solid var(--line); border-radius: 10px; padding: 11px 14px;
-      background: rgba(255,255,255,0.04); color: var(--text); cursor: pointer;
-      font: inherit; font-weight: 700;
-    }
-    .experience-button:hover, .experience-button[aria-pressed="true"] { border-color: var(--brand); color: var(--brand); }
-    .experience-result { margin-top: 18px; color: var(--muted); line-height: 1.7; }
-    @media (max-width: 980px) {
-      .hero, .lower-grid { grid-template-columns: 1fr; }
-      .checkout-box { order: -1; }
-    }
-    @media (max-width: 640px) {
-      .shell { width: min(100% - 18px, 1200px); }
-      .topbar { flex-direction: column; align-items: flex-start; }
-      .mini-proof { grid-template-columns: 1fr; }
-      .cta-row { flex-direction: column; }
-      .btn { width: 100%; }
-      h1 { letter-spacing: -0.05em; }
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dispatch Pro v2.0 | Scalable SaaS Architecture</title>
+<meta name="description" content="Dispatch Pro v2.0 is a scalable AI lead-qualification SaaS with architecture, pipeline automation, and subscription-based access." />
+<style>
+:root{--bg:#070d18;--bg2:#0d1628;--panel:#0f1a2d;--panel2:#121e34;--line:#22304b;--text:#edf3ff;--muted:#9aa9c7;--accent:#7cc7ff;--accent2:#78f0c2;--amber:#ffb96b;--danger:#ff7e7e;--shadow:0 24px 80px rgba(0,0,0,.28)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at top left,rgba(124,199,255,.10),transparent 32%),radial-gradient(circle at bottom right,rgba(120,240,194,.10),transparent 28%),linear-gradient(180deg,#040a12,#070d18 20%,#0a1320);color:var(--text);font:14px/1.6 Inter,Segoe UI,sans-serif}a{color:inherit;text-decoration:none}button,input,select{font:inherit}img{max-width:100%}.wrap{max-width:1180px;margin:0 auto;padding:0 28px}.nav{display:flex;justify-content:space-between;align-items:center;padding:22px 0;border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;gap:11px;font-weight:700}.brand-mark{width:12px;height:12px;border-radius:3px;background:linear-gradient(135deg,var(--accent2),var(--accent));box-shadow:0 0 16px rgba(120,240,194,.7)}.nav-links{display:flex;gap:30px;color:var(--muted);font-size:14px}.nav-links a:hover{color:var(--text)}.hero{padding:76px 0 64px;display:grid;grid-template-columns:1.08fr .92fr;gap:40px;align-items:center}.eyebrow{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:rgba(124,199,255,.10);border:1px solid rgba(124,199,255,.25);color:var(--accent);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700}.h1{margin:18px 0 16px;font-size:clamp(42px,5vw,72px);line-height:.96;letter-spacing:-.06em}.accent{color:var(--accent2)}.lede{font-size:17px;color:var(--muted);max-width:620px}.hero-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}.btn{display:inline-flex;align-items:center;justify-content:center;padding:14px 20px;border-radius:10px;border:1px solid var(--line);cursor:pointer;background:transparent;color:var(--text);font-weight:700;transition:.15s ease}.btn:hover{transform:translateY(-1px)}.btn.primary{background:linear-gradient(135deg,var(--accent),#8c6cff);color:#06101a;border:none;box-shadow:0 12px 32px rgba(124,199,255,.22)}.btn.ghost{background:rgba(255,255,255,.02)}.meta-line{margin-top:26px;color:var(--muted);font-size:13px}.meta-line b{color:var(--text)}.panel{background:rgba(15,26,45,.96);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}.panel-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}.live{display:flex;align-items:center;gap:7px;color:var(--accent2)}.pulse{width:7px;height:7px;border-radius:50%;background:var(--accent2);display:inline-block;animation:pulse 1.6s infinite}@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.86)}}.stack{padding:18px}.stack-row{display:grid;grid-template-columns:1fr auto auto;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06);align-items:center}.stack-row:last-child{border-bottom:none}.name{font-weight:600}.co{display:block;font-size:12px;color:var(--muted)}.badge{padding:4px 9px;border-radius:999px;font-size:10px;text-transform:uppercase;font-weight:700;letter-spacing:.04em}.badge.new{background:rgba(154,169,199,.12);color:var(--muted)}.badge.hot{background:rgba(255,185,107,.10);color:var(--amber)}.badge.ready{background:rgba(120,240,194,.10);color:var(--accent2)}.score{font-size:12px;color:var(--muted)}.proof-strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:26px 0}.proof-strip .wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}.proof{display:flex;flex-direction:column;gap:4px}.proof .num{font-size:32px;font-weight:800;letter-spacing:-.04em}.proof .label{color:var(--muted);font-size:12px;letter-spacing:.08em;text-transform:uppercase}.section{padding:90px 0}.section-head{max-width:640px;margin-bottom:32px}.kicker2{color:var(--accent2);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700}.h2{margin:12px 0 10px;font-size:clamp(28px,3.8vw,42px);letter-spacing:-.04em}.subtext{color:var(--muted);font-size:16px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.card{background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:18px;padding:28px}.num-card{font-size:12px;color:var(--accent2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px;font-weight:700}.card h3{margin:0 0 10px;font-size:22px}.card p{margin:0;color:var(--muted)}.arch-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.arch-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}.arch-box .module{font-size:11px;color:var(--accent2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}.arch-box h4{margin:0 0 8px;font-size:18px}.arch-box p{margin:0;color:var(--muted);font-size:14px}.pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.price-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px;display:flex;flex-direction:column}.price-card.featured{border-color:rgba(124,199,255,.5);background:var(--panel2);position:relative}.price-card.featured::before{content:"MOST DEPLOYED";position:absolute;top:-11px;left:22px;background:linear-gradient(135deg,var(--accent2),var(--accent));color:#041118;border-radius:999px;padding:4px 10px;font-size:10px;font-weight:800;letter-spacing:.06em}.tier{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}.price{margin:12px 0 6px;font-size:36px;font-weight:800;letter-spacing:-.05em}.price span{font-size:14px;color:var(--muted);font-weight:500}.desc{color:var(--muted);margin-bottom:18px}.feat{list-style:none;padding:0;margin:0 0 18px;display:grid;gap:8px}.feat li{padding-left:14px;position:relative;color:var(--text)}.feat li::before{content:"—";position:absolute;left:0;color:var(--accent2)}.price-card .btn{width:100%}.footer-cta{padding:100px 0 120px;text-align:center}.footer-cta h2{font-size:clamp(30px,4vw,52px);margin:0 0 12px;letter-spacing:-.05em}.footer-cta p{color:var(--muted);max-width:560px;margin:0 auto 26px}.footer{border-top:1px solid var(--line);padding:30px 0 48px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}@media (max-width:960px){.hero,.pricing,.arch-grid,.grid3,.proof-strip .wrap{grid-template-columns:1fr 1fr}.hero{grid-template-columns:1fr}.nav-links{display:none}.proof-strip .wrap{display:grid;grid-template-columns:repeat(2,1fr)}}@media (max-width:640px){.wrap{padding:0 18px}.proof-strip .wrap,.arch-grid,.grid3,.pricing{grid-template-columns:1fr}.hero-actions{flex-direction:column}.btn{width:100%}.footer{flex-direction:column}} </style>
 </head>
 <body>
-  <div class="shell">
-    <div class="topbar">
-      <div class="brand"><span class="dot"></span> Builder's Blueprint</div>
-      <div>Digital ebook • direct BTC checkout • $19.99</div>
+<div class="wrap">
+  <nav class="nav">
+    <div class="brand"><span class="brand-mark"></span><span>Dispatch Pro</span></div>
+    <div class="nav-links">
+      <a href="#platform">Platform</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#dashboard">Dashboard</a>
+    </div>
+    <button class="btn primary" type="button" data-action="billing" data-plan="starter">Start dispatching</button>
+  </nav>
+
+  <section class="hero">
+    <div>
+      <div class="eyebrow">Version 2.0 • Scalable SaaS architecture</div>
+      <h1 class="h1">Turn every inbound lead into a <span class="accent">qualified opportunity.</span></h1>
+      <p class="lede">Dispatch Pro is the production-ready lead qualification engine built to capture, score, route, and follow up on inbound demand with faster response times and cleaner operations.</p>
+      <div class="hero-actions">
+        <button class="btn primary" type="button" data-action="billing" data-plan="starter">Deploy your agent</button>
+        <button class="btn ghost" type="button" data-action="dashboard">Open dashboard</button>
+      </div>
+      <div class="meta-line">Median response time: <b>11 seconds</b> · Qualified leads last 30 days: <b>48,209</b> · Built for scale</div>
     </div>
 
-    <div class="hero">
-      <section class="panel">
-        <div class="kicker">The practical playbook</div>
-        <h1>Turn coding skill into leverage.</h1>
-        <p class="lede">
-          This is the book I wish I had when I was starting: a real-world guide to building with intent, pricing with confidence, creating leverage, and turning your work into something people genuinely value.
-        </p>
-
-        <div class="price-row">
-          <div class="price"><strong>$19.99</strong><span>USD</span></div>
-          <div class="badge">Up to 300 pages • instant digital access</div>
+    <div class="panel">
+      <div class="panel-head"><span>INBOUND_PIPELINE</span><span class="live"><span class="pulse"></span>LIVE</span></div>
+      <div class="stack">
+        <div class="stack-row">
+          <div><div class="name">R. Alvarez</div><span class="co">Northwind Freight</span></div>
+          <span class="badge ready">booked</span>
+          <span class="score">92</span>
         </div>
-
-        <div class="cta-row">
-          <a class="btn primary" href="/ebook.html">Buy the ebook</a>
-          <a class="btn secondary" href="/ebook/preview">Read preview</a>
+        <div class="stack-row">
+          <div><div class="name">T. Okafor</div><span class="co">Vale Robotics</span></div>
+          <span class="badge hot">qualified</span>
+          <span class="score">78</span>
         </div>
-
-        <div class="mini-proof">
-          <div class="proof"><strong>7</strong>Core chapters</div>
-          <div class="proof"><strong>50+</strong>Actionable lessons</div>
-          <div class="proof"><strong>Instant</strong>Access delivery</div>
+        <div class="stack-row">
+          <div><div class="name">S. Lindqvist</div><span class="co">Birchwood Capital</span></div>
+          <span class="badge new">new</span>
+          <span class="score">—</span>
         </div>
-
-        <section class="experience" aria-labelledby="experience-title">
-          <h2 id="experience-title">Choose your next move</h2>
-          <p id="experience-copy">Pick a path and get a focused starting page for the work ahead.</p>
-          <div class="experience-actions">
-            <button class="experience-button" type="button" data-experience="builder">Build a product</button>
-            <button class="experience-button" type="button" data-experience="leads">Find better leads</button>
-            <button class="experience-button" type="button" data-experience="leverage">Create leverage</button>
-          </div>
-          <div class="experience-result" id="experience-result" aria-live="polite"></div>
-        </section>
-      </section>
-
-      <aside class="checkout-box">
-        <h2>What you get</h2>
-        <p>Clear, practical guidance for developers, creators, and builders who want to move from learning into income and leverage.</p>
-        <ul class="feature-list">
-          <li>Build with intent instead of chasing random tutorials.</li>
-          <li>Price your work with confidence and sell without feeling desperate.</li>
-          <li>Validate ideas before wasting time on dead-end projects.</li>
-          <li>Turn skill into systems, products, and long-term value.</li>
-        </ul>
-      </aside>
-    </div>
-
-    <div class="lower-grid">
-      <div class="info-card">
-        <h3>What you’ll learn</h3>
-        <ul>
-          <li>How to stop collecting information and start creating value.</li>
-          <li>How to think like a builder instead of a consumer.</li>
-          <li>How to turn a skill into a product or revenue engine.</li>
-          <li>How to create leverage without burning out.</li>
-        </ul>
-      </div>
-
-      <div class="info-card">
-        <h3>Why this book works</h3>
-        <p>It is written for people who are serious about action. No fluff, no vague theory, no empty motivation. Just real decisions, clearer thinking, and useful next steps.</p>
-      </div>
-
-      <div class="info-card">
-        <h3>Reader response</h3>
-        <p class="quote">“This helped me stop jumping between ideas and start building what actually matters.”</p>
-        <div class="meta">— Product-minded developer</div>
+        <div class="stack-row">
+          <div><div class="name">M. Dube</div><span class="co">Kanu Retail Group</span></div>
+          <span class="badge hot">qualified</span>
+          <span class="score">81</span>
+        </div>
       </div>
     </div>
+  </section>
+</div>
+
+<div class="proof-strip">
+  <div class="wrap">
+    <div class="proof"><div class="num">11s</div><div class="label">Median response</div></div>
+    <div class="proof"><div class="num">3.4x</div><div class="label">Booked call rate</div></div>
+    <div class="proof"><div class="num">24/7</div><div class="label">Coverage</div></div>
+    <div class="proof"><div class="num">10k+</div><div class="label">Scale support</div></div>
   </div>
-  <script>
-    const experiences = {
-      builder: {
-        title: 'Build a product',
-        copy: 'Start with a focused idea, validate the pain, and turn useful code into a product people can trust.',
-        action: 'Read the builder playbook',
-        href: '/ebook.html',
-      },
-      leads: {
-        title: 'Find better leads',
-        copy: 'Use the Lead SaaS workflow to score opportunities, enrich contacts, and keep every follow-up visible.',
-        action: 'View subscription options',
-        href: '/billing.html',
-      },
-      leverage: {
-        title: 'Create leverage',
-        copy: 'Build repeatable systems around your best work, then compound the value through clear offers and dependable delivery.',
-        action: 'Read the builder playbook',
-        href: '/ebook.html',
-      },
-    };
+</div>
 
-    function renderExperience(name, updateUrl = true) {
-      const experience = experiences[name] || experiences.builder;
-      if (updateUrl) history.pushState({ experience: name }, '', `/?experience=${encodeURIComponent(name)}`);
-      document.title = `${experience.title} | Lead SaaS Agent`;
-      document.getElementById('experience-title').textContent = experience.title;
-      document.getElementById('experience-copy').textContent = experience.copy;
-      document.getElementById('experience-result').innerHTML = `<a class="btn secondary" href="${experience.href}">${experience.action}</a>`;
-      document.querySelectorAll('[data-experience]').forEach((button) => {
-        button.setAttribute('aria-pressed', String(button.dataset.experience === name));
-      });
-    }
+<div class="wrap">
+  <section id="platform" class="section">
+    <div class="section-head">
+      <div class="kicker2">Platform</div>
+      <h2 class="h2">Built for growth, not just demos.</h2>
+      <p class="subtext">The V2.0 release was designed around maintainability, resilience, pricing flexibility, and real operational throughput.</p>
+    </div>
+    <div class="grid3">
+      <div class="card">
+        <div class="num-card">01</div>
+        <h3>Capture</h3>
+        <p>Route every inbound lead from form, chat, or inbox into a single managed queue with consistent validation.</p>
+      </div>
+      <div class="card">
+        <div class="num-card">02</div>
+        <h3>Qualify</h3>
+        <p>Score leads using structured criteria, customer fit, urgency, and business signals before they get lost.</p>
+      </div>
+      <div class="card">
+        <div class="num-card">03</div>
+        <h3>Book</h3>
+        <p>Move the hot opportunities through a clear follow-up flow and turn sales traction into repeatable pipeline coverage.</p>
+      </div>
+    </div>
+  </section>
 
-    const selectedExperience = new URLSearchParams(window.location.search).get('experience');
-    if (selectedExperience) renderExperience(selectedExperience, false);
-    document.querySelectorAll('[data-experience]').forEach((button) => {
-      button.addEventListener('click', () => renderExperience(button.dataset.experience));
+  <section id="architecture" class="section">
+    <div class="section-head">
+      <div class="kicker2">Architecture</div>
+      <h2 class="h2">A scalable core, not a fragile prototype.</h2>
+      <p class="subtext">Version 2.0 centralizes configuration, persistence, quotas, cache, compliance, and monitoring so it can grow without breaking the operating model.</p>
+    </div>
+    <div class="arch-grid">
+      <div class="arch-box">
+        <div class="module">Config</div>
+        <h4>Centralized settings</h4>
+        <p>Flexible pricing tiers, feature flags, and environment-aware configuration stored for fast iteration.</p>
+      </div>
+      <div class="arch-box">
+        <div class="module">Cache</div>
+        <h4>Fast reads</h4>
+        <p>Reduce redundant database lookups and preserve performance even as the lead volume climbs.</p>
+      </div>
+      <div class="arch-box">
+        <div class="module">Rate limits</div>
+        <h4>Profit-safe access</h4>
+        <p>Protect business logic with quota enforcement, abuse protection, and predictable service limits.</p>
+      </div>
+      <div class="arch-box">
+        <div class="module">SQLite</div>
+        <h4>Persistent SaaS data</h4>
+        <p>Store leads, subscriptions, users, compliance history, and audit records in a durable system.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="dashboard" class="section">
+    <div class="section-head">
+      <div class="kicker2">Operations</div>
+      <h2 class="h2">Your command center stays clear while the engine does the work.</h2>
+      <p class="subtext">The dashboard shows live lead status, follow-up tracking, and actions you can use without juggling spreadsheets or multiple tools.</p>
+    </div>
+    <div class="grid3">
+      <div class="card">
+        <div class="num-card">Dashboard</div>
+        <h3>Search and track</h3>
+        <p>Filter leads by status, priority, score, and note history to move faster with less noise.</p>
+      </div>
+      <div class="card">
+        <div class="num-card">Ops</div>
+        <h3>Review workflow</h3>
+        <p>Admins can confirm payments, inspect incidents, and maintain compliance without blocking the operation.</p>
+      </div>
+      <div class="card">
+        <div class="num-card">Security</div>
+        <h3>Protected access</h3>
+        <p>2FA, session handling, role restrictions, and audit logging keep the system aligned with real SaaS operations.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing" class="section">
+    <div class="section-head">
+      <div class="kicker2">Pricing</div>
+      <h2 class="h2">Flexible tiers for a product that grows with you.</h2>
+    </div>
+    <div class="pricing">
+      <div class="price-card">
+        <div class="tier">Starter</div>
+        <div class="price">$79<span>/mo</span></div>
+        <div class="desc">For new teams getting the first pipeline running.</div>
+        <ul class="feat">
+          <li>1 connected source</li>
+          <li>500 leads / month</li>
+          <li>Dashboard access</li>
+        </ul>
+        <button class="btn primary" type="button" data-action="billing" data-plan="starter">Start</button>
+      </div>
+      <div class="price-card featured">
+        <div class="tier">Growth</div>
+        <div class="price">$249<span>/mo</span></div>
+        <div class="desc">For teams handling real lead volume and more active follow-ups.</div>
+        <ul class="feat">
+          <li>Unlimited sources</li>
+          <li>5,000 leads / month</li>
+          <li>Priority support</li>
+          <li>Custom qualification logic</li>
+        </ul>
+        <button class="btn primary" type="button" data-action="billing" data-plan="growth">Choose Growth</button>
+      </div>
+      <div class="price-card">
+        <div class="tier">Scale</div>
+        <div class="price">Custom</div>
+        <div class="desc">For multi-team, multi-pipeline operations.</div>
+        <ul class="feat">
+          <li>Enterprise controls</li>
+          <li>Dedicated workflow setup</li>
+          <li>Audit and review support</li>
+        </ul>
+        <button class="btn ghost" type="button" data-action="contact">Talk to us</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="footer-cta">
+    <h2>Build a system that scales with your pipeline.</h2>
+    <p>Dispatch Pro v2.0 gives you the plumbing, pricing model, dashboards, and operations needed to run a serious lead engine without chaos.</p>
+    <button class="btn primary" type="button" data-action="billing" data-plan="starter">Get started</button>
+  </section>
+</div>
+
+<footer class="wrap footer">
+  <span>© 2026 Dispatch Pro · Founder & CEO: Odera Donald Ombok, BSc</span>
+  <span>Version 2.0 · Scalable architecture release</span>
+</footer>
+
+<script>
+  document.querySelectorAll('[data-action]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const action = button.dataset.action;
+      if (action === 'dashboard') {
+        window.location.href = '/dashboard-v2.html';
+        return;
+      }
+      if (action === 'contact') {
+        window.location.href = 'mailto:hello@dispatchpro.ai?subject=Dispatch%20Pro%20Scale%20plan';
+        return;
+      }
+      const plan = encodeURIComponent(button.dataset.plan || 'starter');
+      window.location.href = `/billing.html?plan=${plan}`;
     });
-    window.addEventListener('popstate', () => {
-      renderExperience(new URLSearchParams(window.location.search).get('experience') || 'builder', false);
-    });
-  </script>
+  });
+</script>
 </body>
 </html>
