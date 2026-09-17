@@ -432,3 +432,7 @@
 {"timestamp":"2026-09-17T10:56:44.293Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
 {"timestamp":"2026-09-17T10:59:43.956Z","level":"info","message":"SIGTERM received, shutting down gracefully"}
 {"timestamp":"2026-09-17T10:59:43.956Z","level":"info","message":"Server closed"}
+{"timestamp":"2026-09-17T11:04:44.493Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-17T11:04:44.497Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-17T11:04:44.504Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-17T11:04:44.507Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"1ms"}
