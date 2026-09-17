@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plans & Billing</title>
+  <style>
+    :root {
+      --bg:#0B1220; --panel:#0F1830; --line:#22304F; --text:#E7ECF5; --muted:#8493B3; --signal:#5EEAD4; --amber:#FFB454; --danger:#FF6B6B;
+    }
+    * { box-sizing:border-box; }
+    body {
+      margin:0; background:var(--bg); color:var(--text); font-family:Inter, Arial, sans-serif; padding:48px 20px;
+    }
+    .wrap { max-width:760px; margin:0 auto; }
+    .card {
+      background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:24px;
+    }
+    h1 { margin:0 0 16px; }
+    .muted { color:var(--muted); }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    label { display:block; margin:12px 0 8px; color:var(--muted); font-size:13px; }
+    input, select, button { width:100%; padding:11px; border-radius:8px; border:1px solid var(--line); background:#101b2f; color:var(--text); font:inherit; }
+    button { margin-top:16px; background:var(--signal); color:#062421; border:none; cursor:pointer; font-weight:600; }
+    .status { margin-top:18px; min-height:20px; color:var(--muted); }
+    .box { margin-top:18px; padding:16px; border:1px solid var(--line); border-radius:10px; background:#101b2f; display:none; }
+    @media (max-width:640px) { .grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Plans & Billing</h1>
+      <p class="muted">Static upload version: this page is ready for direct Netlify upload. It keeps the selected plan and shows the next step without requiring a backend.</p>
+
+      <div class="grid">
+        <div>
+          <label for="name">Name</label>
+          <input id="name" placeholder="Your name" />
+        </div>
+        <div>
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="you@example.com" />
+        </div>
+        <div>
+          <label for="plan">Plan</label>
+          <select id="plan">
+            <option value="starter">Starter</option>
+            <option value="growth">Growth</option>
+          </select>
+        </div>
+        <div>
+          <label for="method">Payment method</label>
+          <select id="method">
+            <option value="bitcoin">Bitcoin</option>
+            <option value="ethereum">Ethereum</option>
+          </select>
+        </div>
+      </div>
+
+      <button id="order" type="button">Create wallet payment</button>
+      <div id="wallet" class="box"></div>
+      <div id="status" class="status"></div>
+    </div>
+  </div>
+
+  <script>
+    const plan = new URLSearchParams(window.location.search).get('plan');
+    const planField = document.getElementById('plan');
+    if (plan === 'growth') planField.value = 'growth';
+
+    const setStatus = (msg, isError = false) => {
+      const status = document.getElementById('status');
+      status.textContent = msg;
+      status.style.color = isError ? '#FF6B6B' : '#8493B3';
+    };
+
+    document.getElementById('order').addEventListener('click', () => {
+      const name = document.getElementById('name').value.trim() || 'Customer';
+      const email = document.getElementById('email').value.trim() || 'noreply@example.com';
+      const selectedPlan = document.getElementById('plan').value;
+      const method = document.getElementById('method').value;
+      const walletBox = document.getElementById('wallet');
+      const currency = method === 'bitcoin' ? 'BTC' : 'ETH';
+      const amount = selectedPlan === 'growth' ? '0.0025' : '0.0012';
+
+      walletBox.innerHTML = `
+        <strong>${name}</strong><br>
+        Email: ${email}<br>
+        Plan: ${selectedPlan}<br>
+        Send exactly <strong>${amount} ${currency}</strong> to:<br>
+        <strong>bc1qstaticuploadexampleaddress123</strong><br>
+        Reference: <strong>STATIC-${Date.now()}</strong>
+      `;
+      walletBox.style.display = 'block';
+      setStatus('Static upload mode: connect a real backend or Netlify Function to confirm payments.');
+    });
+  </script>
+</body>
+</html>
