@@ -36,7 +36,7 @@ const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, genera
 const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = require('./explorium-client');
 const { parseDataset, validateObservation } = require('./geospatial-safety');
 const { getBtcUsdRate, getCryptoUsdRate, startBtcUsdSync } = require('./crypto-rates');
-const { buildCustomReply, improveReplyWithAI, verifyWebhookSignature, sendReply } = require('./email-assistant');
+const { buildCustomReply, improveReplyWithAI, verifyWebhookSignature: verifyEmailWebhookSignature, sendReply } = require('./email-assistant');
 
 const app = express();
 const DISPATCH_PRO = config.company;
@@ -255,7 +255,7 @@ app.post('/api/email/inbound', asyncHandler(async (req, res) => {
   if (config.isProd && !process.env.EMAIL_WEBHOOK_SECRET) {
     return res.status(503).json({ error: 'EMAIL_WEBHOOK_SECRET is required in production' });
   }
-  if (!verifyWebhookSignature(rawBody, signature, process.env.EMAIL_WEBHOOK_SECRET)) {
+  if (!verifyEmailWebhookSignature(rawBody, signature, process.env.EMAIL_WEBHOOK_SECRET)) {
     return res.status(401).json({ error: 'Invalid email webhook signature' });
   }
   const { id, from, sender, subject, text, body } = req.body || {};
