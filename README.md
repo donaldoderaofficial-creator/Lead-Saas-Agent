@@ -1,5 +1,7 @@
 # Dispatch Pro - Lead Agent SaaS
 
+**Release attribution:** Odera Donald Ombok, BSc - Founder & CEO, Dispatch Pro
+
 **Built by:** Odera Donald Ombok, BSc — Founder & CEO  
 **Email:** odera.ombok@dispatchpro.com
 
