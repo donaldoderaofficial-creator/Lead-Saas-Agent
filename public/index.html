@@ -207,6 +207,17 @@
   <span>Version 2.0 · Scalable architecture release</span>
 </footer>
 
+<aside class="mia" aria-label="Mia virtual assistant">
+  <button class="mia-toggle" id="miaToggle" type="button" aria-expanded="false" aria-controls="miaPanel">
+    <span class="mia-mark">M</span><span>Mia</span><span class="mia-dot"></span>
+  </button>
+  <div class="mia-panel" id="miaPanel" hidden>
+    <div class="mia-head"><div><strong>Mia</strong><small>Dispatch Pro assistant</small></div><button id="miaClose" type="button" aria-label="Close Mia">×</button></div>
+    <div class="mia-messages" id="miaMessages"><div class="mia-message mia-bot">Hi, I’m Mia. Ask about plans, custom packages, lead workflows, or BTC and ETH payments.</div></div>
+    <form class="mia-form" id="miaForm"><input id="miaInput" maxlength="2000" autocomplete="off" placeholder="Ask Mia a question..." aria-label="Message Mia" required><button type="submit" aria-label="Send message">Send</button></form>
+  </div>
+</aside>
+
 <script>
   document.querySelectorAll('[data-action]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -222,6 +233,41 @@
       const plan = encodeURIComponent(button.dataset.plan || 'starter');
       window.location.href = `/billing.html?plan=${plan}`;
     });
+  });
+
+  const miaToggle = document.getElementById('miaToggle');
+  const miaPanel = document.getElementById('miaPanel');
+  const miaClose = document.getElementById('miaClose');
+  const miaForm = document.getElementById('miaForm');
+  const miaInput = document.getElementById('miaInput');
+  const miaMessages = document.getElementById('miaMessages');
+  function setMiaOpen(open) {
+    miaPanel.hidden = !open;
+    miaToggle.setAttribute('aria-expanded', String(open));
+    if (open) miaInput.focus();
+  }
+  function addMiaMessage(text, bot) {
+    const message = document.createElement('div');
+    message.className = `mia-message ${bot ? 'mia-bot' : 'mia-user'}`;
+    message.textContent = text;
+    miaMessages.appendChild(message);
+    miaMessages.scrollTop = miaMessages.scrollHeight;
+  }
+  miaToggle.addEventListener('click', () => setMiaOpen(miaPanel.hidden));
+  miaClose.addEventListener('click', () => setMiaOpen(false));
+  miaForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const question = miaInput.value.trim();
+    if (!question) return;
+    addMiaMessage(question, false);
+    miaInput.value = '';
+    try {
+      const response = await fetch('/api/assistant/mia', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question }) });
+      const data = await response.json();
+      addMiaMessage(response.ok ? data.answer : 'I could not process that request. Please email hello@dispatchpro.ai.', true);
+    } catch (_) {
+      addMiaMessage('I am temporarily unavailable. Please email hello@dispatchpro.ai.', true);
+    }
   });
 </script>
 </body>
