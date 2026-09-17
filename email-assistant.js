@@ -10,7 +10,7 @@ function inferCurrency(text) {
   const value = String(text || '').toUpperCase();
   if (/\b(BTC|BITCOIN)\b/.test(value)) return 'BTC';
   if (/\b(ETH|ETHEREUM)\b/.test(value)) return 'ETH';
-  return 'USD';
+  return 'BTC';
 }
 
 function inferBudget(text) {
@@ -25,13 +25,25 @@ function quoteCustomPackage({ currency = 'USD', budgetUsd = MINIMUM_CUSTOM_USD }
     : 'USD';
   const rate = selected === 'BTC' ? getCryptoUsdRate('bitcoin') : selected === 'ETH' ? getCryptoUsdRate('ethereum') : null;
   const amount = selected === 'USD' ? usd : usd / rate.rate;
+  const btcRate = getCryptoUsdRate('bitcoin');
+  const ethRate = getCryptoUsdRate('ethereum');
   return {
     usd,
     termMonths: CUSTOM_TERM_MONTHS,
     currency: selected,
     amount: selected === 'USD' ? usd.toFixed(2) : amount.toFixed(selected === 'BTC' ? 8 : 6),
     rate,
+    recommendedCurrency: selected === 'USD' ? 'BTC' : selected,
+    conversions: {
+      BTC: (usd / btcRate.rate).toFixed(8),
+      ETH: (usd / ethRate.rate).toFixed(6),
+    },
+    rates: { BTC: btcRate, ETH: ethRate },
   };
+}
+
+function formatCryptoAmount(quote) {
+  return `${quote.conversions[quote.recommendedCurrency]} ${quote.recommendedCurrency} recommended, or ${quote.conversions.BTC} BTC / ${quote.conversions.ETH} ETH at live market rates`;
 }
 
 function buildMiaReply(question) {
@@ -41,7 +53,7 @@ function buildMiaReply(question) {
   if (/custom|enterprise|scale|10,?000|large package/.test(lower)) {
     const currency = inferCurrency(text);
     const quote = quoteCustomPackage({ currency, budgetUsd: inferBudget(text) });
-    const amount = quote.currency === 'USD' ? `$${quote.amount} USD` : `${quote.amount} ${quote.currency} (about $${quote.usd.toFixed(2)} USD at the current market rate)`;
+    const amount = formatCryptoAmount(quote);
     return `That sounds like an exciting opportunity. The current custom-package starting estimate is ${amount} total for a ${CUSTOM_TERM_MONTHS}-month engagement. Final scope is confirmed after discovery, and the minimum package value is $${MINIMUM_CUSTOM_USD.toLocaleString()} USD for the full term. What are your users, monthly lead volume, integrations, timeline, and preferred currency? You can also reach our team at hello@dispatchpro.ai.`;
   }
   if (/btc|bitcoin|eth|ethereum|crypto|pay/.test(lower)) return 'Absolutely. Dispatch Pro accepts BTC and ETH wallet payments. Starter and Growth quotes use live market rates, and payment proof is reviewed before access is enabled. Would you like a current Starter, Growth, or custom-package quote?';
@@ -61,7 +73,7 @@ function buildCustomReply({ body = '', subject = '' } = {}) {
     if (/custom|enterprise|scale|10,?000|large package/.test(lower)) {
       const currency = inferCurrency(text);
       const quote = quoteCustomPackage({ currency, budgetUsd: inferBudget(text) });
-      const amount = quote.currency === 'USD' ? `$${quote.amount} USD` : `${quote.amount} ${quote.currency} (about $${quote.usd.toFixed(2)} USD at the current market rate)`;
+      const amount = formatCryptoAmount(quote);
       return `For a custom Dispatch Pro package, the current starting estimate is ${amount} total for a ${CUSTOM_TERM_MONTHS}-month engagement. Custom scope is confirmed after discovery, and the minimum package value is $${MINIMUM_CUSTOM_USD.toLocaleString()} USD for the full term. Tell me your users, monthly lead volume, integrations, timeline, and preferred currency, or email hello@dispatchpro.ai.`;
     }
     if (/btc|bitcoin|eth|ethereum|crypto|pay/.test(lower)) {
@@ -76,9 +88,7 @@ function buildCustomReply({ body = '', subject = '' } = {}) {
     return 'I can help with Dispatch Pro plans, lead qualification, custom packages, crypto payment quotes, and next steps. What are you trying to accomplish?';
   }
   const quote = quoteCustomPackage({ currency: inferCurrency(body), budgetUsd: inferBudget(body) });
-  const amount = quote.currency === 'USD'
-    ? `$${quote.amount} USD`
-    : `${quote.amount} ${quote.currency} (approximately $${quote.usd.toFixed(2)} USD at the current market rate)`;
+  const amount = formatCryptoAmount(quote);
   const reply = `Hello,\n\nThank you for contacting Dispatch Pro about a custom package. Based on your message, our starting custom-package estimate is ${amount} total for a ${CUSTOM_TERM_MONTHS}-month engagement. The final scope and commercial terms will be confirmed after a discovery call; this is an estimate, not a payment request or financial advice.\n\nPlease reply with your target users, monthly lead volume, required integrations, timeline, and preferred settlement currency: BTC, ETH, or USD. We will prepare a written proposal aligned with our mission to help businesses grow through practical technology and lead intelligence, and our vision of reliable, responsible automation.\n\nBest regards,\nDispatch Pro\n${process.env.EMAIL_FROM || 'hello@dispatchpro.ai'}`;
   return { reply, quote, subject: subject || 'Custom package enquiry' };
 }
