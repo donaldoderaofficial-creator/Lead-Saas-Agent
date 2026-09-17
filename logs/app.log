@@ -390,3 +390,6 @@
 {"timestamp":"2026-09-17T09:29:50.270Z","level":"info","message":"GET /","statusCode":200,"duration":"9ms"}
 {"timestamp":"2026-09-17T09:35:57.102Z","level":"info","message":"GET /ready","statusCode":200,"duration":"4ms"}
 {"timestamp":"2026-09-17T09:35:57.122Z","level":"info","message":"POST /api/email/inbound","statusCode":202,"duration":"9ms"}
+{"timestamp":"2026-09-17T09:37:33.795Z","level":"info","message":"SIGTERM received, shutting down gracefully"}
+{"timestamp":"2026-09-17T09:37:33.795Z","level":"info","message":"Server closed"}
+{"timestamp":"2026-09-17T09:37:34.040Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:8000","env":"development","isProd":false}
