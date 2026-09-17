@@ -45,7 +45,8 @@
         reference = qrReference;
         $('wallet').hidden = false;
         $('wallet').textContent = `Scan to pay KES ${kesAmounts[plan].toLocaleString()} for the ${plan} plan. Reference: ${qrReference}`;
-        $('qrImage').src = data.QRCode || data.qrCode || data.qrCodeDataUrl || '';
+        const qrPayload = data.QRCode || data.qrCode || data.qrCodeDataUrl || '';
+        $('qrImage').src = qrPayload.startsWith('data:') ? qrPayload : (qrPayload ? `data:image/png;base64,${qrPayload}` : '');
         $('qr').hidden = !$('qrImage').src;
         $('hashLabel').hidden = true;
         $('hash').hidden = true;
