@@ -437,3 +437,4 @@
 {"timestamp":"2026-09-17T11:04:44.504Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-17T11:04:44.507Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"1ms"}
 {"timestamp":"2026-09-17T11:08:02.654Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:8000","env":"development","isProd":false}
+{"timestamp":"2026-09-17T11:09:04.757Z","level":"info","message":"GET /","statusCode":200,"duration":"8ms"}
