@@ -660,6 +660,42 @@ function checkDatabase() {
   }
 }
 
+function businessMetrics() {
+  const count = (table, where = '') => db.prepare(`SELECT COUNT(*) AS count FROM ${table}${where}`).get().count;
+  const capturedLeads = count('pending_leads') + count('completed_reports');
+  const activatedReports = count('completed_reports');
+  const registeredUsers = count('users');
+  const activeSubscriptions = count('subscription', " WHERE status = 'active'");
+  const paymentTransactions = count('payment_transactions');
+  const confirmedPayments = count('payment_transactions', " WHERE status = 'confirmed'");
+
+  return {
+    leads: {
+      captured: capturedLeads,
+      activatedReports,
+      activationRate: capturedLeads ? activatedReports / capturedLeads : null,
+    },
+    payments: {
+      total: paymentTransactions,
+      confirmed: confirmedPayments,
+      conversionRate: capturedLeads ? confirmedPayments / capturedLeads : null,
+    },
+    customers: {
+      registeredUsers,
+      activeSubscriptions,
+    },
+    retention: {
+      available: false,
+      reason: 'Retention requires customer-level subscription history and cohorts.',
+    },
+    support: {
+      totalThreads: count('email_threads'),
+      openDrafts: count('email_threads', " WHERE status = 'draft'"),
+      sentReplies: count('email_threads', " WHERE status = 'sent'"),
+    },
+  };
+}
+
 const emailThreads = {
   create({ messageId, sender, subject, body, reply, quote, status = 'draft' }) {
     db.prepare(`INSERT INTO email_threads
@@ -688,5 +724,6 @@ module.exports = {
   compliance,
   emailThreads,
   checkDatabase,
+  businessMetrics,
   createSessionStore,
 };

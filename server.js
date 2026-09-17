@@ -30,7 +30,7 @@ const { RateLimiter } = require('./rate-limiter');
 const { client, checkoutNodeJssdk, verifyWebhookSignature } = require('./paypal-client');
 const { generateDynamicQrCode, initiateSTKPush, normalizePhoneNumber } = require('./mpesa-client');
 const { processLead } = require('./lead-pipeline');
-const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, users, subscription, emailThreads, checkDatabase, createSessionStore } = require('./store');
+const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, users, subscription, emailThreads, checkDatabase, businessMetrics, createSessionStore } = require('./store');
 const { hasActiveSubscription } = require('./subscription-policy');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateQrCode } = require('./auth');
 const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = require('./explorium-client');
@@ -629,6 +629,7 @@ app.get('/metrics', requireAuth, (req, res) => {
     logger: logger.getMetrics(),
     cache: cache.stats(),
     rateLimiter: rateLimiter.userLimits.size,
+    business: businessMetrics(),
   });
 });
 

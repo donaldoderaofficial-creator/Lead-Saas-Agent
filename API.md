@@ -207,6 +207,14 @@ Get current authenticated user info.
 
 ### Lead Management
 
+#### `GET /metrics`
+
+Admin-authenticated operational metrics include lead capture and activation,
+payment confirmation and conversion, active subscriptions, and support email
+workload. Retention is reported as unavailable until customer-level
+subscription history and cohorts are implemented; the endpoint does not infer
+retention from the single current subscription record.
+
 All lead-generation, prospecting, report, and dashboard services require an
 active Dispatch Pro package. Without one, service requests return `402 Payment
 Required` with `code: "subscription_required"` and a link to the package page.
