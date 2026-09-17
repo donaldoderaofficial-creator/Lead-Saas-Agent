@@ -45,6 +45,16 @@ test('exposes direct bitcoin and ethereum wallet payment options', () => {
   assert.equal(config.wallets.ethereum.address, '0x1234567890abcdef1234567890abcdef12345678');
 });
 
+test('uses the required bitcoin amounts for starter and growth subscription packages', () => {
+  const { buildSubscriptionCheckoutPayload } = require('../server');
+
+  const starter = buildSubscriptionCheckoutPayload({ plan: 'starter', method: 'bitcoin' });
+  const growth = buildSubscriptionCheckoutPayload({ plan: 'growth', method: 'bitcoin' });
+
+  assert.equal(starter.amountCrypto, '0.0010327');
+  assert.equal(growth.amountCrypto, '0.003254');
+});
+
 test('crypto subscription proof does not activate access until admin approval', () => {
   const app = require('../server');
   const reference = 'crypto-subscription-review-test';
