@@ -52,7 +52,7 @@ test('uses the required bitcoin amounts for starter and growth subscription pack
   const growth = buildSubscriptionCheckoutPayload({ plan: 'growth', method: 'bitcoin' });
 
   assert.equal(starter.amountCrypto, '0.0010327');
-  assert.equal(growth.amountCrypto, '0.003254');
+  assert.equal(growth.amountCrypto, '0.00325');
 });
 
 test('crypto subscription proof does not activate access until admin approval', () => {

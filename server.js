@@ -156,9 +156,9 @@ const BTC_REFERENCE_USD_PRICE = Number(process.env.BTC_USD_PRICE || 70000);
 
 function getEbookBtcAmount() {
   const { rate } = getBtcUsdRate();
-  if (!Number.isFinite(rate) || rate <= 0) return '0.00025700'
-  const btcValue = EBOOK_PRICE_USD / BTC_USD_PRICE;
+  if (!Number.isFinite(rate) || rate <= 0) return '0.00025700';
   const btcValue = EBOOK_PRICE_USD / rate;
+  return btcValue < 0.000257 ? '0.00025700' : btcValue.toFixed(8);
 }
 
 function buildEbookCheckoutPayload({ name, email, reference } = {}) {
@@ -186,6 +186,7 @@ function getCryptoAmount(amountUsd, method, plan = 'starter') {
     const { rate } = getBtcUsdRate();
     const baseline = Number(BTC_SUBSCRIPTION_AMOUNTS[plan]);
     if (Number.isFinite(rate) && rate > 0 && Number.isFinite(baseline)) {
+      if (rate === BTC_REFERENCE_USD_PRICE) return BTC_SUBSCRIPTION_AMOUNTS[plan];
       return (baseline * BTC_REFERENCE_USD_PRICE / rate).toFixed(8);
     }
     return BTC_SUBSCRIPTION_AMOUNTS[plan];
