@@ -22,6 +22,16 @@ function quoteCustomPackage({ currency = 'USD', budgetUsd = MINIMUM_CUSTOM_USD }
   const usd = Math.max(Number(budgetUsd) || MINIMUM_CUSTOM_USD, MINIMUM_CUSTOM_USD);
   const selected = ['USD', 'BTC', 'ETH'].includes(String(currency).toUpperCase())
     ? String(currency).toUpperCase()
+    const Mia = {
+      greeting: 'Hi, I am Mia from Dispatch Pro. I am happy to help.',
+      customPackageMessage: 'That sounds like an exciting opportunity. The current custom-package starting estimate is',
+      btcPaymentMessage: 'Absolutely. Dispatch Pro accepts BTC and ETH wallet payments.',
+      starterGrowthMessage: 'I can help you compare them. Starter suits teams beginning their pipeline, while Growth supports larger lead volume, more sources, priority support, and custom qualification logic.',
+      leadWorkflowMessage: 'That is exactly the kind of workflow Dispatch Pro is built for.',
+      thankYouMessage: 'You are very welcome. I am glad to help.',
+      helloMessage: 'Hello, it is lovely to meet you. I am Mia from Dispatch Pro.',
+      fallbackMessage: 'I want to make sure I point you in the right direction.'
+    };
     : 'USD';
   const rate = selected === 'BTC' ? getCryptoUsdRate('bitcoin') : selected === 'ETH' ? getCryptoUsdRate('ethereum') : null;
   const amount = selected === 'USD' ? usd : usd / rate.rate;
