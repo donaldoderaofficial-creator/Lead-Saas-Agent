@@ -403,3 +403,8 @@
 {"timestamp":"2026-09-17T10:08:03.080Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
 {"timestamp":"2026-09-17T10:08:16.109Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
 {"timestamp":"2026-09-17T10:12:41.027Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-17T10:19:17.305Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-17T10:19:17.311Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-17T10:19:17.322Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-17T10:19:17.326Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-17T10:19:17.425Z","level":"info","message":"POST /api/assistant/mia","statusCode":404,"duration":"1ms"}
