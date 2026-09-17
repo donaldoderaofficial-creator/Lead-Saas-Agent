@@ -400,3 +400,5 @@
 {"timestamp":"2026-09-17T09:57:34.208Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
 {"timestamp":"2026-09-17T10:03:17.428Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
 {"timestamp":"2026-09-17T10:03:55.759Z","level":"info","message":"POST /api/assistant/mia","statusCode":404,"duration":"7ms"}
+{"timestamp":"2026-09-17T10:08:03.080Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-17T10:08:16.109Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
