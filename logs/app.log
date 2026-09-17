@@ -376,3 +376,6 @@
 {"timestamp":"2026-09-17T09:08:41.188Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-17T09:08:41.195Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-17T09:08:41.198Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-17T09:09:02.689Z","level":"info","message":"SIGTERM received, shutting down gracefully"}
+{"timestamp":"2026-09-17T09:09:02.689Z","level":"info","message":"Server closed"}
+{"timestamp":"2026-09-17T09:09:03.020Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:8000","env":"development","isProd":false}
