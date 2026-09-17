@@ -252,6 +252,9 @@ app.get('/ready', (req, res) => {
 app.post('/api/email/inbound', asyncHandler(async (req, res) => {
   const signature = req.get('x-email-signature');
   const rawBody = JSON.stringify(req.body || {});
+  if (config.isProd && !process.env.EMAIL_WEBHOOK_SECRET) {
+    return res.status(503).json({ error: 'EMAIL_WEBHOOK_SECRET is required in production' });
+  }
   if (!verifyWebhookSignature(rawBody, signature, process.env.EMAIL_WEBHOOK_SECRET)) {
     return res.status(401).json({ error: 'Invalid email webhook signature' });
   }

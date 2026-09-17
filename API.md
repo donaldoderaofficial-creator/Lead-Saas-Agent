@@ -522,6 +522,23 @@ application can query its SQLite database and returns `503` when it cannot.
 }
 ```
 
+#### `POST /api/email/inbound`
+Receives a signed inbound custom-package email, generates an auditable reply,
+quotes a package in USD, BTC, or ETH above the configured `$10,000` floor, and
+optionally sends it through Resend. Send the provider's HMAC-SHA256 signature in
+`X-Email-Signature`. Auto-send requires `EMAIL_AUTOREPLY_ENABLED=true`; otherwise
+the response is stored as a draft.
+
+Example body:
+```json
+{
+  "id": "provider-message-id",
+  "from": "client@example.com",
+  "subject": "Custom package",
+  "text": "We need a custom package and prefer ETH."
+}
+```
+
 ---
 
 ## Error Responses
