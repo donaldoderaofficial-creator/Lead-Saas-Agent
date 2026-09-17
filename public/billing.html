@@ -50,6 +50,9 @@
       const data = await response.json();
       status(response.ok ? 'Payment submitted. Access starts after verification.' : (data.error || 'Could not submit payment.'), !response.ok);
     };
+
+    const requestedPlan = new URLSearchParams(window.location.search).get('plan');
+    if (requestedPlan === 'growth') $('plan').value = 'growth';
   </script>
 </body>
 </html>

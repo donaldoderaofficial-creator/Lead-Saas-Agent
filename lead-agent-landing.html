@@ -273,7 +273,7 @@
       <a href="#pricing">Pricing</a>
       <a href="#log">Field notes</a>
     </div>
-    <button class="nav-cta">Start with Dispatch Pro</button>
+    <button class="nav-cta" type="button" data-action="billing" data-plan="starter">Start with Dispatch Pro</button>
   </nav>
 
   <section class="hero">
@@ -282,8 +282,8 @@
       <h1>An agent that never lets a lead <span class="accent">go cold.</span></h1>
       <p class="sub">Dispatch Pro reads every inbound lead the moment it lands, qualifies it against your criteria, and books the call — before your team even sees the notification.</p>
       <div class="hero-ctas">
-        <button class="btn-primary">Deploy your agent</button>
-        <button class="btn-ghost">Watch it work — 90s</button>
+        <button class="btn-primary" type="button" data-action="billing" data-plan="starter">Deploy your agent</button>
+        <button class="btn-ghost" type="button" data-action="pipeline">Watch it work — 90s</button>
       </div>
       <div class="trust-line">Median response time: <b>11 seconds</b> · Leads qualified last 30 days: <b>48,209</b></div>
     </div>
@@ -406,7 +406,7 @@
           <li>Standard qualification rules</li>
           <li>Email support</li>
         </ul>
-        <button>Start dispatching</button>
+        <button type="button" data-action="billing" data-plan="starter">Start dispatching</button>
       </div>
       <div class="price-card hi">
         <div class="tier">Growth</div>
@@ -419,7 +419,7 @@
           <li>Calendar booking built in</li>
           <li>Priority support</li>
         </ul>
-        <button>Start dispatching</button>
+        <button type="button" data-action="billing" data-plan="growth">Start dispatching</button>
       </div>
       <div class="price-card">
         <div class="tier">Scale</div>
@@ -431,7 +431,7 @@
           <li>SSO & audit logs</li>
           <li>Onboarding specialist</li>
         </ul>
-        <button>Talk to us</button>
+        <button type="button" data-action="contact">Talk to us</button>
       </div>
     </div>
   </section>
@@ -439,7 +439,7 @@
   <section class="final-cta">
     <h2>Your next lead is already waiting.</h2>
     <p>Deploy Dispatch in under ten minutes. No credit card to start.</p>
-    <button class="btn-primary">Deploy your agent</button>
+    <button class="btn-primary" type="button" data-action="billing" data-plan="starter">Deploy your agent</button>
   </section>
 
   <footer>
@@ -447,6 +447,25 @@
     <span class="mono">STATUS: ALL SYSTEMS OPERATIONAL</span>
   </footer>
 </div>
+
+<script>
+  document.querySelectorAll('[data-action]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (button.dataset.action === 'pipeline') {
+        document.querySelector('#pipeline').scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+
+      if (button.dataset.action === 'contact') {
+        window.location.href = 'mailto:hello@dispatchpro.ai?subject=Dispatch%20Pro%20Scale%20plan';
+        return;
+      }
+
+      const plan = encodeURIComponent(button.dataset.plan || 'starter');
+      window.location.href = `/billing.html?plan=${plan}`;
+    });
+  });
+</script>
 
 </body>
 </html>
