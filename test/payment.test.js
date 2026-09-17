@@ -55,6 +55,16 @@ test('uses the required bitcoin amounts for starter and growth subscription pack
   assert.equal(growth.amountCrypto, '0.00325');
 });
 
+test('uses the required ethereum amounts for starter and growth subscription packages', () => {
+  const { buildSubscriptionCheckoutPayload } = require('../server');
+
+  const starter = buildSubscriptionCheckoutPayload({ plan: 'starter', method: 'ethereum' });
+  const growth = buildSubscriptionCheckoutPayload({ plan: 'growth', method: 'ethereum' });
+
+  assert.equal(starter.amountCrypto, '0.03238');
+  assert.equal(growth.amountCrypto, '0.10206');
+});
+
 test('crypto subscription proof does not activate access until admin approval', () => {
   const app = require('../server');
   const reference = 'crypto-subscription-review-test';

@@ -35,7 +35,7 @@ const { hasActiveSubscription } = require('./subscription-policy');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateQrCode } = require('./auth');
 const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = require('./explorium-client');
 const { parseDataset, validateObservation } = require('./geospatial-safety');
-const { getBtcUsdRate, startBtcUsdSync } = require('./crypto-rates');
+const { getBtcUsdRate, getCryptoUsdRate, startBtcUsdSync } = require('./crypto-rates');
 
 const app = express();
 const DISPATCH_PRO = config.company;
@@ -150,12 +150,16 @@ function recordFailedAttempt(username, req) {
 // Flexible, configurable pricing from config system
 const PRICING = config.pricing;
 const EBOOK_PRICE_USD = Number(config.ebook?.priceUsd || 19.99);
-const ETH_USD_PRICE = Number(process.env.ETH_USD_PRICE || 3500);
 const BTC_SUBSCRIPTION_AMOUNTS = {
   starter: '0.0010327',
   growth: '0.00325',
 };
 const BTC_REFERENCE_USD_PRICE = Number(process.env.BTC_USD_PRICE || 70000);
+const ETH_SUBSCRIPTION_AMOUNTS = {
+  starter: '0.03238',
+  growth: '0.10206',
+};
+const ETH_REFERENCE_USD_PRICE = Number(process.env.ETH_USD_PRICE || 3500);
 
 function getEbookBtcAmount() {
   const { rate } = getBtcUsdRate();
@@ -185,16 +189,18 @@ function buildEbookCheckoutPayload({ name, email, reference } = {}) {
 }
 
 function getCryptoAmount(amountUsd, method, plan = 'starter') {
-  if (method === 'bitcoin' && BTC_SUBSCRIPTION_AMOUNTS[plan]) {
-    const { rate } = getBtcUsdRate();
-    const baseline = Number(BTC_SUBSCRIPTION_AMOUNTS[plan]);
+  const subscriptionAmounts = method === 'bitcoin' ? BTC_SUBSCRIPTION_AMOUNTS : ETH_SUBSCRIPTION_AMOUNTS;
+  const referenceRate = method === 'bitcoin' ? BTC_REFERENCE_USD_PRICE : ETH_REFERENCE_USD_PRICE;
+  if (subscriptionAmounts[plan]) {
+    const { rate } = getCryptoUsdRate(method);
+    const baseline = Number(subscriptionAmounts[plan]);
     if (Number.isFinite(rate) && rate > 0 && Number.isFinite(baseline)) {
-      if (rate === BTC_REFERENCE_USD_PRICE) return BTC_SUBSCRIPTION_AMOUNTS[plan];
-      return (baseline * BTC_REFERENCE_USD_PRICE / rate).toFixed(8);
+      if (rate === referenceRate) return subscriptionAmounts[plan];
+      return (baseline * referenceRate / rate).toFixed(method === 'bitcoin' ? 8 : 6);
     }
-    return BTC_SUBSCRIPTION_AMOUNTS[plan];
+    return subscriptionAmounts[plan];
   }
-  const price = method === 'bitcoin' ? getBtcUsdRate().rate : ETH_USD_PRICE;
+  const price = getCryptoUsdRate(method).rate;
   if (!Number.isFinite(price) || price <= 0) return null;
   return (Number(amountUsd) / price).toFixed(method === 'bitcoin' ? 8 : 6);
 }
@@ -268,6 +274,7 @@ app.get('/api/payments/options', (req, res) => {
         currency: 'ETH',
         methods: ['wallet-transfer'],
         address: config.wallets.ethereum.address,
+        rate: getCryptoUsdRate('ethereum'),
       },
     },
     supportedCurrencies: ['USD', 'KES', 'BTC', 'ETH'],
