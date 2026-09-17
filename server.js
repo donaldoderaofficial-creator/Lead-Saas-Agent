@@ -94,6 +94,10 @@ app.use((req, res, next) => {
 
 app.use(express.static('public'));
 
+app.get('/init', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 app.use((req, res, next) => {
   const requestOrigin = req.get('origin');
   if (!requestOrigin) return next();
