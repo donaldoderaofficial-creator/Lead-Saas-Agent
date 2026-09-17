@@ -7,42 +7,42 @@
   status = 301
   force = true
 
-# Keep the frontend and API on separate deploys so the backend can use its
-# persistent data disk and receive payment callbacks reliably.
+# The frontend is static; the backend runs on the self-hosted production API.
+# Point api.dispatchpro.ai at the Oracle VM managed by deploy/setup-server.sh.
 
 [[redirects]]
   from = "/api/*"
-  to = "https://lead-agent-saas.onrender.com/api/:splat"
+  to = "https://api.dispatchpro.ai/api/:splat"
   status = 200
   force = true
 
 [[redirects]]
   from = "/auth/*"
-  to = "https://lead-agent-saas.onrender.com/auth/:splat"
+  to = "https://api.dispatchpro.ai/auth/:splat"
   status = 200
   force = true
 
 [[redirects]]
   from = "/leads/*"
-  to = "https://lead-agent-saas.onrender.com/leads/:splat"
+  to = "https://api.dispatchpro.ai/leads/:splat"
   status = 200
   force = true
 
 [[redirects]]
   from = "/payments/*"
-  to = "https://lead-agent-saas.onrender.com/payments/:splat"
+  to = "https://api.dispatchpro.ai/payments/:splat"
   status = 200
   force = true
 
 [[redirects]]
   from = "/health"
-  to = "https://lead-agent-saas.onrender.com/health"
+  to = "https://api.dispatchpro.ai/health"
   status = 200
   force = true
 
 [[redirects]]
   from = "/ebook/*"
-  to = "https://lead-agent-saas.onrender.com/ebook/:splat"
+  to = "https://api.dispatchpro.ai/ebook/:splat"
   status = 200
   force = true
 
