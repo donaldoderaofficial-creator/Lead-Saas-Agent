@@ -422,3 +422,4 @@
 {"timestamp":"2026-09-17T10:35:36.719Z","level":"info","message":"GET /api/assistant/mia","statusCode":404,"duration":"5ms"}
 {"timestamp":"2026-09-17T10:36:34.826Z","level":"info","message":"GET /ready","statusCode":200,"duration":"2ms"}
 {"timestamp":"2026-09-17T10:36:34.845Z","level":"info","message":"POST /api/assistant/mia","statusCode":404,"duration":"7ms"}
+{"timestamp":"2026-09-17T10:41:48.995Z","level":"info","message":"POST /api/assistant/mia","statusCode":404,"duration":"1ms"}
