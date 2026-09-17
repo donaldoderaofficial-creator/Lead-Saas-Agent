@@ -2,10 +2,9 @@
 
 ## Before you deploy
 
-This app writes to a SQLite file (`data.db`) for pending leads and completed
-reports. **Both Render and Railway wipe the filesystem on every redeploy
-unless you attach a persistent disk/volume.** Skip that step and every paid
-report vanishes the next time you push code. Both setups below handle it.
+This app writes to SQLite for pending leads and completed reports. Production
+uses the Oracle Always Free VM path with persistent storage, systemd restart
+policy, and Caddy HTTPS.
 
 ## 1. Push this folder to GitHub
 
@@ -21,31 +20,18 @@ git remote add origin https://github.com/<you>/lead-agent-saas.git
 git push -u origin main
 ```
 
-## 2. Deploy on Render
+## 2. Deploy on the Oracle Always Free VM
 
-`render.yaml` in this folder already defines the service, including a 1GB
-persistent disk mounted at `/data`.
+Follow `ORACLE_DEPLOY.md`, then run `deploy/setup-server.sh`. The service listens
+on port `8000`, runs under systemd, restarts after crashes and reboots, stores
+SQLite on persistent disk, and is exposed through Caddy with HTTPS.
 
-1. Go to [dashboard.render.com](https://dashboard.render.com) -> **New** -> **Blueprint**
-2. Connect the GitHub repo you just pushed — Render reads `render.yaml` automatically
-3. It will prompt you for the env vars marked `sync: false` (your real credentials).
-   Fill in: `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`,
-   `PAYPAL_PLAN_STARTER_MONTHLY`, `PAYPAL_PLAN_GROWTH_MONTHLY`,
-   `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_SHORT_CODE`,
-   `MPESA_PASSKEY`, `MPESA_CALLBACK_URL` (use the Render URL you're given +
-   `/payments/mpesa/callback`), plus `COMPLIANCE_MPESA_NUMBER`,
-   `COMPLIANCE_BITCOIN_ADDRESS`, and `COMPLIANCE_ETHEREUM_ADDRESS`.
-   Keep those payment destinations in the provider dashboard, not in Git.
-4. Deploy — you'll get a permanent `https://lead-agent-saas.onrender.com` URL
-5. Update `MPESA_CALLBACK_URL` and your PayPal webhook to point at that real URL
+Point `api.dispatchpro.ai` at the VM and use it for payment callbacks, email
+webhooks, and the Netlify API proxy.
 
-Note: Render's free tier spins down after inactivity and takes ~30s to wake
-on the next request — fine for testing, worth upgrading to a paid instance
-before real customers depend on it.
+## 3. Optional alternative hosting
 
-## 3. Deploy on Railway (alternative)
-
-Railway doesn't use a checked-in blueprint file the way Render does — set it
+Railway doesn't use a checked-in blueprint file — set it
 up from the dashboard:
 
 1. Go to [railway.app](https://railway.app) -> **New Project** -> **Deploy from GitHub repo**
@@ -56,18 +42,9 @@ up from the dashboard:
 5. Deploy — Railway gives you a permanent `https://<project>.up.railway.app` URL
 6. Same as step 5 above: update your callback/webhook URLs to the real domain
 
-## 3b. Deploy on Render Free (no hosting charge)
-
-Use `render-free.yaml` when you need a no-cost validation environment. Create
-a Render Blueprint from that file and set the prompted `sync: false` values,
-including the exact BTC and ETH wallet addresses. Render Free services sleep
-after inactivity and their local filesystem is ephemeral, so do not use this
-option as the only store for paid customer records. The free service is best
-for demos, checkout testing, and early validation.
-
-For persistent production data without a recurring hosting bill, use the
-Oracle Always Free VM instructions in `ORACLE_DEPLOY.md`. You remain
-responsible for operating-system updates, backups, TLS, and monitoring.
+For persistent production data without a recurring hosting bill, use the Oracle
+Always Free VM instructions in `ORACLE_DEPLOY.md`. You remain responsible for
+operating-system updates, backups, TLS, and monitoring.
 
 ## 3c. Keep hosting options separate from customer options
 
