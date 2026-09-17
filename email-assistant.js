@@ -4,6 +4,7 @@ const crypto = require('node:crypto');
 const { getCryptoUsdRate } = require('./crypto-rates');
 
 const MINIMUM_CUSTOM_USD = Math.max(Number(process.env.CUSTOM_PACKAGE_MIN_USD || 10001), 10001);
+const CUSTOM_TERM_MONTHS = 6;
 
 function inferCurrency(text) {
   const value = String(text || '').toUpperCase();
@@ -26,6 +27,7 @@ function quoteCustomPackage({ currency = 'USD', budgetUsd = MINIMUM_CUSTOM_USD }
   const amount = selected === 'USD' ? usd : usd / rate.rate;
   return {
     usd,
+    termMonths: CUSTOM_TERM_MONTHS,
     currency: selected,
     amount: selected === 'USD' ? usd.toFixed(2) : amount.toFixed(selected === 'BTC' ? 8 : 6),
     rate,
@@ -40,7 +42,7 @@ function buildMiaReply(question) {
     const currency = inferCurrency(text);
     const quote = quoteCustomPackage({ currency, budgetUsd: inferBudget(text) });
     const amount = quote.currency === 'USD' ? `$${quote.amount} USD` : `${quote.amount} ${quote.currency} (about $${quote.usd.toFixed(2)} USD at the current market rate)`;
-    return `That sounds like an exciting opportunity. The current custom-package starting estimate is ${amount}. Final scope is confirmed after discovery, and the minimum package value is $${MINIMUM_CUSTOM_USD.toLocaleString()} USD. What are your users, monthly lead volume, integrations, timeline, and preferred currency? You can also reach our team at hello@dispatchpro.ai.`;
+    return `That sounds like an exciting opportunity. The current custom-package starting estimate is ${amount} total for a ${CUSTOM_TERM_MONTHS}-month engagement. Final scope is confirmed after discovery, and the minimum package value is $${MINIMUM_CUSTOM_USD.toLocaleString()} USD for the full term. What are your users, monthly lead volume, integrations, timeline, and preferred currency? You can also reach our team at hello@dispatchpro.ai.`;
   }
   if (/btc|bitcoin|eth|ethereum|crypto|pay/.test(lower)) return 'Absolutely. Dispatch Pro accepts BTC and ETH wallet payments. Starter and Growth quotes use live market rates, and payment proof is reviewed before access is enabled. Would you like a current Starter, Growth, or custom-package quote?';
   if (/starter|growth|plan|pricing/.test(lower)) return 'I can help you compare them. Starter suits teams beginning their pipeline, while Growth supports larger lead volume, more sources, priority support, and custom qualification logic. How many leads do you expect each month?';
@@ -60,7 +62,7 @@ function buildCustomReply({ body = '', subject = '' } = {}) {
       const currency = inferCurrency(text);
       const quote = quoteCustomPackage({ currency, budgetUsd: inferBudget(text) });
       const amount = quote.currency === 'USD' ? `$${quote.amount} USD` : `${quote.amount} ${quote.currency} (about $${quote.usd.toFixed(2)} USD at the current market rate)`;
-      return `For a custom Dispatch Pro package, the current starting estimate is ${amount}. Custom scope is confirmed after discovery, and the minimum package value is $${MINIMUM_CUSTOM_USD.toLocaleString()} USD. Tell me your users, monthly lead volume, integrations, timeline, and preferred currency, or email hello@dispatchpro.ai.`;
+      return `For a custom Dispatch Pro package, the current starting estimate is ${amount} total for a ${CUSTOM_TERM_MONTHS}-month engagement. Custom scope is confirmed after discovery, and the minimum package value is $${MINIMUM_CUSTOM_USD.toLocaleString()} USD for the full term. Tell me your users, monthly lead volume, integrations, timeline, and preferred currency, or email hello@dispatchpro.ai.`;
     }
     if (/btc|bitcoin|eth|ethereum|crypto|pay/.test(lower)) {
       return 'Dispatch Pro accepts BTC and ETH wallet payments. Starter and Growth quotes are calculated from live market rates, and payment proof is reviewed before access is enabled. Visit the billing page to request a current quote.';
@@ -77,7 +79,7 @@ function buildCustomReply({ body = '', subject = '' } = {}) {
   const amount = quote.currency === 'USD'
     ? `$${quote.amount} USD`
     : `${quote.amount} ${quote.currency} (approximately $${quote.usd.toFixed(2)} USD at the current market rate)`;
-  const reply = `Hello,\n\nThank you for contacting Dispatch Pro about a custom package. Based on your message, our starting custom-package estimate is ${amount}. The final scope and commercial terms will be confirmed after a discovery call; this is an estimate, not a payment request or financial advice.\n\nPlease reply with your target users, monthly lead volume, required integrations, timeline, and preferred settlement currency: BTC, ETH, or USD. We will prepare a written proposal aligned with our mission to help businesses grow through practical technology and lead intelligence, and our vision of reliable, responsible automation.\n\nBest regards,\nDispatch Pro\n${process.env.EMAIL_FROM || 'hello@dispatchpro.ai'}`;
+  const reply = `Hello,\n\nThank you for contacting Dispatch Pro about a custom package. Based on your message, our starting custom-package estimate is ${amount} total for a ${CUSTOM_TERM_MONTHS}-month engagement. The final scope and commercial terms will be confirmed after a discovery call; this is an estimate, not a payment request or financial advice.\n\nPlease reply with your target users, monthly lead volume, required integrations, timeline, and preferred settlement currency: BTC, ETH, or USD. We will prepare a written proposal aligned with our mission to help businesses grow through practical technology and lead intelligence, and our vision of reliable, responsible automation.\n\nBest regards,\nDispatch Pro\n${process.env.EMAIL_FROM || 'hello@dispatchpro.ai'}`;
   return { reply, quote, subject: subject || 'Custom package enquiry' };
 }
 
@@ -119,4 +121,4 @@ async function sendReply({ to, subject, text }) {
   return { sent: true, provider: 'resend', id: (await response.json()).id || null };
 }
 
-module.exports = { buildCustomReply, buildMiaReply, improveReplyWithAI, verifyWebhookSignature, sendReply, MINIMUM_CUSTOM_USD };
+module.exports = { buildCustomReply, buildMiaReply, improveReplyWithAI, verifyWebhookSignature, sendReply, MINIMUM_CUSTOM_USD, CUSTOM_TERM_MONTHS };
