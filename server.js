@@ -34,6 +34,7 @@ const { hasActiveSubscription } = require('./subscription-policy');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateQrCode } = require('./auth');
 const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = require('./explorium-client');
 const { parseDataset, validateObservation } = require('./geospatial-safety');
+const { getBtcUsdRate, startBtcUsdSync } = require('./crypto-rates');
 
 const app = express();
 const DISPATCH_PRO = config.company;
@@ -146,17 +147,18 @@ function recordFailedAttempt(username, req) {
 // Flexible, configurable pricing from config system
 const PRICING = config.pricing;
 const EBOOK_PRICE_USD = Number(config.ebook?.priceUsd || 19.99);
-const BTC_USD_PRICE = Number(process.env.BTC_USD_PRICE || 70000);
 const ETH_USD_PRICE = Number(process.env.ETH_USD_PRICE || 3500);
 const BTC_SUBSCRIPTION_AMOUNTS = {
   starter: '0.0010327',
-  growth: '0.003254',
+  growth: '0.00325',
 };
+const BTC_REFERENCE_USD_PRICE = Number(process.env.BTC_USD_PRICE || 70000);
 
 function getEbookBtcAmount() {
-  if (!Number.isFinite(BTC_USD_PRICE) || BTC_USD_PRICE <= 0) return '0.00025700';
+  const { rate } = getBtcUsdRate();
+  if (!Number.isFinite(rate) || rate <= 0) return '0.00025700'
   const btcValue = EBOOK_PRICE_USD / BTC_USD_PRICE;
-  return btcValue < 0.000257 ? '0.00025700' : btcValue.toFixed(8);
+  const btcValue = EBOOK_PRICE_USD / rate;
 }
 
 function buildEbookCheckoutPayload({ name, email, reference } = {}) {
@@ -181,9 +183,14 @@ function buildEbookCheckoutPayload({ name, email, reference } = {}) {
 
 function getCryptoAmount(amountUsd, method, plan = 'starter') {
   if (method === 'bitcoin' && BTC_SUBSCRIPTION_AMOUNTS[plan]) {
+    const { rate } = getBtcUsdRate();
+    const baseline = Number(BTC_SUBSCRIPTION_AMOUNTS[plan]);
+    if (Number.isFinite(rate) && rate > 0 && Number.isFinite(baseline)) {
+      return (baseline * BTC_REFERENCE_USD_PRICE / rate).toFixed(8);
+    }
     return BTC_SUBSCRIPTION_AMOUNTS[plan];
   }
-  const price = method === 'bitcoin' ? BTC_USD_PRICE : ETH_USD_PRICE;
+  const price = method === 'bitcoin' ? getBtcUsdRate().rate : ETH_USD_PRICE;
   if (!Number.isFinite(price) || price <= 0) return null;
   return (Number(amountUsd) / price).toFixed(method === 'bitcoin' ? 8 : 6);
 }
@@ -240,6 +247,7 @@ app.get('/api/payments/options', (req, res) => {
         currency: 'BTC',
         methods: ['wallet-transfer'],
         address: config.wallets.bitcoin.address,
+        rate: getBtcUsdRate(),
       },
       ethereum: {
         enabled: !!config.wallets.ethereum.address,
@@ -1184,6 +1192,7 @@ const HOST = config.host;
 
 function startServer() {
   initializeSafetyDataset();
+  startBtcUsdSync();
   const server = app.listen(PORT, HOST, () => {
     logger.info(`Dispatch Pro API listening on ${HOST}:${PORT}`, {
       env: config.env,
