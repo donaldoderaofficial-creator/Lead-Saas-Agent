@@ -540,6 +540,11 @@ Example body:
 ```
 
 #### `GET /api/email/status`
+
+#### `POST /api/assistant/mia`
+Ask Mia, the public Dispatch Pro virtual assistant, about plans, workflows,
+custom packages, and BTC/ETH payment options. The assistant uses current market
+rates for custom estimates and does not finalize scope or activate access.
 Returns non-secret configuration status for the email assistant. This does not
 read the mailbox; the email provider must forward inbound messages to the
 webhook endpoint.

@@ -33,6 +33,28 @@ function quoteCustomPackage({ currency = 'USD', budgetUsd = MINIMUM_CUSTOM_USD }
 }
 
 function buildCustomReply({ body = '', subject = '' } = {}) {
+
+  function buildMiaReply(question) {
+    const text = String(question || '').trim();
+    const lower = text.toLowerCase();
+    if (!text) return 'Hi, I am Mia from Dispatch Pro. Ask me about plans, custom packages, lead workflows, or paying in BTC or ETH.';
+    if (/custom|enterprise|scale|10,?000|large package/.test(lower)) {
+      const currency = inferCurrency(text);
+      const quote = quoteCustomPackage({ currency, budgetUsd: inferBudget(text) });
+      const amount = quote.currency === 'USD' ? `$${quote.amount} USD` : `${quote.amount} ${quote.currency} (about $${quote.usd.toFixed(2)} USD at the current market rate)`;
+      return `For a custom Dispatch Pro package, the current starting estimate is ${amount}. Custom scope is confirmed after discovery, and the minimum package value is $${MINIMUM_CUSTOM_USD.toLocaleString()} USD. Tell me your users, monthly lead volume, integrations, timeline, and preferred currency, or email hello@dispatchpro.ai.`;
+    }
+    if (/btc|bitcoin|eth|ethereum|crypto|pay/.test(lower)) {
+      return 'Dispatch Pro accepts BTC and ETH wallet payments. Starter and Growth quotes are calculated from live market rates, and payment proof is reviewed before access is enabled. Visit the billing page to request a current quote.';
+    }
+    if (/starter|growth|plan|pricing/.test(lower)) {
+      return 'Starter is for teams beginning their pipeline, while Growth supports larger lead volume, more sources, priority support, and custom qualification logic. You can compare and select a package on the billing page.';
+    }
+    if (/lead|qualif|dashboard|workflow|integration/.test(lower)) {
+      return 'Dispatch Pro captures inbound leads, qualifies them with structured business signals, and keeps follow-up work visible in one operational dashboard. Mia can help route a custom request to the team.';
+    }
+    return 'I can help with Dispatch Pro plans, lead qualification, custom packages, crypto payment quotes, and next steps. What are you trying to accomplish?';
+  }
   const quote = quoteCustomPackage({ currency: inferCurrency(body), budgetUsd: inferBudget(body) });
   const amount = quote.currency === 'USD'
     ? `$${quote.amount} USD`
@@ -80,3 +102,4 @@ async function sendReply({ to, subject, text }) {
 }
 
 module.exports = { buildCustomReply, improveReplyWithAI, verifyWebhookSignature, sendReply, MINIMUM_CUSTOM_USD };
+module.exports = { buildCustomReply, buildMiaReply, improveReplyWithAI, verifyWebhookSignature, sendReply, MINIMUM_CUSTOM_USD };
