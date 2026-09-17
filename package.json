@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Event-driven lead-qualification agent exposed as an HTTP API",
   "main": "server.js",
-  "author": "Donald Odera",
+  "author": "Odera Donald Ombok, BSc - Founder & CEO, Dispatch Pro",
   "license": "MIT",
   "engines": {
     "node": ">=22"

@@ -233,6 +233,10 @@ app.buildSubscriptionCheckoutPayload = buildSubscriptionCheckoutPayload;
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
+    release: {
+      version: require('./package.json').version,
+      attribution: DISPATCH_PRO.releaseAttribution,
+    },
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     prospecting: Boolean(process.env.EXPLORIUM_API_KEY),
