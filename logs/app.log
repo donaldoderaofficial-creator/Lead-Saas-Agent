@@ -356,3 +356,4 @@
 {"timestamp":"2026-09-17T08:35:15.417Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"1ms"}
 {"timestamp":"2026-09-17T08:35:15.419Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-17T08:35:40.844Z","level":"info","message":"GET /ready","statusCode":404,"duration":"6ms"}
+{"timestamp":"2026-09-17T08:36:55.075Z","level":"info","message":"GET /ready","statusCode":404,"duration":"2ms"}
