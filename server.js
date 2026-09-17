@@ -249,6 +249,17 @@ app.get('/ready', (req, res) => {
   });
 });
 
+app.get('/api/email/status', (req, res) => {
+  res.json({
+    inboundWebhook: Boolean(process.env.EMAIL_WEBHOOK_SECRET) || !config.isProd,
+    aiDrafting: Boolean(process.env.OPENAI_API_KEY),
+    autoReply: process.env.EMAIL_AUTOREPLY_ENABLED === 'true' && Boolean(process.env.RESEND_API_KEY),
+    senderConfigured: Boolean(process.env.EMAIL_FROM),
+    mailboxForwardingRequired: true,
+    endpoint: '/api/email/inbound',
+  });
+});
+
 app.post('/api/email/inbound', asyncHandler(async (req, res) => {
   const signature = req.get('x-email-signature');
   const rawBody = JSON.stringify(req.body || {});

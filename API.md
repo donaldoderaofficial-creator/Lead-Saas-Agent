@@ -539,6 +539,11 @@ Example body:
 }
 ```
 
+#### `GET /api/email/status`
+Returns non-secret configuration status for the email assistant. This does not
+read the mailbox; the email provider must forward inbound messages to the
+webhook endpoint.
+
 ---
 
 ## Error Responses
