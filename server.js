@@ -254,14 +254,6 @@ app.get('/ready', (req, res) => {
 });
 
 app.get('/api/email/status', (req, res) => {
-
-  app.post('/api/assistant/mia', (req, res) => {
-    const { question } = req.body || {};
-    if (typeof question !== 'string' || question.length > 2000) {
-      return res.status(400).json({ error: 'question must be a string of 2,000 characters or fewer' });
-    }
-    res.json({ assistant: 'Mia', answer: buildMiaReply(question) });
-  });
   res.json({
     inboundWebhook: Boolean(process.env.EMAIL_WEBHOOK_SECRET) || !config.isProd,
     aiDrafting: Boolean(process.env.OPENAI_API_KEY),
@@ -270,6 +262,14 @@ app.get('/api/email/status', (req, res) => {
     mailboxForwardingRequired: true,
     endpoint: '/api/email/inbound',
   });
+});
+
+app.post('/api/assistant/mia', (req, res) => {
+  const { question } = req.body || {};
+  if (typeof question !== 'string' || question.length > 2000) {
+    return res.status(400).json({ error: 'question must be a string of 2,000 characters or fewer' });
+  }
+  res.json({ assistant: 'Mia', answer: buildMiaReply(question) });
 });
 
 app.post('/api/email/inbound', asyncHandler(async (req, res) => {
