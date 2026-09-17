@@ -184,13 +184,14 @@
       <div class="price-card">
         <div class="tier">Scale</div>
         <div class="price">Custom</div>
-        <div class="desc">For multi-team, multi-pipeline operations.</div>
+        <div class="desc">For multi-team, multi-pipeline operations that need a tailored operating system.</div>
         <ul class="feat">
-          <li>Enterprise controls</li>
-          <li>Dedicated workflow setup</li>
-          <li>Audit and review support</li>
+          <li>Custom lead workflows and integrations</li>
+          <li>Dedicated setup, governance, and support</li>
+          <li>Live-rate BTC or ETH settlement options</li>
+          <li>Starting engagements from $10,001</li>
         </ul>
-        <button class="btn ghost" type="button" data-action="contact">Talk to us</button>
+        <button class="btn ghost" type="button" data-action="contact">Request a custom proposal</button>
       </div>
     </div>
   </section>
@@ -227,7 +228,7 @@
         return;
       }
       if (action === 'contact') {
-        window.location.href = 'mailto:hello@dispatchpro.ai?subject=Dispatch%20Pro%20Scale%20plan';
+        window.location.href = 'mailto:hello@dispatchpro.ai?subject=Dispatch%20Pro%20custom%20proposal&body=Hello%20Dispatch%20Pro%2C%0A%0AWe%20are%20interested%20in%20a%20custom%20package.%0A%0ATeam%20size%3A%0AMonthly%20lead%20volume%3A%0ARequired%20integrations%3A%0ATarget%20timeline%3A%0APreferred%20settlement%3A%20USD%2C%20BTC%2C%20or%20ETH%0A';
         return;
       }
       const plan = encodeURIComponent(button.dataset.plan || 'starter');
