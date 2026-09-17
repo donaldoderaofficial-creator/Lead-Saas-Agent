@@ -3,7 +3,7 @@
 ## Overview
 Dispatch Pro is a scalable SaaS platform for lead qualification and management. This document describes all public API endpoints, authentication requirements, and response formats.
 
-**Base URL:** `https://api.dispatchpro.com` (production) | `http://localhost:3000` (development)
+**Base URL:** `https://api.dispatchpro.com` (production) | `http://localhost:8000` (development)
 
 **API Version:** 1.0
 
@@ -506,6 +506,19 @@ System health check.
   "status": "ok",
   "timestamp": "2026-08-18T10:30:00Z",
   "uptime": 86400
+}
+```
+
+#### `GET /ready`
+Readiness check for load balancers and deployment platforms. Verifies that the
+application can query its SQLite database and returns `503` when it cannot.
+
+**Response:** `200 OK`
+```json
+{
+  "status": "ready",
+  "timestamp": "2026-09-17T10:30:00Z",
+  "database": { "status": "ok" }
 }
 ```
 

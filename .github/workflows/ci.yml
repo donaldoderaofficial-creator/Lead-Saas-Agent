@@ -23,8 +23,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate JavaScript
-        run: npm run harness
+      - name: Run tests and syntax checks
+        run: npm test
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Smoke test health endpoint
         env:
@@ -34,11 +37,11 @@ jobs:
           BITCOIN_WALLET_ADDRESS: ci-only-bitcoin-wallet
           ETHEREUM_WALLET_ADDRESS: ci-only-ethereum-wallet
         run: |
-          node server.js > /tmp/lead-agent.log 2>&1 &
+          PORT=8000 node server.js > /tmp/lead-agent.log 2>&1 &
           PID=$!
           trap 'kill $PID 2>/dev/null || true' EXIT
           for i in {1..20}; do
-            if curl --fail --silent http://127.0.0.1:3000/health | grep -q '"status":"ok"'; then
+            if curl --fail --silent http://127.0.0.1:8000/ready | grep -q '"status":"ready"'; then
               exit 0
             fi
             sleep 1
