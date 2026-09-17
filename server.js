@@ -148,6 +148,10 @@ const PRICING = config.pricing;
 const EBOOK_PRICE_USD = Number(config.ebook?.priceUsd || 19.99);
 const BTC_USD_PRICE = Number(process.env.BTC_USD_PRICE || 70000);
 const ETH_USD_PRICE = Number(process.env.ETH_USD_PRICE || 3500);
+const BTC_SUBSCRIPTION_AMOUNTS = {
+  starter: '0.0010327',
+  growth: '0.003254',
+};
 
 function getEbookBtcAmount() {
   if (!Number.isFinite(BTC_USD_PRICE) || BTC_USD_PRICE <= 0) return '0.00025700';
@@ -175,7 +179,10 @@ function buildEbookCheckoutPayload({ name, email, reference } = {}) {
   };
 }
 
-function getCryptoAmount(amountUsd, method) {
+function getCryptoAmount(amountUsd, method, plan = 'starter') {
+  if (method === 'bitcoin' && BTC_SUBSCRIPTION_AMOUNTS[plan]) {
+    return BTC_SUBSCRIPTION_AMOUNTS[plan];
+  }
   const price = method === 'bitcoin' ? BTC_USD_PRICE : ETH_USD_PRICE;
   if (!Number.isFinite(price) || price <= 0) return null;
   return (Number(amountUsd) / price).toFixed(method === 'bitcoin' ? 8 : 6);
@@ -184,7 +191,7 @@ function getCryptoAmount(amountUsd, method) {
 function buildSubscriptionCheckoutPayload({ plan = 'starter', method = 'bitcoin', name, email, reference } = {}) {
   const walletType = method === 'bitcoin' ? 'bitcoin' : 'ethereum';
   const amountUsd = Number(PRICING.usd[plan]?.price);
-  const amountCrypto = getCryptoAmount(amountUsd, method);
+  const amountCrypto = getCryptoAmount(amountUsd, method, plan);
   const walletAddress = config.wallets[walletType].address;
   const orderReference = reference || crypto.randomUUID();
   return {

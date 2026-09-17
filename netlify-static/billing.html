@@ -82,7 +82,9 @@
       const method = document.getElementById('method').value;
       const walletBox = document.getElementById('wallet');
       const currency = method === 'bitcoin' ? 'BTC' : 'ETH';
-      const amount = selectedPlan === 'growth' ? '0.0025' : '0.0012';
+      const amount = method === 'bitcoin'
+        ? (selectedPlan === 'growth' ? '0.003254' : '0.0010327')
+        : (selectedPlan === 'growth' ? '0.0028' : '0.0014');
 
       walletBox.innerHTML = `
         <strong>${name}</strong><br>
