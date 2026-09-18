@@ -526,3 +526,4 @@
 {"timestamp":"2026-09-18T13:23:22.520Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:8000","env":"development","isProd":false}
 {"timestamp":"2026-09-18T13:23:26.202Z","level":"info","message":"GET /","statusCode":200,"duration":"5ms"}
 {"timestamp":"2026-09-18T13:23:55.401Z","level":"info","message":"GET /api/email/status","statusCode":200,"duration":"4ms"}
+{"timestamp":"2026-09-18T13:26:49.383Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:8000","env":"development","isProd":false}
