@@ -521,3 +521,5 @@
 {"timestamp":"2026-09-18T13:17:00.761Z","level":"info","message":"POST /api/assistant/mia","statusCode":200,"duration":"1ms"}
 {"timestamp":"2026-09-18T13:17:09.374Z","level":"info","message":"POST /api/assistant/mia","statusCode":200,"duration":"1ms"}
 {"timestamp":"2026-09-18T13:17:20.726Z","level":"info","message":"POST /api/assistant/mia","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-18T13:19:40.832Z","level":"info","message":"GET /api/email/status","statusCode":200,"duration":"0ms"}
+{"timestamp":"2026-09-18T13:20:28.855Z","level":"info","message":"GET /api/email/status","statusCode":200,"duration":"1ms"}
