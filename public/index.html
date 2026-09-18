@@ -23,6 +23,10 @@
 <style>.platform-flow{margin:34px 0 42px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}.platform-flow-head{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px;border-bottom:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)}.platform-flow-head strong{font-family:'Space Grotesk',sans-serif;font-size:18px;color:var(--text)}.platform-flow-head span{color:var(--accent2);text-transform:uppercase;letter-spacing:.06em}.platform-flow-grid{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}.platform-stage{padding:18px 20px;border-right:1px solid var(--line);min-height:104px}.platform-stage:last-child{border-right:0}.platform-stage .stage-number{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}.platform-stage h3{font-family:'Space Grotesk',sans-serif;font-size:17px;margin:5px 0 0}.platform-stage p,.flow-orb{display:none}.flow-track{position:relative;height:120px;overflow:hidden;background:linear-gradient(90deg,transparent 24.8%,var(--line) 25%,var(--line) 25.2%,transparent 25.4%),linear-gradient(90deg,transparent 49.8%,var(--line) 50%,var(--line) 50.2%,transparent 50.4%),linear-gradient(90deg,transparent 74.8%,var(--line) 75%,var(--line) 75.2%,transparent 75.4%)}.flow-track::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:var(--line)}.flow-lead{position:absolute;top:50%;display:block;min-width:150px;padding:9px 13px;transform:translateY(-50%);background:var(--panel2);border:1px solid var(--line);border-radius:7px;font-size:12px;animation:flowTravel 14s linear infinite;white-space:nowrap}.flow-lead strong{font-weight:600;display:block}.flow-lead span{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)}.flow-lead:nth-child(2){top:65%;animation-delay:-4s}.flow-lead:nth-child(3){top:45%;animation-delay:-8s}@keyframes flowTravel{0%{left:-180px}100%{left:105%}}@media (prefers-reduced-motion:reduce){.flow-lead{animation:none;left:20%}}@media (max-width:860px){.platform-flow-grid{grid-template-columns:repeat(2,1fr)}.platform-stage:nth-child(2){border-right:0}.platform-stage:nth-child(-n+2){border-bottom:1px solid var(--line)}}@media (max-width:640px){.platform-flow-grid{grid-template-columns:1fr}.platform-stage{border-right:0!important;border-bottom:1px solid var(--line)}.platform-stage:last-child{border-bottom:0}.platform-flow-head{align-items:flex-start;flex-direction:column;gap:6px}}
 </style>
 <style>.flow-lead:nth-child(4){animation-delay:-11.5s}</style>
+<style>
+.mia-quick{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 12px}.mia-quick button{border:1px solid rgba(120,240,194,.25);border-radius:999px;background:rgba(120,240,194,.07);color:#d9fff1;padding:7px 9px;font-size:11px;cursor:pointer;transition:.15s ease}.mia-quick button:hover{border-color:var(--accent2);background:rgba(120,240,194,.14);transform:translateY(-1px)}.mia-signal{display:flex;align-items:center;gap:7px;padding:0 14px 11px;color:#9aa9b8;font-size:11px}.mia-signal .pulse{width:6px;height:6px;background:var(--accent2);box-shadow:0 0 0 4px rgba(120,240,194,.1)}
+@media (max-width:680px){.mia{right:14px;bottom:14px}.mia-panel{bottom:54px}}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -280,7 +284,9 @@
   </button>
   <div class="mia-panel" id="miaPanel" hidden>
     <div class="mia-head"><div><strong>Mia</strong><small>Dispatch Pro assistant</small></div><button id="miaClose" type="button" aria-label="Close Mia">×</button></div>
-    <div class="mia-messages" id="miaMessages"><div class="mia-message mia-bot">Hi, I’m Mia. Ask about plans, custom packages, lead workflows, or BTC and ETH payments.</div></div>
+    <div class="mia-messages" id="miaMessages"><div class="mia-message mia-bot">Hi, I’m Mia. Give me your growth goal and I’ll help turn it into a clear next move.</div></div>
+    <div class="mia-signal"><span class="pulse"></span><span>Ready to map your fastest path to pipeline</span></div>
+    <div class="mia-quick" aria-label="Mia quick prompts"><button type="button" data-mia-prompt="Help me choose the right plan for my team">Find my best plan</button><button type="button" data-mia-prompt="I want a custom package for my business">Build a custom package</button><button type="button" data-mia-prompt="How can Dispatch Pro help me close more qualified leads?">Show me the workflow</button></div>
     <form class="mia-form" id="miaForm"><input id="miaInput" maxlength="2000" autocomplete="off" placeholder="Ask Mia a question..." aria-label="Message Mia" required><button type="submit" aria-label="Send message">Send</button></form>
   </div>
 </aside>
@@ -308,6 +314,7 @@
   const miaForm = document.getElementById('miaForm');
   const miaInput = document.getElementById('miaInput');
   const miaMessages = document.getElementById('miaMessages');
+  const miaQuickPrompts = document.querySelectorAll('[data-mia-prompt]');
   function setMiaOpen(open) {
     miaPanel.hidden = !open;
     miaToggle.setAttribute('aria-expanded', String(open));
@@ -322,6 +329,10 @@
   }
   miaToggle.addEventListener('click', () => setMiaOpen(miaPanel.hidden));
   miaClose.addEventListener('click', () => setMiaOpen(false));
+  miaQuickPrompts.forEach((button) => button.addEventListener('click', () => {
+    miaInput.value = button.dataset.miaPrompt;
+    miaForm.requestSubmit();
+  }));
   miaForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const question = miaInput.value.trim();
