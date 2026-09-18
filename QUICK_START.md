@@ -221,14 +221,14 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
 COPY . .
-EXPOSE 3000
+EXPOSE 8000
 CMD ["node", "server.js"]
 ```
 
 Build and run:
 ```bash
 docker build -t dispatch-pro .
-docker run -e NODE_ENV=production -p 3000:3000 dispatch-pro
+docker run -e NODE_ENV=production -p 8000:8000 dispatch-pro
 ```
 
 ### Environment-Specific Deployment
