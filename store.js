@@ -202,17 +202,17 @@ db.exec(`
 for (const column of ['crypto_payment_reference', 'crypto_transaction_id']) {
   try { db.exec(`ALTER TABLE subscription ADD COLUMN ${column} TEXT`); } catch (_) {}
 }
-for (const column of ['product', 'payment_method', 'plan', 'amount_crypto']) {
+for (const column of ['product', 'payment_method', 'plan', 'amount_crypto', 'referral_source']) {
   try { db.exec(`ALTER TABLE pending_leads ADD COLUMN ${column} TEXT`); } catch (_) {}
 }
 
 const pendingLeads = {
   set(ref, lead) {
-    db.prepare('INSERT OR REPLACE INTO pending_leads (ref, name, email, phone, product, payment_method, plan, amount_crypto) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(ref, lead.name, lead.email, lead.phone || null, lead.product || null, lead.paymentMethod || null, lead.plan || null, lead.amountCrypto || null);
+    db.prepare('INSERT OR REPLACE INTO pending_leads (ref, name, email, phone, product, payment_method, plan, amount_crypto, referral_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(ref, lead.name, lead.email, lead.phone || null, lead.product || null, lead.paymentMethod || null, lead.plan || null, lead.amountCrypto || null, lead.referralSource || null);
   },
   get(ref) {
-    const row = db.prepare('SELECT name, email, phone, product, payment_method, plan, amount_crypto FROM pending_leads WHERE ref = ?').get(ref);
+    const row = db.prepare('SELECT name, email, phone, product, payment_method, plan, amount_crypto, referral_source FROM pending_leads WHERE ref = ?').get(ref);
     if (!row) return undefined;
     return {
       name: row.name,
@@ -222,6 +222,7 @@ const pendingLeads = {
       ...(row.payment_method ? { paymentMethod: row.payment_method } : {}),
       ...(row.plan ? { plan: row.plan } : {}),
       ...(row.amount_crypto ? { amountCrypto: row.amount_crypto } : {}),
+      ...(row.referral_source ? { referralSource: row.referral_source } : {}),
     };
   },
   has(ref) {

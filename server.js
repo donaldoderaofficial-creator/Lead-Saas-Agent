@@ -712,6 +712,9 @@ app.post('/api/lead', requireActiveSubscription, async (req, res) => {
     }
 
     if (method === 'mpesa') {
+      if (!config.payment.mpesa.enabled || !config.payment.mpesa.shortCode || !process.env.MPESA_PASSKEY || !process.env.MPESA_CALLBACK_URL) {
+        return res.status(503).json({ error: 'M-Pesa payments are not configured. Use Bitcoin or Ethereum checkout.' });
+      }
       const normalizedPhone = normalizePhoneNumber(phone);
       if (!/^254[17]\d{8}$/.test(normalizedPhone)) {
         return res.status(400).json({ error: 'phone must be a Kenyan number such as 0712345678 or 254712345678' });
