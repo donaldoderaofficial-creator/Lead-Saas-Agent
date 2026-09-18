@@ -516,3 +516,8 @@
 {"timestamp":"2026-09-18T12:40:36.328Z","level":"info","message":"GET /dashboard-v2.html","statusCode":200,"duration":"1ms"}
 {"timestamp":"2026-09-18T12:40:36.343Z","level":"info","message":"GET /auth/me","statusCode":401,"duration":"4ms"}
 {"timestamp":"2026-09-18T12:43:34.984Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-18T13:16:31.249Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-18T13:16:47.402Z","level":"info","message":"POST /api/assistant/mia","statusCode":200,"duration":"16ms"}
+{"timestamp":"2026-09-18T13:17:00.761Z","level":"info","message":"POST /api/assistant/mia","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-18T13:17:09.374Z","level":"info","message":"POST /api/assistant/mia","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-18T13:17:20.726Z","level":"info","message":"POST /api/assistant/mia","statusCode":200,"duration":"1ms"}
