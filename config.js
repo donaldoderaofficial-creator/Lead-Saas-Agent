@@ -107,13 +107,19 @@ const config = {
   // Payment Providers
   payment: {
     paypal: {
-      enabled: !!process.env.PAYPAL_CLIENT_ID,
+      enabled: Boolean(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET),
       clientId: process.env.PAYPAL_CLIENT_ID,
       clientSecret: process.env.PAYPAL_CLIENT_SECRET,
       live: [process.env.PAYPAL_ENV, process.env.PAYPAL_MODE].includes('live'),
     },
     mpesa: {
-      enabled: !!(process.env.MPESA_CONSUMER_KEY && process.env.MPESA_CONSUMER_SECRET),
+      enabled: Boolean(
+        process.env.MPESA_CONSUMER_KEY
+        && process.env.MPESA_CONSUMER_SECRET
+        && (process.env.MPESA_SHORT_CODE || process.env.MPESA_SHORTCODE)
+        && process.env.MPESA_PASSKEY
+        && process.env.MPESA_CALLBACK_URL
+      ),
       consumerKey: process.env.MPESA_CONSUMER_KEY,
       consumerSecret: process.env.MPESA_CONSUMER_SECRET,
       shortCode: process.env.MPESA_SHORT_CODE || process.env.MPESA_SHORTCODE,

@@ -328,6 +328,9 @@ app.post('/api/email/inbound', asyncHandler(async (req, res) => {
 
 // ---- Global payment capabilities ----
 app.get('/api/payments/options', (req, res) => {
+  const supportedCurrencies = ['BTC', 'ETH'];
+  if (config.payment.paypal.enabled) supportedCurrencies.unshift('USD');
+  if (config.payment.mpesa.enabled) supportedCurrencies.splice(1, 0, 'KES');
   res.json({
     providers: {
       paypal: {
@@ -355,7 +358,7 @@ app.get('/api/payments/options', (req, res) => {
         rate: getCryptoUsdRate('ethereum'),
       },
     },
-    supportedCurrencies: ['USD', 'KES', 'BTC', 'ETH'],
+    supportedCurrencies,
     settlement: 'Direct Bitcoin and Ethereum wallet transfers are accepted manually and require transaction confirmation before a report is released.',
   });
 });

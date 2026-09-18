@@ -16,7 +16,7 @@
       <div><label for="plan">Plan</label><select id="plan"><option value="starter">Starter</option><option value="growth">Growth</option></select></div>
       <div><label for="method">Payment method</label><select id="method"><option value="bitcoin">Bitcoin (BTC)</option><option value="ethereum">Ethereum (ETH)</option></select></div>
     </div>
-    <button id="order">Create payment</button>
+    <button id="order" disabled>Create payment</button>
     <div id="wallet" class="wallet" hidden></div>
     <label id="hashLabel" for="hash" hidden>Transaction hash</label>
     <input id="hash" placeholder="Paste transaction hash" hidden>
@@ -28,9 +28,31 @@
     let reference = '';
     let amountCrypto = '';
     const referral = new URLSearchParams(window.location.search).get('ref') || '';
+    const configuredMethods = new Set();
     function status(message, isError = false) {
       $('status').textContent = message;
       $('status').style.color = isError ? '#ff7373' : '#9aa1b1';
+    }
+    async function loadPaymentOptions() {
+      try {
+        const response = await fetch('/api/payments/options');
+        const data = await response.json();
+        for (const option of $('method').options) {
+          const provider = option.value === 'bitcoin' ? data.providers.bitcoin : data.providers.ethereum;
+          option.hidden = !provider?.enabled;
+          option.disabled = !provider?.enabled;
+          if (provider?.enabled) configuredMethods.add(option.value);
+        }
+        const firstAvailable = [...configuredMethods][0];
+        if (firstAvailable) {
+          $('method').value = firstAvailable;
+          $('order').disabled = false;
+        } else {
+          status('No wallet payment method is configured yet.', true);
+        }
+      } catch {
+        status('Payment options are temporarily unavailable. Please try again later.', true);
+      }
     }
     $('order').onclick = async () => {
       const method = $('method').value;
@@ -64,6 +86,7 @@
 
     const requestedPlan = new URLSearchParams(window.location.search).get('plan');
     if (requestedPlan === 'growth') $('plan').value = 'growth';
+    loadPaymentOptions();
   </script>
 </body>
 </html>
