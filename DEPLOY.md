@@ -6,6 +6,9 @@ This app writes to SQLite for pending leads and completed reports. Production
 uses the Oracle Always Free VM path with persistent storage, systemd restart
 policy, and Caddy HTTPS.
 
+For the checked-in Netlify frontend deployment flow, export
+`NETLIFY_SITE_ID` and `NETLIFY_AUTH_TOKEN`, then run `npm run deploy`.
+
 ## 1. Push this folder to GitHub
 
 ```bash
