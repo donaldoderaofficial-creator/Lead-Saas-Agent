@@ -91,10 +91,21 @@
         Email: ${email}<br>
         Plan: ${selectedPlan}<br>
         Send exactly <strong>${amount} ${currency}</strong> to:<br>
-        <strong>bc1qstaticuploadexampleaddress123</strong><br>
+        <code id="walletAddr" style="user-select:all;word-break:break-all;">bc1qstaticuploadexampleaddress123</code>
+        <button type="button" id="copyAddr" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">Copy</button><br>
         Reference: <strong>STATIC-${Date.now()}</strong>
       `;
       walletBox.style.display = 'block';
+      document.getElementById('copyAddr').addEventListener('click', async () => {
+        const btn = document.getElementById('copyAddr');
+        try {
+          await navigator.clipboard.writeText('bc1qstaticuploadexampleaddress123');
+          btn.textContent = 'Copied!';
+        } catch {
+          btn.textContent = 'Copy failed';
+        }
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      });
       setStatus('Static upload mode: connect a real backend or Netlify Function to confirm payments.');
     });
   </script>
