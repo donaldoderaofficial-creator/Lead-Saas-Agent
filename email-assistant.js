@@ -84,13 +84,20 @@ function verifyWebhookSignature(rawBody, signature, secret) {
   return expected.length === signature.length && crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 }
 
-async function sendReply({ to, subject, text }) {
+async function sendReply({ to, subject, text, replyTo, prefixSubject = true }) {
   if (process.env.EMAIL_AUTOREPLY_ENABLED !== 'true') return { sent: false, reason: 'EMAIL_AUTOREPLY_ENABLED is not true' };
   if (!process.env.RESEND_API_KEY) throw new Error('RESEND_API_KEY is required when email auto-replies are enabled');
+  const message = {
+    from: process.env.EMAIL_FROM || 'Dispatch Pro <hello@dispatchpro.ai>',
+    to: [to],
+    subject: `${prefixSubject ? 'Re: ' : ''}${subject}`,
+    text,
+  };
+  if (replyTo) message.reply_to = replyTo;
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ from: process.env.EMAIL_FROM || 'Dispatch Pro <hello@dispatchpro.ai>', to: [to], subject: `Re: ${subject}`, text }),
+    body: JSON.stringify(message),
   });
   if (!response.ok) throw new Error(`email provider returned HTTP ${response.status}`);
   return { sent: true, provider: 'resend', id: (await response.json()).id || null };

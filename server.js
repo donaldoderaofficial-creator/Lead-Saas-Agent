@@ -258,11 +258,15 @@ app.get('/ready', (req, res) => {
 });
 
 app.get('/api/email/status', (req, res) => {
+  const emailEnabled = process.env.EMAIL_AUTOREPLY_ENABLED === 'true';
+  const sender = process.env.EMAIL_FROM || 'Dispatch Pro <hello@dispatchpro.ai>';
   res.json({
     inboundWebhook: Boolean(process.env.EMAIL_WEBHOOK_SECRET) || !config.isProd,
     aiDrafting: Boolean(process.env.OPENAI_API_KEY),
-    autoReply: process.env.EMAIL_AUTOREPLY_ENABLED === 'true' && Boolean(process.env.RESEND_API_KEY),
-    senderConfigured: Boolean(process.env.EMAIL_FROM),
+    autoReply: emailEnabled && Boolean(process.env.RESEND_API_KEY),
+    sender,
+    ownerNotification: emailEnabled && Boolean(process.env.RESEND_API_KEY),
+    ownerNotificationAddress: process.env.EMAIL_NOTIFY_TO || 'Donaldoderaofficial@gmail.com',
     mailboxForwardingRequired: true,
     endpoint: '/api/email/inbound',
   });
@@ -291,7 +295,16 @@ app.post('/api/email/inbound', asyncHandler(async (req, res) => {
   }
   if (emailThreads.find(id)) return res.json({ status: 'duplicate', id });
   const draft = await improveReplyWithAI(buildCustomReply({ subject, body: text || body }));
-  const delivery = await sendReply({ to: from || sender, subject: subject || draft.subject, text: draft.reply });
+  const clientAddress = from || sender;
+  const messageSubject = subject || draft.subject;
+  const delivery = await sendReply({ to: clientAddress, subject: messageSubject, text: draft.reply, replyTo: process.env.EMAIL_NOTIFY_TO || 'Donaldoderaofficial@gmail.com' });
+  const ownerNotification = await sendReply({
+    to: process.env.EMAIL_NOTIFY_TO || 'Donaldoderaofficial@gmail.com',
+    subject: `New custom-package request from ${clientAddress}`,
+    text: `A new custom-package request arrived for Dispatch Pro.\n\nFrom: ${clientAddress}\nSubject: ${messageSubject}\nMessage:\n${text || body}\n\nGenerated client reply:\n${draft.reply}\n\nQuote:\n${JSON.stringify(draft.quote, null, 2)}`,
+    replyTo: clientAddress,
+    prefixSubject: false,
+  });
   emailThreads.create({
     messageId: id,
     sender: from || sender,
@@ -302,7 +315,7 @@ app.post('/api/email/inbound', asyncHandler(async (req, res) => {
     status: delivery.sent ? 'sent' : 'draft',
   });
   if (delivery.sent) emailThreads.markSent(id);
-  res.status(202).json({ status: delivery.sent ? 'sent' : 'draft', id, quote: draft.quote, delivery });
+  res.status(202).json({ status: delivery.sent ? 'sent' : 'draft', id, quote: draft.quote, delivery, ownerNotification });
 }));
 
 // ---- Global payment capabilities ----
