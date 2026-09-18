@@ -43,6 +43,8 @@ services:
         condition: service_healthy
     restart: unless-stopped
     init: true
+    healthcheck:
+      disable: true
     entrypoint: ["sh", "-c"]
     command: ["while true; do node scripts/backup-db.js; sleep 21600; done"]
 
