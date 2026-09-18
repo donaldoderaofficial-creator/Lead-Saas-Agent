@@ -523,3 +523,5 @@
 {"timestamp":"2026-09-18T13:17:20.726Z","level":"info","message":"POST /api/assistant/mia","statusCode":200,"duration":"1ms"}
 {"timestamp":"2026-09-18T13:19:40.832Z","level":"info","message":"GET /api/email/status","statusCode":200,"duration":"0ms"}
 {"timestamp":"2026-09-18T13:20:28.855Z","level":"info","message":"GET /api/email/status","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-18T13:23:22.520Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:8000","env":"development","isProd":false}
+{"timestamp":"2026-09-18T13:23:26.202Z","level":"info","message":"GET /","statusCode":200,"duration":"5ms"}
