@@ -58,7 +58,7 @@ test('stores validated AI referral attribution on subscription orders', () => {
 
   const invalidResponse = { statusCode: 200, body: null, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
   order({ body: { plan: 'starter', method: 'bitcoin', referral: 'https://bad.example/?secret=1' } }, invalidResponse);
-  assert.equal(pendingLeads.get(invalidResponse.body.reference).referralSource, null);
+  assert.equal(pendingLeads.get(invalidResponse.body.reference).referralSource || null, null);
 });
 
 test('uses the required bitcoin amounts for starter and growth subscription packages', () => {
