@@ -4,8 +4,6 @@
  * Supports scalable multi-user limits and flexible quota management.
  */
 
-const { config } = require('./config');
-
 /**
  * Track API usage per user with TTL-based reset.
  */
