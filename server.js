@@ -28,7 +28,7 @@ const { RateLimiter } = require('./rate-limiter');
 
 // Core modules
 const { client, checkoutNodeJssdk, verifyWebhookSignature } = require('./paypal-client');
-const { generateDynamicQrCode, initiateSTKPush, normalizePhoneNumber } = require('./mpesa-client');
+const { initiateSTKPush, normalizePhoneNumber } = require('./mpesa-client');
 const { processLead } = require('./lead-pipeline');
 const { trainFromLeads, learningStatus } = require('./adaptive-learning');
 const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, users, subscription, emailThreads, checkDatabase, businessMetrics, createSessionStore } = require('./store');
@@ -331,7 +331,7 @@ app.get('/api/payments/options', (req, res) => {
       mpesa: {
         enabled: config.payment.mpesa.enabled,
         currency: 'KES',
-        methods: ['stk-push', 'dynamic-qr'],
+        methods: ['stk-push'],
       },
       bitcoin: {
         enabled: !!config.wallets.bitcoin.address,
@@ -738,29 +738,6 @@ app.post('/api/lead', requireActiveSubscription, async (req, res) => {
     return res.status(400).json({ error: "method must be 'paypal', 'mpesa', 'bitcoin', or 'ethereum'" });
   } catch (err) {
     res.status(500).json({ error: err.message });
-  }
-});
-
-// ---- M-Pesa: generate a dynamic QR code for merchant checkout ----
-app.post('/payments/mpesa/qr', async (req, res) => {
-  if (rateLimiter.isLimited(`mpesa-qr:${req.ip}`, 30, 60 * 60 * 1000)) {
-    return res.status(429).json({ error: 'Too many QR requests. Try again later.' });
-  }
-
-  const { reference, amount, transactionCode = 'PB', size = 300 } = req.body || {};
-  try {
-    const qr = await generateDynamicQrCode({
-      merchantName: DISPATCH_PRO.brand,
-      reference,
-      amount,
-      transactionCode,
-      size,
-      cpi: config.payment.mpesa.shortCode,
-    });
-    res.json({ method: 'mpesa-qr', ...qr });
-  } catch (err) {
-    logger.error('M-Pesa QR generation failed', { error: err.message });
-    res.status(400).json({ error: err.message });
   }
 });
 

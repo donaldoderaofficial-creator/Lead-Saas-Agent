@@ -250,7 +250,7 @@ providers settle independently.
 {
   "providers": {
     "paypal": { "enabled": true, "currency": "USD", "methods": ["checkout"] },
-    "mpesa": { "enabled": true, "currency": "KES", "methods": ["stk-push", "dynamic-qr"] }
+    "mpesa": { "enabled": true, "currency": "KES", "methods": ["stk-push"] }
   },
   "supportedCurrencies": ["USD", "KES"]
 }
@@ -322,39 +322,8 @@ Administrator-only payment review endpoint. Set `approved` to `true` after
 independently verifying the wallet transfer, or `false` to reject the proof.
 Approved orders are moved to `confirmed` and receive an ebook access URL.
 
----
-
-#### `POST /payments/mpesa/qr`
-Generate a dynamic M-Pesa QR code for a merchant payment. The merchant name
-and configured shortcode are supplied by the server.
-
-**Request:**
-```json
-{
-  "reference": "ORDER-123",
-  "amount": 250,
-  "transactionCode": "PB",
-  "size": 300
-}
-```
-
-`transactionCode` supports `PB` (Paybill) and `BG` (Buy Goods). The endpoint
-is rate-limited per client IP.
-
-**Response:** `200 OK`
-```json
-{
-  "method": "mpesa-qr",
-  "ResponseCode": "00",
-  "RequestID": "request-1",
-  "QRCode": "base64-encoded-qr-payload"
-}
-```
-
----
-
 #### `POST /payments/mpesa/c2b/confirmation`
-Safaricom calls this endpoint after a QR or other C2B merchant payment. The
+Safaricom calls this endpoint after a C2B merchant payment. The
 server validates the configured business shortcode, records the receipt
 idempotently, and unlocks a matching pending lead reference.
 
