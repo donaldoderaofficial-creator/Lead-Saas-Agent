@@ -61,6 +61,18 @@ test('stores validated AI referral attribution on subscription orders', () => {
   assert.equal(pendingLeads.get(invalidResponse.body.reference).referralSource || null, null);
 });
 
+test('does not attempt unconfigured PayPal checkout', () => {
+  const app = require('../server');
+  const leadRoute = app._router.stack.find((layer) => layer.route?.path === '/api/lead');
+  const lead = leadRoute.route.stack.at(-1).handle;
+  const response = { statusCode: 200, body: null, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
+
+  lead({ body: { name: 'Customer', email: 'customer@example.com', method: 'paypal' } }, response);
+
+  assert.equal(response.statusCode, 503);
+  assert.match(response.body.error, /not configured/i);
+});
+
 test('uses the required bitcoin amounts for starter and growth subscription packages', () => {
   const { buildSubscriptionCheckoutPayload } = require('../server');
 

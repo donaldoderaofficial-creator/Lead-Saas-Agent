@@ -559,3 +559,11 @@
 {"timestamp":"2026-09-18T15:33:46.893Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-18T15:33:46.905Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"2ms"}
 {"timestamp":"2026-09-18T15:33:46.910Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-18T15:34:45.861Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-18T15:34:45.865Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-18T15:34:45.872Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-18T15:34:45.875Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-18T15:34:53.689Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-18T15:34:53.693Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-18T15:34:53.701Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-18T15:34:53.703Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}

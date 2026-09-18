@@ -686,6 +686,9 @@ app.post('/api/lead', requireActiveSubscription, async (req, res) => {
 
   try {
     if (method === 'paypal') {
+      if (!config.payment.paypal.enabled || !config.payment.paypal.clientSecret) {
+        return res.status(503).json({ error: 'PayPal payments are not configured. Use Bitcoin or Ethereum checkout.' });
+      }
       const leadRef = crypto.randomUUID();
       const createReq = new checkoutNodeJssdk.orders.OrdersCreateRequest();
       createReq.prefer('return=representation');
