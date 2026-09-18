@@ -510,3 +510,8 @@
 {"timestamp":"2026-09-18T12:38:29.424Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:8000","env":"development","isProd":false}
 {"timestamp":"2026-09-18T12:38:33.878Z","level":"info","message":"SIGTERM received, shutting down gracefully"}
 {"timestamp":"2026-09-18T12:38:33.879Z","level":"info","message":"Server closed"}
+{"timestamp":"2026-09-18T12:40:06.538Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:8000","env":"development","isProd":false}
+{"timestamp":"2026-09-18T12:40:11.784Z","level":"info","message":"GET /","statusCode":200,"duration":"7ms"}
+{"timestamp":"2026-09-18T12:40:36.314Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-18T12:40:36.328Z","level":"info","message":"GET /dashboard-v2.html","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-18T12:40:36.343Z","level":"info","message":"GET /auth/me","statusCode":401,"duration":"4ms"}
