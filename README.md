@@ -172,7 +172,7 @@ in the Dispatch Pro SaaS subscription tiers above.
 
 ## Performance
 
-- **Cache Hit Rate:** 60-90% for typical workloads
+- **Cache Hit Rate:** Monitor through the metrics endpoint before making capacity claims
 - **Query Reduction:** 50-90% fewer DB queries via batching
 - **Response Compression:** 60-80% payload reduction (GZIP)
 - **Load Handling:** Supports 10k+ concurrent users (with proper hosting)
