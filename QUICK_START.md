@@ -210,6 +210,20 @@ tail -f logs/app.log | jq '.'  # Pretty-print JSON logs
 curl http://localhost:8000/health
 ```
 
+### Containerized Orchestration
+```bash
+docker compose up -d --build
+docker compose ps
+curl http://localhost:8000/ready
+```
+
+The Compose stack runs the API with persistent SQLite/session/model storage and
+a backup sidecar that snapshots the databases and learned model every six hours.
+Set production secrets in `.env` before starting the stack. Stop it with:
+```bash
+docker compose down
+```
+
 ---
 
 ## Deployment
