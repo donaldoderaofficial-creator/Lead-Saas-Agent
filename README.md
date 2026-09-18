@@ -5,8 +5,8 @@
 **Built by:** Odera Donald Ombok, BSc — Founder & CEO  
 **Email:** odera.ombok@dispatchpro.com
 
-Event-driven lead-qualification agent with dual payment gateway integration
-(PayPal + M-Pesa STK Push), a persistent leads dashboard with 2FA-protected
+Event-driven lead-qualification agent with configurable payment integrations,
+a persistent leads dashboard with 2FA-protected
 login, and a rule-based compliance assistant — built for global scalability.
 
 ## Mission

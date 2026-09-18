@@ -241,18 +241,21 @@ the transaction on the relevant blockchain, or `false` to reject it. Approval
 sets the subscription to `status: "active"` and `billingType: "crypto"`.
 
 #### `GET /api/payments/options`
-Returns the payment providers configured for the current deployment. PayPal
-handles international USD checkout; M-Pesa handles KES STK Push; Bitcoin and
-Ethereum use manual wallet verification. These providers settle independently.
+Returns only the payment providers and methods fully configured for the current
+deployment. PayPal handles international USD checkout; M-Pesa handles KES STK
+Push; Bitcoin and Ethereum use manual wallet verification. These providers
+settle independently.
 
 **Response:** `200 OK`
 ```json
 {
   "providers": {
-    "paypal": { "enabled": true, "currency": "USD", "methods": ["checkout"] },
-    "mpesa": { "enabled": true, "currency": "KES", "methods": ["stk-push"] }
+    "paypal": { "enabled": false, "currency": "USD", "methods": [] },
+    "mpesa": { "enabled": false, "currency": "KES", "methods": [] },
+    "bitcoin": { "enabled": true, "currency": "BTC", "methods": ["wallet-transfer"] },
+    "ethereum": { "enabled": true, "currency": "ETH", "methods": ["wallet-transfer"] }
   },
-  "supportedCurrencies": ["USD", "KES"]
+  "supportedCurrencies": ["BTC", "ETH"]
 }
 ```
 

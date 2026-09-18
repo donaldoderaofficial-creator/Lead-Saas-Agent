@@ -247,6 +247,7 @@ app.get('/health', (req, res) => {
     status: 'ok',
     release: {
       version: require('./package.json').version,
+      build: process.env.BUILD_SHA || 'local',
       attribution: DISPATCH_PRO.releaseAttribution,
     },
     timestamp: new Date().toISOString(),
@@ -328,32 +329,36 @@ app.post('/api/email/inbound', asyncHandler(async (req, res) => {
 
 // ---- Global payment capabilities ----
 app.get('/api/payments/options', (req, res) => {
-  const supportedCurrencies = ['BTC', 'ETH'];
-  if (config.payment.paypal.enabled) supportedCurrencies.unshift('USD');
-  if (config.payment.mpesa.enabled) supportedCurrencies.splice(1, 0, 'KES');
+  const bitcoinEnabled = Boolean(config.wallets.bitcoin.address);
+  const ethereumEnabled = Boolean(config.wallets.ethereum.address);
+  const supportedCurrencies = [];
+  if (config.payment.paypal.enabled) supportedCurrencies.push('USD');
+  if (config.payment.mpesa.enabled) supportedCurrencies.push('KES');
+  if (bitcoinEnabled) supportedCurrencies.push('BTC');
+  if (ethereumEnabled) supportedCurrencies.push('ETH');
   res.json({
     providers: {
       paypal: {
         enabled: config.payment.paypal.enabled,
         currency: 'USD',
-        methods: ['checkout'],
+        methods: config.payment.paypal.enabled ? ['checkout'] : [],
       },
       mpesa: {
         enabled: config.payment.mpesa.enabled,
         currency: 'KES',
-        methods: ['stk-push'],
+        methods: config.payment.mpesa.enabled ? ['stk-push'] : [],
       },
       bitcoin: {
-        enabled: !!config.wallets.bitcoin.address,
+        enabled: bitcoinEnabled,
         currency: 'BTC',
-        methods: ['wallet-transfer'],
+        methods: bitcoinEnabled ? ['wallet-transfer'] : [],
         address: config.wallets.bitcoin.address,
         rate: getBtcUsdRate(),
       },
       ethereum: {
-        enabled: !!config.wallets.ethereum.address,
+        enabled: ethereumEnabled,
         currency: 'ETH',
-        methods: ['wallet-transfer'],
+        methods: ethereumEnabled ? ['wallet-transfer'] : [],
         address: config.wallets.ethereum.address,
         rate: getCryptoUsdRate('ethereum'),
       },
@@ -370,6 +375,12 @@ app.get('/api/config', (req, res) => {
       provider: 'Explorium',
     },
     paypalClientId: config.payment.paypal.clientId || null,
+    payments: {
+      paypal: config.payment.paypal.enabled,
+      mpesa: config.payment.mpesa.enabled,
+      bitcoin: Boolean(config.wallets.bitcoin.address),
+      ethereum: Boolean(config.wallets.ethereum.address),
+    },
     plans: {
       starter: {
         paypalPlanId: process.env.PAYPAL_PLAN_STARTER_MONTHLY || null,
