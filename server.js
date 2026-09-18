@@ -21,7 +21,7 @@ const compression = require('compression');
 const helmet = require('helmet');
 
 // Scalability & Configuration
-const { config, isFeatureEnabled } = require('./config');
+const { config } = require('./config');
 const { logger, requestLogger, errorHandler, asyncHandler } = require('./logger');
 const { cache, withCache } = require('./cache');
 const { RateLimiter } = require('./rate-limiter');
