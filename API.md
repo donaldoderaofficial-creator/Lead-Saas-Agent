@@ -241,9 +241,8 @@ sets the subscription to `status: "active"` and `billingType: "crypto"`.
 
 #### `GET /api/payments/options`
 Returns the payment providers configured for the current deployment. PayPal
-handles international USD checkout; M-Pesa handles KES STK Push and dynamic
-QR payments; Bitcoin and Ethereum use manual wallet verification. These
-providers settle independently.
+handles international USD checkout; M-Pesa handles KES STK Push; Bitcoin and
+Ethereum use manual wallet verification. These providers settle independently.
 
 **Response:** `200 OK`
 ```json
