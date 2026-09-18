@@ -22,7 +22,7 @@ const helmet = require('helmet');
 
 // Scalability & Configuration
 const { config } = require('./config');
-const { logger, requestLogger, errorHandler, asyncHandler } = require('./logger');
+const { logger, requestLogger, errorHandler, asyncHandler, assignRequestId } = require('./logger');
 const { cache, withCache } = require('./cache');
 const { RateLimiter } = require('./rate-limiter');
 
@@ -80,6 +80,7 @@ if (config.performance.enableCompression) {
 }
 
 app.use(helmet({ contentSecurityPolicy: false }));
+app.use(assignRequestId); // tags every request/error response with a traceable ID
 app.use(requestLogger); // Request logging for monitoring
 app.set('trust proxy', config.isProd ? 1 : false);
 app.use(express.json({ limit: '1mb' }));

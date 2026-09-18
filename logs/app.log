@@ -580,3 +580,7 @@
 {"timestamp":"2026-09-18T15:48:39.149Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-18T15:48:39.151Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-18T15:51:11.588Z","level":"error","message":"Uncaught exception","error":"listen EADDRINUSE: address already in use 0.0.0.0:8000","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:8000\n    at Server.setupListenHandle [as _listen2] (node:net:1939:16)\n    at listenInCluster (node:net:1996:12)\n    at node:net:2205:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)"}
+{"timestamp":"2026-09-18T15:58:57.143Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"4ms"}
+{"timestamp":"2026-09-18T15:58:57.181Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-18T15:58:57.195Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-18T15:58:57.204Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"1ms"}

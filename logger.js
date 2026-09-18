@@ -6,6 +6,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { config } = require('./config');
 
 const LOG_LEVELS = {
@@ -123,6 +124,16 @@ class Logger {
 const logger = new Logger();
 
 /**
+ * Express middleware that tags every request with a short, traceable ID.
+ * Must run before requestLogger/errorHandler so both can reference req.id.
+ */
+function assignRequestId(req, res, next) {
+  req.id = crypto.randomUUID().slice(0, 8);
+  res.setHeader('X-Request-Id', req.id);
+  next();
+}
+
+/**
  * Express middleware for request logging and metrics.
  */
 function requestLogger(req, res, next) {
@@ -143,6 +154,7 @@ function requestLogger(req, res, next) {
  * Express middleware for error handling.
  */
 function errorHandler(err, req, res, next) {
+  const statusCode = err.statusCode || 500;
   logger.error(`Unhandled error: ${err.message}`, {
     stack: err.stack,
     path: req.path,
@@ -150,8 +162,11 @@ function errorHandler(err, req, res, next) {
     ip: req.ip,
   });
 
-  res.status(err.statusCode || 500).json({
-    error: config.isDev ? err.message : 'Internal server error',
+  // Client errors (4xx) are safe and useful to return as-is; only mask 5xx
+  // details in production to avoid leaking internals.
+  const isClientError = statusCode >= 400 && statusCode < 500;
+  res.status(statusCode).json({
+    error: (config.isDev || isClientError) ? err.message : 'Internal server error',
     requestId: req.id || 'unknown',
   });
 }
@@ -167,6 +182,7 @@ function asyncHandler(fn) {
 
 module.exports = {
   logger,
+  assignRequestId,
   requestLogger,
   errorHandler,
   asyncHandler,
