@@ -484,3 +484,21 @@
 {"timestamp":"2026-09-17T17:14:24.323Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-17T17:14:24.326Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-17T17:14:44.571Z","level":"info","message":"GET /billing.html","statusCode":200,"duration":"2ms"}
+{"timestamp":"2026-09-18T05:30:36.731Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:8000","env":"development","isProd":false}
+{"timestamp":"2026-09-18T05:33:52.205Z","level":"info","message":"GET /","statusCode":200,"duration":"8ms"}
+{"timestamp":"2026-09-18T05:33:53.448Z","level":"info","message":"GET /favicon.ico","statusCode":404,"duration":"5ms"}
+{"timestamp":"2026-09-18T05:34:11.443Z","level":"info","message":"POST /api/assistant/mia","statusCode":200,"duration":"12ms"}
+{"timestamp":"2026-09-18T05:34:36.307Z","level":"info","message":"POST /api/assistant/mia","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-18T05:35:25.298Z","level":"info","message":"POST /api/assistant/mia","statusCode":200,"duration":"0ms"}
+{"timestamp":"2026-09-18T05:35:48.498Z","level":"info","message":"POST /api/assistant/mia","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-18T05:41:09.161Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-18T05:41:09.176Z","level":"info","message":"GET /health","statusCode":200,"duration":"0ms"}
+{"timestamp":"2026-09-18T05:41:09.192Z","level":"info","message":"GET /ready","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-18T05:41:09.208Z","level":"info","message":"GET /api/leads","statusCode":401,"duration":"1ms"}
+{"timestamp":"2026-09-18T05:41:09.223Z","level":"info","message":"GET /api/lead","statusCode":404,"duration":"1ms"}
+{"timestamp":"2026-09-18T05:41:38.465Z","level":"info","message":"GET /auth/me","statusCode":401,"duration":"1ms"}
+{"timestamp":"2026-09-18T05:41:38.480Z","level":"info","message":"GET /metrics","statusCode":401,"duration":"0ms"}
+{"timestamp":"2026-09-18T05:41:38.495Z","level":"info","message":"GET /api/leads","statusCode":401,"duration":"1ms"}
+{"timestamp":"2026-09-18T05:45:28.670Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-18T05:45:57.078Z","level":"info","message":"GET /","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-18T05:46:24.033Z","level":"info","message":"GET /","statusCode":200,"duration":"2ms"}
