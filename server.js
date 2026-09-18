@@ -231,6 +231,12 @@ function buildSubscriptionCheckoutPayload({ plan = 'starter', method = 'bitcoin'
   };
 }
 
+function normalizeReferral(referral) {
+  if (!referral || typeof referral !== 'string') return null;
+  const normalized = referral.trim().toLowerCase();
+  return /^[a-z0-9_-]{2,64}$/.test(normalized) ? normalized : null;
+}
+
 app.buildEbookCheckoutPayload = buildEbookCheckoutPayload;
 app.buildSubscriptionCheckoutPayload = buildSubscriptionCheckoutPayload;
 
@@ -386,13 +392,14 @@ app.get('/api/billing/status', (req, res) => {
 });
 
 app.post('/api/billing/crypto/order', (req, res) => {
-  const { plan = 'starter', method = 'bitcoin', name, email } = req.body || {};
+  const { plan = 'starter', method = 'bitcoin', name, email, referral } = req.body || {};
   if (!['starter', 'growth'].includes(plan)) return res.status(400).json({ error: 'plan must be starter or growth' });
   if (!['bitcoin', 'ethereum'].includes(method)) return res.status(400).json({ error: 'method must be bitcoin or ethereum' });
   const walletType = method === 'bitcoin' ? 'bitcoin' : 'ethereum';
   if (!config.wallets[walletType].address) return res.status(400).json({ error: `${config.wallets[walletType].label} payments are not configured.` });
   const reference = crypto.randomUUID();
   const checkout = buildSubscriptionCheckoutPayload({ plan, method, name, email, reference });
+  const referralSource = normalizeReferral(referral);
   pendingLeads.set(reference, {
     name: checkout.buyerName,
     email: checkout.buyerEmail,
@@ -400,6 +407,7 @@ app.post('/api/billing/crypto/order', (req, res) => {
     paymentMethod: method,
     plan,
     amountCrypto: checkout.amountCrypto,
+    referralSource,
   });
   res.json(checkout);
 });
@@ -425,7 +433,14 @@ app.post('/api/billing/crypto/confirm', (req, res) => {
     amount: submittedAmount,
     currency: config.wallets[walletType].currency,
     status: 'pending_review',
-    raw: { txHash, method: order.paymentMethod, plan: order.plan, amount: submittedAmount, amountCrypto: order.amountCrypto },
+    raw: {
+      txHash,
+      method: order.paymentMethod,
+      plan: order.plan,
+      amount: submittedAmount,
+      amountCrypto: order.amountCrypto,
+      referralSource: order.referralSource || null,
+    },
   });
   res.status(202).json({ status: 'pending_review', reference, message: 'Payment proof received. Service access will be enabled after payment verification.' });
 });

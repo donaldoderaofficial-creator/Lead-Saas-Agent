@@ -226,8 +226,9 @@ authenticated owner or administrator verifies the wallet transfer.
 #### `POST /api/billing/crypto/order`
 Create a BTC or ETH subscription order. The request accepts `plan` (`starter`
 or `growth`), `method` (`bitcoin` or `ethereum`), and optional buyer `name` and
-`email`. The response includes the wallet address, estimated exact display
-amount, and a unique reference.
+`email`. An optional `referral` identifies the referring AI agent or partner
+using 2-64 lowercase letters, numbers, `_`, or `-`. The response includes the
+wallet address, estimated exact display amount, and a unique reference.
 
 #### `POST /api/billing/crypto/confirm`
 Submit the order `reference`, `txHash`, `method`, and `plan` after sending the

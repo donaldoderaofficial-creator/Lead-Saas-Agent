@@ -45,6 +45,22 @@ test('exposes direct bitcoin and ethereum wallet payment options', () => {
   assert.equal(config.wallets.ethereum.address, '0x1234567890abcdef1234567890abcdef12345678');
 });
 
+test('stores validated AI referral attribution on subscription orders', () => {
+  const app = require('../server');
+  const orderRoute = app._router.stack.find((layer) => layer.route?.path === '/api/billing/crypto/order');
+  const order = orderRoute.route.stack.at(-1).handle;
+  const response = { statusCode: 200, body: null, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
+
+  order({ body: { plan: 'starter', method: 'bitcoin', referral: 'Partner-Agent_7' } }, response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(pendingLeads.get(response.body.reference).referralSource, 'partner-agent_7');
+
+  const invalidResponse = { statusCode: 200, body: null, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
+  order({ body: { plan: 'starter', method: 'bitcoin', referral: 'https://bad.example/?secret=1' } }, invalidResponse);
+  assert.equal(pendingLeads.get(invalidResponse.body.reference).referralSource, null);
+});
+
 test('uses the required bitcoin amounts for starter and growth subscription packages', () => {
   const { buildSubscriptionCheckoutPayload } = require('../server');
 

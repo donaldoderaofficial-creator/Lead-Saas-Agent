@@ -27,6 +27,7 @@
     const $ = (id) => document.getElementById(id);
     let reference = '';
     let amountCrypto = '';
+    const referral = new URLSearchParams(window.location.search).get('ref') || '';
     function status(message, isError = false) {
       $('status').textContent = message;
       $('status').style.color = isError ? '#ff7373' : '#9aa1b1';
@@ -34,7 +35,7 @@
     $('order').onclick = async () => {
       const method = $('method').value;
       status('Creating wallet payment...');
-      const response = await fetch('/api/billing/crypto/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('name').value, email: $('email').value, plan: $('plan').value, method: $('method').value }) });
+      const response = await fetch('/api/billing/crypto/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('name').value, email: $('email').value, plan: $('plan').value, method: $('method').value, referral }) });
       const data = await response.json();
       if (!response.ok) return status(data.error || 'Could not create payment.', true);
       reference = data.reference;
