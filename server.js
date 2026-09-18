@@ -869,7 +869,7 @@ app.post('/payments/mpesa/callback', async (req, res) => {
   res.json({ ResultCode: 0, ResultDesc: 'Received' });
 });
 
-// ---- M-Pesa: C2B confirmation for QR and other merchant payments ----
+// ---- M-Pesa: C2B merchant payment confirmation ----
 app.post('/payments/mpesa/c2b/validation', (req, res) => {
   res.json({ ResultCode: 0, ResultDesc: 'Accepted' });
 });

@@ -3,6 +3,8 @@ FROM node:22-bookworm-slim
 ENV NODE_ENV=production
 ENV PORT=8000
 ENV HOST=0.0.0.0
+ARG BUILD_SHA=local
+ENV BUILD_SHA=$BUILD_SHA
 
 WORKDIR /app
 

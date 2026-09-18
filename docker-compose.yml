@@ -10,6 +10,7 @@ services:
       NODE_ENV: production
       PORT: 8000
       HOST: 0.0.0.0
+      BUILD_SHA: ${BUILD_SHA:-local}
       DB_PATH: /data/data.db
       SESSION_DB_PATH: /data/sessions.sqlite
       LEARNING_MODEL_PATH: /data/model-state.json

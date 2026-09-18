@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Lead SaaS billing</title>
-  <style>body{margin:0;padding:32px 18px;background:#0b0d12;color:#e7e9ee;font:15px/1.5 sans-serif}.wrap{max-width:620px;margin:auto}.panel{background:#151822;border:1px solid #303747;border-radius:12px;padding:24px}h1{margin-top:0}label{display:block;color:#9aa1b1;font-size:13px;margin:12px 0 5px}input,select,button{width:100%;box-sizing:border-box;padding:11px;border-radius:8px;border:1px solid #303747;background:#1c202c;color:#e7e9ee;font:inherit}button{margin-top:16px;background:#6c8cff;border-color:#6c8cff;cursor:pointer}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.wallet{margin-top:18px;padding:14px;background:#1c202c;border-radius:8px;word-break:break-word}#status{min-height:24px;margin-top:16px;color:#9aa1b1}@media(max-width:560px){.grid{grid-template-columns:1fr}}</style>
+  <style>body{margin:0;padding:32px 18px;background:#0b0d12;color:#e7e9ee;font:15px/1.5 sans-serif}.wrap{max-width:620px;margin:auto}.panel{background:#151822;border:1px solid #303747;border-radius:12px;padding:24px;margin-bottom:16px}h1{margin-top:0}label{display:block;color:#9aa1b1;font-size:13px;margin:12px 0 5px}input,select,button{width:100%;box-sizing:border-box;padding:11px;border-radius:8px;border:1px solid #303747;background:#1c202c;color:#e7e9ee;font:inherit}button{margin-top:16px;background:#6c8cff;border-color:#6c8cff;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.wallet{margin-top:18px;padding:14px;background:#1c202c;border-radius:8px;word-break:break-word}.card-plan{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}.card-plan>div{border:1px solid #303747;border-radius:8px;padding:14px}.card-plan h2{font-size:16px;margin:0 0 4px}.card-plan p{color:#9aa1b1;font-size:13px;margin:0 0 10px}.paypal-button{min-height:42px}#status{min-height:24px;margin-top:16px;color:#9aa1b1}@media(max-width:560px){.grid,.card-plan{grid-template-columns:1fr}}</style>
 </head>
 <body>
   <main class="wrap"><div class="panel">
@@ -23,6 +23,14 @@
     <button id="confirm" hidden>Submit payment for review</button>
     <div id="status"></div>
   </div></main>
+  <section class="wrap panel" id="cardPanel" hidden>
+    <h2>Pay by card</h2>
+    <p>Use the hosted PayPal checkout to pay by debit or credit card on a recurring monthly plan. Dispatch Pro never stores card details.</p>
+    <div class="card-plan">
+      <div><h2>Starter</h2><p>$79/month</p><div class="paypal-button" id="paypal-starter"></div></div>
+      <div><h2>Growth</h2><p>$249/month</p><div class="paypal-button" id="paypal-growth"></div></div>
+    </div>
+  </section>
   <script>
     const $ = (id) => document.getElementById(id);
     let reference = '';
@@ -53,6 +61,31 @@
       } catch {
         status('Payment options are temporarily unavailable. Please try again later.', true);
       }
+    }
+    async function loadCardCheckout() {
+      try {
+        const response = await fetch('/api/config');
+        const data = await response.json();
+        const starterId = data.plans?.starter?.paypalPlanId;
+        const growthId = data.plans?.growth?.paypalPlanId;
+        if (!data.paypalClientId || !starterId || !growthId) return;
+        const script = document.createElement('script');
+        script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(data.paypalClientId)}&vault=true&intent=subscription&currency=USD`;
+        script.onload = () => {
+          if (!window.paypal) return;
+          $('cardPanel').hidden = false;
+          [['paypal-starter', starterId, 'Starter'], ['paypal-growth', growthId, 'Growth']].forEach(([id, planId, label]) => {
+            window.paypal.Buttons({
+              style: { layout: 'vertical', shape: 'rect', label: 'subscribe' },
+              createSubscription: (data, actions) => actions.subscription.create({ plan_id: planId }),
+              onApprove: () => status(`${label} subscription started. Access will activate after provider confirmation.`),
+              onError: () => status('Card checkout is temporarily unavailable. Please try again or use a wallet payment.', true),
+            }).render(`#${id}`);
+          });
+        };
+        script.onerror = () => {};
+        document.head.appendChild(script);
+      } catch {}
     }
     $('order').onclick = async () => {
       const method = $('method').value;
@@ -87,6 +120,7 @@
     const requestedPlan = new URLSearchParams(window.location.search).get('plan');
     if (requestedPlan === 'growth') $('plan').value = 'growth';
     loadPaymentOptions();
+    loadCardCheckout();
   </script>
 </body>
 </html>

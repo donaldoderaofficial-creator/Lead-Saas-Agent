@@ -45,6 +45,32 @@ test('exposes direct bitcoin and ethereum wallet payment options', () => {
   assert.equal(config.wallets.ethereum.address, '0x1234567890abcdef1234567890abcdef12345678');
 });
 
+test('advertises only configured payment methods and currencies', () => {
+  const app = require('../server');
+  const optionsRoute = app._router.stack.find((layer) => layer.route?.path === '/api/payments/options');
+  const options = optionsRoute.route.stack.at(-1).handle;
+  const response = { body: null, json(body) { this.body = body; return this; } };
+
+  options({}, response);
+
+  assert.deepEqual(response.body.providers.paypal.methods, []);
+  assert.deepEqual(response.body.providers.mpesa.methods, []);
+  assert.deepEqual(response.body.providers.bitcoin.methods, ['wallet-transfer']);
+  assert.deepEqual(response.body.providers.ethereum.methods, ['wallet-transfer']);
+  assert.deepEqual(response.body.supportedCurrencies, ['BTC', 'ETH']);
+});
+
+test('health response exposes a release build identifier', () => {
+  const app = require('../server');
+  const healthRoute = app._router.stack.find((layer) => layer.route?.path === '/health');
+  const health = healthRoute.route.stack.at(-1).handle;
+  const response = { body: null, json(body) { this.body = body; return this; } };
+
+  health({}, response);
+
+  assert.equal(response.body.release.build, 'local');
+});
+
 test('stores validated AI referral attribution on subscription orders', () => {
   const app = require('../server');
   const orderRoute = app._router.stack.find((layer) => layer.route?.path === '/api/billing/crypto/order');

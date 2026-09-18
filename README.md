@@ -67,7 +67,7 @@ Client → Express API → Config System → Business Logic
 - **Adaptable**: Feature flags, flexible configuration, easy to extend
 - **Profitable**: Multi-tier pricing with automatic quota enforcement
 - **Maintainable**: Centralized config, comprehensive logging, clean separation of concerns
-- **Efficient**: Caching, query batching, compression reduces load by 60-90%
+- **Efficient**: Caching, query batching, and compression reduce repeat-work and transfer overhead
 - **Resilient**: Graceful error handling, proper shutdown, audit trails
 
 ### Real lead generation
