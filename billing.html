@@ -218,8 +218,17 @@ el('cryptoOrder').addEventListener('click', async () => {
   if (!res.ok) return setStatus(data.error || 'Unable to create wallet payment.', true);
   cryptoReference = data.reference;
   cryptoAmount = data.amountCrypto;
-  el('cryptoWallet').innerHTML = `Send exactly <strong>${data.amountCrypto} ${data.currency}</strong> to <strong>${data.walletAddress}</strong>.<br>Reference: ${data.reference}`;
+  el('cryptoWallet').innerHTML = `Send exactly <strong>${data.amountCrypto} ${data.currency}</strong> to:<br><code id="cryptoAddr" style="user-select:all;word-break:break-all;">${data.walletAddress}</code> <button type="button" id="copyCryptoAddr" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">Copy</button><br>Reference: ${data.reference}`;
   el('cryptoWallet').style.display = 'block'; el('cryptoTxHash').style.display = 'block'; el('cryptoConfirm').style.display = 'block';
+  el('copyCryptoAddr').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(data.walletAddress);
+      el('copyCryptoAddr').textContent = 'Copied!';
+    } catch {
+      el('copyCryptoAddr').textContent = 'Copy failed';
+    }
+    setTimeout(() => { el('copyCryptoAddr').textContent = 'Copy'; }, 2000);
+  });
   setStatus('Send the amount, then submit the transaction hash for review.');
 });
 el('cryptoConfirm').addEventListener('click', async () => {
