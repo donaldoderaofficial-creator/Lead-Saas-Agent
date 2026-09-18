@@ -30,6 +30,7 @@ const { RateLimiter } = require('./rate-limiter');
 const { client, checkoutNodeJssdk, verifyWebhookSignature } = require('./paypal-client');
 const { generateDynamicQrCode, initiateSTKPush, normalizePhoneNumber } = require('./mpesa-client');
 const { processLead } = require('./lead-pipeline');
+const { trainFromLeads, learningStatus } = require('./adaptive-learning');
 const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, users, subscription, emailThreads, checkDatabase, businessMetrics, createSessionStore } = require('./store');
 const { hasActiveSubscription } = require('./subscription-policy');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateQrCode } = require('./auth');
@@ -1203,6 +1204,15 @@ app.post('/api/ebook/review/:reference', requireAuth, requireAdmin, (req, res) =
 
 app.get('/api/leads', requireAuth, requireActiveSubscription, (req, res) => {
   res.json({ leads: leads.listAll() });
+});
+
+app.get('/api/learning/status', requireAuth, requireAdmin, (req, res) => {
+  res.json(learningStatus());
+});
+
+app.post('/api/learning/train', requireAuth, requireAdmin, (req, res) => {
+  const result = trainFromLeads(leads.listAll());
+  res.json(result);
 });
 
 app.patch('/api/leads/:ref/followup', requireAuth, requireActiveSubscription, (req, res) => {

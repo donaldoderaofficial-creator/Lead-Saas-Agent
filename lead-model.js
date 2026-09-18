@@ -19,6 +19,29 @@ class LeadModel {
     return { probability, score: Math.round(probability * 100) };
   }
 
+  exportState() {
+    return {
+      inputToHidden: this.inputToHidden,
+      hiddenBias: this.hiddenBias,
+      hiddenToOutput: this.hiddenToOutput,
+      outputBias: this.outputBias,
+    };
+  }
+
+  importState(state) {
+    if (!state || !Array.isArray(state.inputToHidden) || state.inputToHidden.length !== 2 ||
+      !Array.isArray(state.hiddenBias) || state.hiddenBias.length !== 4 ||
+      !Array.isArray(state.hiddenToOutput) || state.hiddenToOutput.length !== 4 ||
+      !Number.isFinite(state.outputBias)) return false;
+    if (state.inputToHidden.some((row) => !Array.isArray(row) || row.length !== 4 || row.some((value) => !Number.isFinite(value))) ||
+      state.hiddenBias.some((value) => !Number.isFinite(value)) || state.hiddenToOutput.some((value) => !Number.isFinite(value))) return false;
+    this.inputToHidden = state.inputToHidden.map((row) => [...row]);
+    this.hiddenBias = [...state.hiddenBias];
+    this.hiddenToOutput = [...state.hiddenToOutput];
+    this.outputBias = state.outputBias;
+    return true;
+  }
+
   train(samples, { epochs = 20, learningRate = 0.05 } = {}) {
     if (!Array.isArray(samples) || samples.length === 0) return { trained: false, samples: 0 };
     const boundedEpochs = Math.max(1, Math.min(100, Number(epochs) || 20));
