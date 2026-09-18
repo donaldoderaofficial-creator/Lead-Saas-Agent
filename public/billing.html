@@ -60,7 +60,16 @@
       reference = data.reference;
       amountCrypto = data.amountCrypto;
       $('wallet').hidden = false;
-      $('wallet').innerHTML = `Send exactly <strong>${data.amountCrypto} ${data.currency}</strong> to <strong>${data.walletAddress}</strong>.<br>Reference: ${data.reference}`;
+      $('wallet').innerHTML = `Send exactly <strong>${data.amountCrypto} ${data.currency}</strong> to:<br><code id="walletAddr" style="user-select:all;word-break:break-all;">${data.walletAddress}</code> <button type="button" id="copyAddr" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">Copy</button><br>Reference: ${data.reference}`;
+      $('copyAddr').onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(data.walletAddress);
+          $('copyAddr').textContent = 'Copied!';
+        } catch {
+          $('copyAddr').textContent = 'Copy failed';
+        }
+        setTimeout(() => { $('copyAddr').textContent = 'Copy'; }, 2000);
+      };
       $('hashLabel').hidden = false;
       $('hash').hidden = false;
       $('confirm').hidden = false;
