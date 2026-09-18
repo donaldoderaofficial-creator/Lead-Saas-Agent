@@ -531,3 +531,7 @@
 {"timestamp":"2026-09-18T13:27:08.357Z","level":"info","message":"POST /api/assistant/mia","statusCode":200,"duration":"10ms"}
 {"timestamp":"2026-09-18T13:27:24.163Z","level":"info","message":"POST /api/assistant/mia","statusCode":200,"duration":"1ms"}
 {"timestamp":"2026-09-18T13:27:24.196Z","level":"info","message":"GET /","statusCode":200,"duration":"4ms"}
+{"timestamp":"2026-09-18T13:33:18.394Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-18T13:33:18.399Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-18T13:33:18.409Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-18T13:33:18.412Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"1ms"}
