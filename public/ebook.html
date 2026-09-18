@@ -397,6 +397,7 @@
         <div class="wallet-box" id="walletBox" style="display:none;">
           <strong>Send BTC to this wallet</strong>
           <div class="address" id="walletAddress">3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k</div>
+          <button type="button" id="copyWalletAddress" class="cta" style="margin-top:6px;padding:8px;">Copy address</button>
           <div>Amount: <strong id="btcAmount">0.00025700 BTC</strong></div>
         </div>
 
@@ -443,6 +444,18 @@
     const btcAmountEl = document.getElementById('btcAmount');
     const paymentInstructionsEl = document.getElementById('paymentInstructions');
     const payButton = document.getElementById('payButton');
+    const copyWalletAddressButton = document.getElementById('copyWalletAddress');
+
+    copyWalletAddressButton.addEventListener('click', async () => {
+      if (!state.walletAddress) return;
+      try {
+        await navigator.clipboard.writeText(state.walletAddress);
+        copyWalletAddressButton.textContent = 'Copied!';
+      } catch (_) {
+        copyWalletAddressButton.textContent = 'Copy failed';
+      }
+      setTimeout(() => { copyWalletAddressButton.textContent = 'Copy address'; }, 2000);
+    });
 
     function setStatus(message, kind = 'info') {
       statusEl.className = 'status';
