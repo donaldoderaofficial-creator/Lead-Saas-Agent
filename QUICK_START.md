@@ -30,7 +30,7 @@ All configuration is centralized in [config.js](config.js), controlled by `.env`
 ```bash
 # Core
 NODE_ENV=production
-PORT=3000
+PORT=8000
 HOST=localhost
 
 # Database
@@ -55,7 +55,7 @@ FEATURE_COMPLIANCE=true
 const { config, get, isFeatureEnabled } = require('./config');
 
 // Get value from config
-console.log(config.port);  // 3000
+console.log(config.port);  // 8000
 
 // Get nested value
 const pricing = get('pricing.usd.starter.price');  // '9.99'
@@ -184,7 +184,7 @@ Automatic enforcement via `rate-limiter.js`.
 
 ### Metrics Endpoint
 ```bash
-curl http://localhost:3000/metrics
+curl http://localhost:8000/metrics
 ```
 
 Response:
@@ -207,7 +207,7 @@ tail -f logs/app.log | jq '.'  # Pretty-print JSON logs
 
 ### Health Check
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:8000/health
 ```
 
 ---

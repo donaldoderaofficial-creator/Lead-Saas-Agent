@@ -22,7 +22,7 @@ echo Waiting for it to boot...
 timeout /t 3 /nobreak >nul
 
 echo Opening the dashboard in your browser...
-start http://localhost:3000/dashboard.html
+start http://localhost:8000/dashboard.html
 
 echo Done. Leave the server window open - closing it stops the app.
 pause
