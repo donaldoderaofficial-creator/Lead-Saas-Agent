@@ -2,6 +2,7 @@
 
 const crypto = require('node:crypto');
 const { getCryptoUsdRate } = require('./crypto-rates');
+const { config } = require('./config');
 
 const MINIMUM_CUSTOM_USD = Math.max(Number(process.env.CUSTOM_PACKAGE_MIN_USD || 10001), 10001);
 const CUSTOM_TERM_MONTHS = 6;
@@ -40,13 +41,23 @@ function formatCryptoAmount(quote) {
   return `${quote.conversions[quote.recommendedCurrency]} ${quote.recommendedCurrency} recommended, or ${quote.conversions.BTC} BTC / ${quote.conversions.ETH} ETH at live market rates`;
 }
 
+function formatWalletInstructions(quote) {
+  const bitcoin = config.wallets.bitcoin.address
+    ? `BTC: send ${quote.conversions.BTC} BTC to ${config.wallets.bitcoin.address}`
+    : 'BTC payments are not configured yet';
+  const ethereum = config.wallets.ethereum.address
+    ? `ETH: send ${quote.conversions.ETH} ETH to ${config.wallets.ethereum.address}`
+    : 'ETH payments are not configured yet';
+  return `${bitcoin}. ${ethereum}. Payment proof is reviewed manually before access is enabled. Double-check the network and address before sending; crypto transfers cannot be reversed.`;
+}
+
 function buildMiaReply(question) {
   const text = String(question || '').trim();
   const lower = text.toLowerCase();
   if (!text) return 'Hi, I am Mia from Dispatch Pro. I am happy to help. Ask me about plans, custom packages, lead workflows, or BTC and ETH payments.';
   if (/custom|enterprise|scale|10,?000|large package/.test(lower)) {
     const quote = quoteCustomPackage({ currency: inferCurrency(text), budgetUsd: inferBudget(text) });
-    return `That sounds like an exciting opportunity. The current custom-package starting estimate is ${formatCryptoAmount(quote)} total for a ${CUSTOM_TERM_MONTHS}-month engagement. Final scope is confirmed after discovery. What are your users, monthly lead volume, integrations, timeline, and preferred currency? You can also reach our team at hello@dispatchpro.ai.`;
+    return `That sounds like an exciting opportunity. The current custom-package starting estimate is ${formatCryptoAmount(quote)} total for a ${CUSTOM_TERM_MONTHS}-month engagement. ${formatWalletInstructions(quote)} Final scope is confirmed after discovery. Before payment, please share your users, monthly lead volume, integrations, timeline, and preferred currency so our team can confirm the proposal. You can also reach us at hello@dispatchpro.ai.`;
   }
   if (/btc|bitcoin|eth|ethereum|crypto|pay/.test(lower)) return 'Absolutely. Dispatch Pro accepts BTC and ETH wallet payments. Starter and Growth quotes use live market rates, and payment proof is reviewed before access is enabled. Would you like a current Starter, Growth, or custom-package quote?';
   if (/starter|growth|plan|pricing/.test(lower)) return 'I can help you compare them. Starter suits teams beginning their pipeline, while Growth supports larger lead volume, more sources, priority support, and custom qualification logic. How many leads do you expect each month?';

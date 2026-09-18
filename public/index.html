@@ -300,7 +300,9 @@
         return;
       }
       if (action === 'contact') {
-        window.location.href = 'mailto:hello@dispatchpro.ai?subject=Dispatch%20Pro%20custom%20proposal&body=Hello%20Dispatch%20Pro%2C%0A%0AWe%20are%20interested%20in%20a%20custom%20package.%0A%0ATeam%20size%3A%0AMonthly%20lead%20volume%3A%0ARequired%20integrations%3A%0ATarget%20timeline%3A%0APreferred%20settlement%3A%20USD%2C%20BTC%2C%20or%20ETH%0A';
+        setMiaOpen(true);
+        miaInput.value = 'I want a custom package for my business';
+        miaForm.requestSubmit();
         return;
       }
       const plan = encodeURIComponent(button.dataset.plan || 'starter');
