@@ -1,0 +1,14 @@
+.git
+.github
+.vscode
+node_modules
+.env
+.env.*
+!.env.example
+*.db
+*.db-shm
+*.db-wal
+logs
+*.pdf
+*.zip
+npm-debug.log*
