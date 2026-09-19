@@ -15,6 +15,7 @@
     "check": "node --check server.js && node --check store.js && node --check compliance.js && node --check auth.js && node --check lead-pipeline.js && node --check lead-model.js && node --check paypal-client.js && node --check mpesa-client.js && node --check explorium-client.js",
     "test": "npm run check && node --test",
     "harness": "bash scripts/engineering-harness.sh",
+    "deploy": "npm run deploy:netlify",
     "deploy:netlify": "bash scripts/deploy-netlify.sh public",
     "commit": "bash scripts/generate-commit-message.sh --commit",
     "commit:preview": "bash scripts/generate-commit-message.sh --preview",
