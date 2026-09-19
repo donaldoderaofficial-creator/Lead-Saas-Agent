@@ -31,7 +31,7 @@
   <div class="wrap">
     <div class="card">
       <h1>Plans & Billing</h1>
-      <p class="muted">Static upload version: this page is ready for direct Netlify upload. It keeps the selected plan and shows the next step without requiring a backend.</p>
+      <p class="muted">Create a BTC or ETH payment request, send the exact amount, then submit the transaction hash for review.</p>
 
       <div class="grid">
         <div>
@@ -60,14 +60,22 @@
 
       <button id="order" type="button">Create wallet payment</button>
       <div id="wallet" class="box"></div>
+      <label id="txHashLabel" for="txHash" hidden>Transaction hash</label>
+      <input id="txHash" placeholder="Paste transaction hash after sending" hidden />
+      <button id="confirm" type="button" hidden>Submit payment for review</button>
       <div id="status" class="status"></div>
     </div>
   </div>
 
   <script>
+    const API_BASE_URL = 'https://api.dispatchpro.ai';
     const plan = new URLSearchParams(window.location.search).get('plan');
     const planField = document.getElementById('plan');
+    const orderButton = document.getElementById('order');
+    const confirmButton = document.getElementById('confirm');
+    const txHashInput = document.getElementById('txHash');
     if (plan === 'growth') planField.value = 'growth';
+    let checkout = null;
 
     const setStatus = (msg, isError = false) => {
       const status = document.getElementById('status');
@@ -75,38 +83,81 @@
       status.style.color = isError ? '#FF6B6B' : '#8493B3';
     };
 
-    document.getElementById('order').addEventListener('click', () => {
+    orderButton.addEventListener('click', async () => {
       const name = document.getElementById('name').value.trim() || 'Customer';
       const email = document.getElementById('email').value.trim() || 'noreply@example.com';
       const selectedPlan = document.getElementById('plan').value;
       const method = document.getElementById('method').value;
       const walletBox = document.getElementById('wallet');
-      const currency = method === 'bitcoin' ? 'BTC' : 'ETH';
-      const amount = method === 'bitcoin'
-        ? (selectedPlan === 'growth' ? '0.003254' : '0.0010327')
-        : (selectedPlan === 'growth' ? '0.0028' : '0.0014');
+      orderButton.disabled = true;
+      setStatus('Creating wallet payment...');
 
-      walletBox.innerHTML = `
-        <strong>${name}</strong><br>
-        Email: ${email}<br>
-        Plan: ${selectedPlan}<br>
-        Send exactly <strong>${amount} ${currency}</strong> to:<br>
-        <code id="walletAddr" style="user-select:all;word-break:break-all;">bc1qstaticuploadexampleaddress123</code>
-        <button type="button" id="copyAddr" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">Copy</button><br>
-        Reference: <strong>STATIC-${Date.now()}</strong>
-      `;
-      walletBox.style.display = 'block';
-      document.getElementById('copyAddr').addEventListener('click', async () => {
-        const btn = document.getElementById('copyAddr');
-        try {
-          await navigator.clipboard.writeText('bc1qstaticuploadexampleaddress123');
-          btn.textContent = 'Copied!';
-        } catch {
-          btn.textContent = 'Copy failed';
-        }
-        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
-      });
-      setStatus('Static upload mode: connect a real backend or Netlify Function to confirm payments.');
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/billing/crypto/order`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, plan: selectedPlan, method }),
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || 'Unable to create wallet payment.');
+        checkout = { ...payload, method, plan: selectedPlan };
+
+        walletBox.innerHTML = `
+          Send exactly <strong>${payload.amountCrypto} ${payload.currency}</strong> to:<br>
+          <code id="walletAddr" style="user-select:all;word-break:break-all;"></code>
+          <button type="button" id="copyAddr" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">Copy</button><br>
+          Reference: <strong></strong>
+        `;
+        document.getElementById('walletAddr').textContent = payload.walletAddress;
+        walletBox.querySelector('strong:last-child').textContent = payload.reference;
+        walletBox.style.display = 'block';
+        document.getElementById('txHashLabel').hidden = false;
+        txHashInput.hidden = false;
+        confirmButton.hidden = false;
+        document.getElementById('copyAddr').addEventListener('click', async () => {
+          const button = document.getElementById('copyAddr');
+          try {
+            await navigator.clipboard.writeText(payload.walletAddress);
+            button.textContent = 'Copied!';
+          } catch {
+            button.textContent = 'Copy failed';
+          }
+          setTimeout(() => { button.textContent = 'Copy'; }, 2000);
+        });
+        setStatus('Send the amount, then submit the transaction hash for review.');
+      } catch (error) {
+        setStatus(error.message || 'Unable to create wallet payment.', true);
+      } finally {
+        orderButton.disabled = false;
+      }
+    });
+
+    confirmButton.addEventListener('click', async () => {
+      if (!checkout) return;
+      confirmButton.disabled = true;
+      setStatus('Submitting payment for review...');
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/billing/crypto/confirm`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reference: checkout.reference,
+            txHash: txHashInput.value.trim(),
+            amount: checkout.amountCrypto,
+            plan: checkout.plan,
+            method: checkout.method,
+          }),
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || 'Unable to submit payment.');
+        setStatus(payload.message || 'Payment submitted. Access starts after verification.');
+        confirmButton.hidden = true;
+      } catch (error) {
+        setStatus(error.message || 'Unable to submit payment.', true);
+      } finally {
+        confirmButton.disabled = false;
+      }
     });
   </script>
 </body>

@@ -9,6 +9,8 @@ require('dotenv').config();
 const ENV = process.env.NODE_ENV || 'development';
 const IS_PROD = ENV === 'production';
 const IS_DEV = ENV === 'development';
+const DEFAULT_BITCOIN_WALLET_ADDRESS = '3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k';
+const DEFAULT_ETHEREUM_WALLET_ADDRESS = '0xFFc40b1EcE21ce8A3b5e33caf95aA64bd8081330';
 
 function parsePort(value) {
   const port = Number(value);
@@ -129,14 +131,14 @@ const config = {
 
   wallets: {
     bitcoin: {
-      enabled: !!process.env.BITCOIN_WALLET_ADDRESS,
-      address: process.env.BITCOIN_WALLET_ADDRESS || null,
+      enabled: true,
+      address: process.env.BITCOIN_WALLET_ADDRESS || DEFAULT_BITCOIN_WALLET_ADDRESS,
       currency: 'BTC',
       label: 'Bitcoin',
     },
     ethereum: {
-      enabled: !!process.env.ETHEREUM_WALLET_ADDRESS,
-      address: process.env.ETHEREUM_WALLET_ADDRESS || null,
+      enabled: true,
+      address: process.env.ETHEREUM_WALLET_ADDRESS || DEFAULT_ETHEREUM_WALLET_ADDRESS,
       currency: 'ETH',
       label: 'Ethereum',
     },
@@ -147,7 +149,7 @@ const config = {
     title: 'The Builder\'s Blueprint: From Zero to Profitable Product Engineer',
     subtitle: 'A practical guide to turning coding skills into income, systems, and leverage.',
     priceUsd: 9.99,
-    walletAddress: process.env.BITCOIN_WALLET_ADDRESS || null,
+    walletAddress: process.env.BITCOIN_WALLET_ADDRESS || DEFAULT_BITCOIN_WALLET_ADDRESS,
   },
 
   // Third-party APIs
@@ -206,10 +208,10 @@ function validate() {
   if (config.payment.mpesa.enabled && !config.payment.mpesa.consumerKey) {
     console.warn('M-Pesa enabled but credentials missing');
   }
-  if (config.isProd && !process.env.BITCOIN_WALLET_ADDRESS) {
+  if (config.isProd && !config.wallets.bitcoin.address) {
     throw new Error('BITCOIN_WALLET_ADDRESS must be configured in production');
   }
-  if (config.isProd && !process.env.ETHEREUM_WALLET_ADDRESS) {
+  if (config.isProd && !config.wallets.ethereum.address) {
     throw new Error('ETHEREUM_WALLET_ADDRESS must be configured in production');
   }
 }

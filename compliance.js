@@ -7,18 +7,21 @@
  */
 
 const { compliance } = require('./store');
+const { COMPLIANCE_CATEGORY } = require('./constants');
+const { logger } = require('./logger');
 
+// Define screening rules for harmful content detection
 const RULES = [
-  { category: 'child sexual exploitation', pattern: /\b(child sexual abuse material|csam|groom (?:a )?child|sexual(?:ize|ising|izing) (?:a )?(?:child|minor))\b/i },
-  { category: 'violent crime', pattern: /\b(mass (?:shooting|violence)|murder(?:ing)?|assassin(?:ate|ation)|terror(?:ist|ism)|bomb threat)\b/i },
-  { category: 'weapons', pattern: /\b(nerve gas|biological weapon|radiological weapon|nuclear weapon|cluster munitions)\b/i },
-  { category: 'self-harm', pattern: /\b(encourage (?:suicide|self-harm)|promote (?:suicide|self-harm)|dangerous self-harm challenge)\b/i },
-  { category: 'privacy and credentials', pattern: /\b(steal (?:passwords?|credentials?)|doxx|home address(?:es)? for|credit card (?:numbers?|details?)|bank account (?:numbers?|details?))\b/i },
-  { category: 'cybercrime', pattern: /\b(hack(?:ing)? (?:into )?|malware campaign|credential stuffing|phishing campaign)\b/i },
-  { category: 'financial crime', pattern: /\b(money laundering|investment scam|defraud|fraudulent leads?)\b/i },
-  { category: 'hate or discrimination', pattern: /\b(target|exclude|avoid) .*\b(?:race|ethnicity|religion|nationality|gender identity|sexual orientation|disability|pregnan(?:t|cy))\b/i },
-  { category: 'defamation', pattern: /\bspread (?:false|unverified) (?:claims?|rumors?) about\b/i },
-  { category: 'intellectual property abuse', pattern: /\bcopy (?:their|a competitor'?s) (?:website|content|course) verbatim\b/i },
+  { category: COMPLIANCE_CATEGORY.CHILD_EXPLOITATION, pattern: /\b(child sexual abuse material|csam|groom (?:a )?child|sexual(?:ize|ising|izing) (?:a )?(?:child|minor))\b/i },
+  { category: COMPLIANCE_CATEGORY.VIOLENT_CRIME, pattern: /\b(mass (?:shooting|violence)|murder(?:ing)?|assassin(?:ate|ation)|terror(?:ist|ism)|bomb threat)\b/i },
+  { category: COMPLIANCE_CATEGORY.WEAPONS, pattern: /\b(nerve gas|biological weapon|radiological weapon|nuclear weapon|cluster munitions)\b/i },
+  { category: COMPLIANCE_CATEGORY.SELF_HARM, pattern: /\b(encourage (?:suicide|self-harm)|promote (?:suicide|self-harm)|dangerous self-harm challenge)\b/i },
+  { category: COMPLIANCE_CATEGORY.PRIVACY, pattern: /\b(steal (?:passwords?|credentials?)|doxx|home address(?:es)? for|credit card (?:numbers?|details?)|bank account (?:numbers?|details?))\b/i },
+  { category: COMPLIANCE_CATEGORY.CYBERCRIME, pattern: /\b(hack(?:ing)? (?:into )?|malware campaign|credential stuffing|phishing campaign)\b/i },
+  { category: COMPLIANCE_CATEGORY.FINANCIAL_CRIME, pattern: /\b(money laundering|investment scam|defraud|fraudulent leads?)\b/i },
+  { category: COMPLIANCE_CATEGORY.HATE, pattern: /\b(target|exclude|avoid) .*\b(?:race|ethnicity|religion|nationality|gender identity|sexual orientation|disability|pregnan(?:t|cy))\b/i },
+  { category: COMPLIANCE_CATEGORY.DEFAMATION, pattern: /\bspread (?:false|unverified) (?:claims?|rumors?) about\b/i },
+  { category: COMPLIANCE_CATEGORY.IP_ABUSE, pattern: /\bcopy (?:their|a competitor'?s) (?:website|content|course) verbatim\b/i },
 ];
 
 const preferredPenaltyPaymentMethods = [

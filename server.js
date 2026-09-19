@@ -22,6 +22,8 @@ const helmet = require('helmet');
 
 // Scalability & Configuration
 const { config } = require('./config');
+const { HTTP_STATUS, ERROR_MESSAGE, LEAD_SCORE } = require('./constants');
+const { validateEmail, validatePassword, validateLeadData, sanitizeString, validatePagination } = require('./validators');
 const { logger, requestLogger, errorHandler, asyncHandler, assignRequestId } = require('./logger');
 const { cache, withCache } = require('./cache');
 const { RateLimiter } = require('./rate-limiter');
@@ -697,7 +699,15 @@ async function finalizeLead(ref, payment) {
 // ---- Step 1: submit a lead, get a payment reference back ----
 app.post('/api/lead', requireActiveSubscription, async (req, res) => {
   const { name, email, phone, method } = req.body || {};
-  if (!name || !email) return res.status(400).json({ error: 'Missing name or email' });
+  
+  // Validate input
+  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Name is required' });
+  }
+  
+  if (!email || !validateEmail(email)) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Valid email is required' });
+  }
 
   try {
     if (method === 'paypal') {
@@ -1006,7 +1016,7 @@ app.post('/api/safety/incidents/:id/escalate', requireAuth, requireAdmin, async 
 
 function requireActiveSubscription(req, res, next) {
   if (!hasActiveSubscription(subscription.get())) {
-    return res.status(402).json({
+    return res.status(HTTP_STATUS.PAYMENT_REQUIRED).json({
       error: 'An active Dispatch Pro package is required for this service.',
       code: 'subscription_required',
       plansUrl: '/billing.html',
@@ -1019,7 +1029,7 @@ function requireActiveSubscription(req, res, next) {
     res.setHeader('X-RateLimit-Limit', String(config.rateLimiting.apiLimit));
     res.setHeader('X-RateLimit-Remaining', '0');
     res.setHeader('X-RateLimit-Reset', String(Math.floor(resetAt / 1000)));
-    return res.status(429).json(serviceAccessLimiter.message);
+    return res.status(HTTP_STATUS.RATE_LIMITED).json(serviceAccessLimiter.message);
   }
   res.setHeader('X-RateLimit-Limit', String(config.rateLimiting.apiLimit));
   res.setHeader('X-RateLimit-Remaining', String(serviceAccessLimiter.getRemaining(clientKey, config.rateLimiting.apiLimit, 60 * 60 * 1000)));
@@ -1028,8 +1038,16 @@ function requireActiveSubscription(req, res, next) {
 
 app.post('/auth/register', async (req, res) => {
   const { username, password } = req.body || {};
-  if (!username || !password || password.length < 8) {
-    return res.status(400).json({ error: 'Username and a password of at least 8 characters are required' });
+  
+  // Validate username
+  if (!username || typeof username !== 'string' || username.length < 3) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Username must be at least 3 characters' });
+  }
+  
+  // Validate password strength
+  const passwordValidation = validatePassword(password);
+  if (!passwordValidation.valid) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Password does not meet requirements', details: passwordValidation.errors });
   }
 
   const isFirstUser = users.count() === 0;
