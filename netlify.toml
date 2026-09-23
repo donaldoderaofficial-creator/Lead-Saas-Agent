@@ -8,53 +8,53 @@
   force = true
 
 # The frontend is static; the backend runs on the self-hosted production API.
-# Point api.dispatchpro.ai at the Oracle VM managed by deploy/setup-server.sh.
+# Point the Netlify frontend at the live Render backend.
 
 [[redirects]]
   from = "/api/payments/options"
-  to = "https://api.dispatchpro.ai/api/payments/options"
+  to = "https://lead-agent-saas.onrender.com/api/payments/options"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/billing/crypto/*"
-  to = "https://api.dispatchpro.ai/api/billing/crypto/:splat"
+  to = "https://lead-agent-saas.onrender.com/api/billing/crypto/:splat"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/*"
-  to = "https://api.dispatchpro.ai/api/:splat"
+  to = "https://lead-agent-saas.onrender.com/api/:splat"
   status = 200
   force = true
 
 [[redirects]]
   from = "/auth/*"
-  to = "https://api.dispatchpro.ai/auth/:splat"
+  to = "https://lead-agent-saas.onrender.com/auth/:splat"
   status = 200
   force = true
 
 [[redirects]]
   from = "/leads/*"
-  to = "https://api.dispatchpro.ai/leads/:splat"
+  to = "https://lead-agent-saas.onrender.com/leads/:splat"
   status = 200
   force = true
 
 [[redirects]]
   from = "/payments/*"
-  to = "https://api.dispatchpro.ai/payments/:splat"
+  to = "https://lead-agent-saas.onrender.com/payments/:splat"
   status = 200
   force = true
 
 [[redirects]]
   from = "/health"
-  to = "https://api.dispatchpro.ai/health"
+  to = "https://lead-agent-saas.onrender.com/health"
   status = 200
   force = true
 
 [[redirects]]
   from = "/ebook/*"
-  to = "https://api.dispatchpro.ai/ebook/:splat"
+  to = "https://lead-agent-saas.onrender.com/ebook/:splat"
   status = 200
   force = true
 
