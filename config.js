@@ -210,13 +210,15 @@ const config = {
   // Payment Providers
   payment: {
     paypal: {
-      enabled: Boolean(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET),
+      enabled: true,
+      configured: Boolean(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET),
       clientId: process.env.PAYPAL_CLIENT_ID,
       clientSecret: process.env.PAYPAL_CLIENT_SECRET,
       live: [process.env.PAYPAL_ENV, process.env.PAYPAL_MODE].includes('live'),
     },
     mpesa: {
-      enabled: Boolean(
+      enabled: true,
+      configured: Boolean(
         process.env.MPESA_CONSUMER_KEY
         && process.env.MPESA_CONSUMER_SECRET
         && (process.env.MPESA_SHORT_CODE || process.env.MPESA_SHORTCODE)
@@ -308,10 +310,10 @@ function validate() {
   if (config.security.corsOrigins.length === 0) {
     throw new Error('CORS_ORIGINS must contain at least one allowed origin');
   }
-  if (config.payment.paypal.enabled && !config.payment.paypal.clientId) {
+  if (config.payment.paypal.configured && !config.payment.paypal.clientId) {
     console.warn('PayPal enabled but credentials missing');
   }
-  if (config.payment.mpesa.enabled && !config.payment.mpesa.consumerKey) {
+  if (config.payment.mpesa.configured && !config.payment.mpesa.consumerKey) {
     console.warn('M-Pesa enabled but credentials missing');
   }
 }

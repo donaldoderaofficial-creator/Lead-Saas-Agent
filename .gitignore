@@ -9,3 +9,6 @@ model-state.json
 backups/
 .DS_Store
 npm-debug.log*
+
+# Local Netlify folder
+.netlify

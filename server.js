@@ -35,7 +35,7 @@ const { processLead } = require('./lead-pipeline');
 const { trainFromLeads, learningStatus } = require('./adaptive-learning');
 const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, users, subscription, emailThreads, checkDatabase, businessMetrics, createSessionStore } = require('./store');
 const { hasActiveSubscription } = require('./subscription-policy');
-const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateQrCode } = require('./auth');
+const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateEmailOtp, hashEmailOtp } = require('./auth');
 const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = require('./explorium-client');
 const { parseDataset, validateObservation } = require('./geospatial-safety');
 const { getBtcUsdRate, getCryptoUsdRate, startBtcUsdSync } = require('./crypto-rates');
@@ -64,6 +64,9 @@ function isOriginAllowed(origin, path = '') {
     const { hostname } = new URL(origin);
     const isLocalDevelopmentHost = ['localhost', '127.0.0.1', '::1'].includes(hostname) || hostname.endsWith('.localhost');
     if (isLocalDevelopmentHost) return true;
+    const isHostedPaymentPath = path === '/api/payments/options'
+      || path.startsWith('/api/billing/crypto/');
+    if (isHostedPaymentPath && hostname === 'lead-saas-agent.netlify.app') return true;
     if (path.startsWith('/api/ebook/') || path.startsWith('/ebook/')) {
       return hostname.endsWith('.netlify.app') || hostname.endsWith('.vercel.app') || hostname.endsWith('.pages.dev');
     }
@@ -89,7 +92,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 
 app.get('/', (req, res) => {
-  res.redirect(302, '/dashboard-v2.html');
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.use((req, res, next) => {
@@ -744,7 +747,7 @@ app.post('/api/lead', requireActiveSubscription, async (req, res) => {
 
   try {
     if (method === 'paypal') {
-      if (!config.payment.paypal.enabled || !config.payment.paypal.clientSecret) {
+      if (!config.payment.paypal.configured || !config.payment.paypal.clientSecret) {
         return res.status(503).json({ error: 'PayPal payments are not configured. Use Bitcoin or Ethereum checkout.' });
       }
       const leadRef = crypto.randomUUID();
@@ -773,7 +776,7 @@ app.post('/api/lead', requireActiveSubscription, async (req, res) => {
     }
 
     if (method === 'mpesa') {
-      if (!config.payment.mpesa.enabled || !config.payment.mpesa.shortCode || !process.env.MPESA_PASSKEY || !process.env.MPESA_CALLBACK_URL) {
+      if (!config.payment.mpesa.configured || !config.payment.mpesa.shortCode || !process.env.MPESA_PASSKEY || !process.env.MPESA_CALLBACK_URL) {
         return res.status(503).json({ error: 'M-Pesa payments are not configured. Use Bitcoin or Ethereum checkout.' });
       }
       const normalizedPhone = normalizePhoneNumber(phone);
@@ -1070,11 +1073,10 @@ function requireActiveSubscription(req, res, next) {
 }
 
 app.post('/auth/register', async (req, res) => {
-  const { username, password } = req.body || {};
+  const { email, password } = req.body || {};
   
-  // Validate username
-  if (!username || typeof username !== 'string' || username.length < 3) {
-    return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Username must be at least 3 characters' });
+  if (!validateEmail(email)) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Enter a valid email address' });
   }
   
   // Validate password strength
@@ -1083,20 +1085,32 @@ app.post('/auth/register', async (req, res) => {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Password does not meet requirements', details: passwordValidation.errors });
   }
 
-  if (users.findByUsername(username)) {
+  if (users.findByUsername(email.trim().toLowerCase())) {
     return res.status(409).json({ error: 'That username is already taken' });
   }
 
   try {
     const passwordHash = await hashPassword(password);
     const totpSecret = generateTotpSecret();
-    const userId = users.create(username, passwordHash, totpSecret);
-    const qrCodeDataUrl = await generateQrCode(username, totpSecret);
+    const normalizedEmail = email.trim().toLowerCase();
+    const userId = users.create(normalizedEmail, passwordHash, totpSecret);
+    const otp = generateEmailOtp();
+    users.setEmailOtp(userId, hashEmailOtp(otp), new Date(Date.now() + 10 * 60 * 1000).toISOString());
+    const delivery = await sendReply({
+      to: normalizedEmail,
+      subject: 'Your Dispatch Pro verification code',
+      text: `Your Dispatch Pro verification code is ${otp}. It expires in 10 minutes.`,
+      prefixSubject: false,
+    });
+    if (!delivery.sent && config.isProd) {
+      return res.status(503).json({ error: 'Email verification is temporarily unavailable. Please try again shortly.' });
+    }
     res.json({
       userId,
-      username,
-      qrCodeDataUrl,
-      manualEntryKey: totpSecret,
+      username: normalizedEmail,
+      email: normalizedEmail,
+      verificationRequired: true,
+      ...(delivery.sent ? {} : { developmentOtp: otp }),
       companyProfile: DISPATCH_PRO,
     });
   } catch (err) {
@@ -1105,33 +1119,34 @@ app.post('/auth/register', async (req, res) => {
 });
 
 app.post('/auth/verify-setup', (req, res) => {
-  const { username, code } = req.body || {};
-  const user = users.findByUsername(username);
+  const { username, email, code } = req.body || {};
+  const identifier = (email || username || '').trim().toLowerCase();
+  const user = users.findByUsername(identifier);
   if (!user) return res.status(404).json({ error: 'Unknown username' });
-  if (!verifyTotpCode(code, user.totp_secret)) {
-    return res.status(400).json({ error: 'Invalid code — check your authenticator app and try again' });
+  if (!users.verifyEmailOtp(user.id, hashEmailOtp(code))) {
+    return res.status(400).json({ error: 'Invalid or expired email code' });
   }
-  users.enableTotp(user.id);
   res.json({ status: 'verified' });
 });
 
 app.post('/auth/login', async (req, res) => {
-  const { username, password, totpCode } = req.body || {};
-  if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+  const { username, email, password, totpCode } = req.body || {};
+  const identifier = (email || username || '').trim().toLowerCase();
+  if (!identifier || !password) return res.status(400).json({ error: 'Email and password required' });
 
-  if (isRateLimited(username, req)) {
+  if (isRateLimited(identifier, req)) {
     return res.status(429).json({ error: 'Too many failed attempts. Try again in a few minutes.' });
   }
 
-  const user = users.findByUsername(username);
+  const user = users.findByUsername(identifier);
   if (!user) {
-    recordFailedAttempt(username, req);
+    recordFailedAttempt(identifier, req);
     return res.status(401).json({ error: 'Invalid username or password' });
   }
 
   const passwordOk = await verifyPassword(password, user.password_hash);
   if (!passwordOk) {
-    recordFailedAttempt(username, req);
+    recordFailedAttempt(identifier, req);
     return res.status(401).json({ error: 'Invalid username or password' });
   }
 
@@ -1139,7 +1154,7 @@ app.post('/auth/login', async (req, res) => {
     return res.status(403).json({ error: '2FA setup not completed for this account', needsSetup: true });
   }
 
-  if (!totpCode || !verifyTotpCode(totpCode, user.totp_secret)) {
+  if (user.auth_method !== 'email_otp' && (!totpCode || !verifyTotpCode(totpCode, user.totp_secret))) {
     recordFailedAttempt(username, req);
     return res.status(401).json({ error: 'Invalid 2FA code' });
   }

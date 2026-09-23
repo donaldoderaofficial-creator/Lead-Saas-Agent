@@ -11,6 +11,38 @@
         "/^docker compose ps --all 2>&1 \\|\\| true; printf '\\\\n--- port ---\\\\n'; \\(ss -ltnp 2>/dev/null \\|\\| netstat -ltnp 2>/dev/null \\|\\| true\\) \\| grep ':8000' \\|\\| true$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "/^pwd && git status --short --branch && git rev-parse --show-toplevel$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^git config --show-origin --get-regexp '\\^\\(core\\\\\\.fsmonitor\\|core\\\\\\.untrackedCache\\|status\\\\\\.showUntrackedFiles\\|feature\\\\\\.manyFiles\\|core\\\\\\.preloadIndex\\|core\\\\\\.splitIndex\\)' \\|\\| true$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^git count-objects -vH && git submodule status 2>&1 \\|\\| true$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^git --version && /usr/bin/time -f 'status elapsed=%e s' git status --porcelain=v2 --untracked-files=all >/dev/null$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^git check-ignore -v logs/app\\.log \\|\\| true; git ls-files --stage logs/app\\.log; git status --short logs/app\\.log$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^git fsmonitor--daemon status 2>&1 \\|\\| true$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^node -e \"const \\{ config \\} = require\\('\\./config'\\); console\\.log\\(JSON\\.stringify\\(\\{ bitcoin: config\\.wallets\\.bitcoin\\.address, ethereum: config\\.wallets\\.ethereum\\.address \\}\\)\\);\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^node --check server\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }

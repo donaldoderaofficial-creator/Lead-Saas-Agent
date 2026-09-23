@@ -85,6 +85,10 @@ db.exec(`
     totp_secret TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'user',
     totp_enabled INTEGER NOT NULL DEFAULT 0,
+    auth_method TEXT NOT NULL DEFAULT 'totp',
+    email_otp_hash TEXT,
+    email_otp_expires_at TEXT,
+    email_otp_attempts INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -198,6 +202,15 @@ db.exec(`
     FOREIGN KEY (actor_id) REFERENCES users(id)
   );
 `);
+
+for (const column of [
+  "auth_method TEXT NOT NULL DEFAULT 'totp'",
+  'email_otp_hash TEXT',
+  'email_otp_expires_at TEXT',
+  'email_otp_attempts INTEGER NOT NULL DEFAULT 0',
+]) {
+  try { db.exec(`ALTER TABLE users ADD COLUMN ${column}`); } catch (_) {}
+}
 
 for (const column of ['crypto_payment_reference', 'crypto_transaction_id']) {
   try { db.exec(`ALTER TABLE subscription ADD COLUMN ${column} TEXT`); } catch (_) {}
@@ -439,6 +452,21 @@ const users = {
     const info = db.prepare('INSERT INTO users (username, password_hash, totp_secret, role) VALUES (?, ?, ?, ?)')
       .run(username, passwordHash, totpSecret, role);
     return Number(info.lastInsertRowid);
+  },
+  setEmailOtp(id, otpHash, expiresAt) {
+    db.prepare("UPDATE users SET auth_method = 'email_otp', email_otp_hash = ?, email_otp_expires_at = ?, email_otp_attempts = 0 WHERE id = ?")
+      .run(otpHash, expiresAt, id);
+  },
+  verifyEmailOtp(id, otpHash) {
+    const user = this.findById(id);
+    if (!user || user.auth_method !== 'email_otp' || !user.email_otp_hash || !user.email_otp_expires_at) return false;
+    if (user.email_otp_attempts >= 5 || new Date(user.email_otp_expires_at).getTime() < Date.now()) return false;
+    if (user.email_otp_hash !== otpHash) {
+      db.prepare('UPDATE users SET email_otp_attempts = email_otp_attempts + 1 WHERE id = ?').run(id);
+      return false;
+    }
+    db.prepare('UPDATE users SET totp_enabled = 1, email_otp_hash = NULL, email_otp_expires_at = NULL, email_otp_attempts = 0 WHERE id = ?').run(id);
+    return true;
   },
   findByUsername(username) {
     return db.prepare('SELECT * FROM users WHERE username = ?').get(username);

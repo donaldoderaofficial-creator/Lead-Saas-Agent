@@ -4,6 +4,7 @@
  */
 
 const bcrypt = require('bcryptjs');
+const crypto = require('node:crypto');
 const { authenticator } = require('otplib');
 const QRCode = require('qrcode');
 const { PASSWORD_REQUIREMENTS } = require('./constants');
@@ -67,6 +68,14 @@ function verifyTotpCode(code, secret) {
   }
 }
 
+function generateEmailOtp() {
+  return String(crypto.randomInt(100000, 1000000));
+}
+
+function hashEmailOtp(code) {
+  return crypto.createHash('sha256').update(String(code)).digest('hex');
+}
+
 /**
  * Generate QR code for TOTP setup.
  * @param {string} username - Username for identification
@@ -81,4 +90,4 @@ async function generateQrCode(username, secret) {
   return QRCode.toDataURL(otpauthUrl);
 }
 
-module.exports = { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateQrCode };
+module.exports = { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateQrCode, generateEmailOtp, hashEmailOtp };

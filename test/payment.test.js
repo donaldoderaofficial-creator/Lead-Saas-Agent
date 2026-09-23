@@ -45,7 +45,7 @@ test('exposes direct bitcoin and ethereum wallet payment options', () => {
   assert.equal(config.wallets.ethereum.address, '0x1234567890abcdef1234567890abcdef12345678');
 });
 
-test('advertises only configured payment methods and currencies', () => {
+test('permanently advertises all payment methods and currencies', () => {
   const app = require('../server');
   const optionsRoute = app._router.stack.find((layer) => layer.route?.path === '/api/payments/options');
   const options = optionsRoute.route.stack.at(-1).handle;
@@ -53,11 +53,11 @@ test('advertises only configured payment methods and currencies', () => {
 
   options({}, response);
 
-  assert.deepEqual(response.body.providers.paypal.methods, []);
-  assert.deepEqual(response.body.providers.mpesa.methods, []);
+  assert.deepEqual(response.body.providers.paypal.methods, ['checkout']);
+  assert.deepEqual(response.body.providers.mpesa.methods, ['stk-push']);
   assert.deepEqual(response.body.providers.bitcoin.methods, ['wallet-transfer']);
   assert.deepEqual(response.body.providers.ethereum.methods, ['wallet-transfer']);
-  assert.deepEqual(response.body.supportedCurrencies, ['BTC', 'ETH']);
+  assert.deepEqual(response.body.supportedCurrencies, ['USD', 'KES', 'BTC', 'ETH']);
 });
 
 test('health response exposes a release build identifier', () => {
@@ -173,6 +173,13 @@ test('allows ebook payment origins for buyer checkout', () => {
   assert.equal(app.isOriginAllowed('http://localhost:5173', '/api/ebook/order'), true);
   assert.equal(app.isOriginAllowed('http://localhost:3000', '/api/ebook/confirm'), true);
   assert.equal(app.isOriginAllowed('https://evil.example', '/api/ebook/order'), false);
+});
+
+test('allows the deployed billing page to load wallet payment options', () => {
+  const app = require('../server');
+
+  assert.equal(app.isOriginAllowed('https://lead-saas-agent.netlify.app', '/api/payments/options'), true);
+  assert.equal(app.isOriginAllowed('https://lead-saas-agent.netlify.app', '/api/billing/crypto/order'), true);
 });
 
 test('accepts a deposit screenshot as ebook payment confirmation', () => {
