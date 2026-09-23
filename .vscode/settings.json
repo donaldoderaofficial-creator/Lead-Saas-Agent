@@ -1,4 +1,5 @@
 {
+    "git.useEditorAsCommitMessage": false,
     "chat.tools.terminal.autoApprove": {
         "/^cd /workspaces/Lead-Saas-Agent && git remote -v && echo '---' && git --no-pager branch -avv && echo '---' && git --no-pager rev-parse --verify 619da137b4c06d459bda7a41d171656c86c61dfc\\^\\{commit\\} 2>/dev/null \\|\\| echo 'commit-not-found-local'$/": {
             "approve": true,
@@ -41,6 +42,10 @@
             "matchCommandLine": true
         },
         "/^node --check server\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^find \\.git/hooks -maxdepth 1 -type f -perm -111 -printf '%f %s bytes\\\\n' \\| sort && git config --show-origin --get-regexp 'core\\\\\\.\\(hooksPath\\|editor\\)\\|commit\\\\\\.\\|gpg' \\|\\| true$/": {
             "approve": true,
             "matchCommandLine": true
         }
