@@ -27,6 +27,105 @@ function parseCorsOrigins(value) {
     .filter(Boolean);
 }
 
+function getDefaultCorsOrigins() {
+  const origins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:4173',
+    'http://localhost:5173',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+    'http://127.0.0.1:4173',
+    'http://127.0.0.1:5173',
+  ];
+
+  if (process.env.PUBLIC_APP_URL) {
+    origins.push(process.env.PUBLIC_APP_URL);
+  }
+
+  return origins;
+}
+
+function validateProductionConfig(input = {}) {
+  const configToValidate = input || {};
+  const environment = configToValidate.env || ENV;
+
+  if (environment !== 'production') {
+    return [];
+  }
+
+  const errors = [];
+  const sessionSecret = configToValidate.sessionSecret ?? process.env.SESSION_SECRET ?? '';
+  const publicAppUrl = configToValidate.publicAppUrl ?? process.env.PUBLIC_APP_URL ?? '';
+  const corsOrigins = Array.isArray(configToValidate.corsOrigins)
+    ? configToValidate.corsOrigins
+    : parseCorsOrigins(configToValidate.corsOrigins ?? process.env.CORS_ORIGINS ?? '');
+  const paypal = configToValidate.paypal || {};
+  const mpesa = configToValidate.mpesa || {};
+  const wallets = configToValidate.wallets || {};
+
+  if (!sessionSecret || sessionSecret.trim().length < 32) {
+    errors.push('SESSION_SECRET must be set to a value at least 32 characters long in production.');
+  }
+
+  if (!publicAppUrl || !/^https?:\/\//.test(publicAppUrl)) {
+    errors.push('PUBLIC_APP_URL must be set to the deployed app origin in production.');
+  }
+
+  if (!corsOrigins.length) {
+    errors.push('CORS_ORIGINS must contain at least one allowed origin in production.');
+  }
+
+  if (paypal.enabled && (!paypal.clientId || !paypal.clientSecret)) {
+    errors.push('PayPal is enabled but the required PayPal client credentials are missing.');
+  }
+
+  if (mpesa.enabled && (!mpesa.consumerKey || !mpesa.consumerSecret || !mpesa.callbackUrl)) {
+    errors.push('M-Pesa is enabled but the required consumer key, consumer secret, or callback URL are missing.');
+  }
+
+  if (!wallets.bitcoin?.address) {
+    errors.push('BITCOIN_WALLET_ADDRESS must be configured in production.');
+  }
+
+  if (!wallets.ethereum?.address) {
+    errors.push('ETHEREUM_WALLET_ADDRESS must be configured in production.');
+  }
+
+  return errors;
+}
+
+function buildProductionSmokeCheckStatus(input = {}) {
+  const configToCheck = input || {};
+  const environment = configToCheck.env || ENV;
+
+  if (environment !== 'production') {
+    return {
+      status: 'skipped',
+      checks: [],
+      missing: [],
+    };
+  }
+
+  const checks = [
+    { name: 'sessionSecret', passed: Boolean(configToCheck.sessionSecret && configToCheck.sessionSecret.length >= 32), label: 'SESSION_SECRET' },
+    { name: 'publicAppUrl', passed: Boolean(configToCheck.publicAppUrl && /^https?:\/\//.test(configToCheck.publicAppUrl)), label: 'PUBLIC_APP_URL' },
+    { name: 'corsOrigins', passed: Array.isArray(configToCheck.corsOrigins) ? configToCheck.corsOrigins.length > 0 : Boolean(configToCheck.corsOrigins), label: 'CORS_ORIGINS' },
+    { name: 'bitcoinWallet', passed: Boolean(configToCheck.wallets?.bitcoin?.address), label: 'BITCOIN_WALLET_ADDRESS' },
+    { name: 'ethereumWallet', passed: Boolean(configToCheck.wallets?.ethereum?.address), label: 'ETHEREUM_WALLET_ADDRESS' },
+    { name: 'paypal', passed: !(configToCheck.paypal?.enabled) || Boolean(configToCheck.paypal?.clientId && configToCheck.paypal?.clientSecret), label: 'PayPal configuration' },
+    { name: 'mpesa', passed: !(configToCheck.mpesa?.enabled) || Boolean(configToCheck.mpesa?.consumerKey && configToCheck.mpesa?.consumerSecret && configToCheck.mpesa?.callbackUrl), label: 'M-Pesa configuration' },
+  ];
+
+  const missing = checks.filter((check) => !check.passed).map((check) => check.label);
+
+  return {
+    status: missing.length === 0 ? 'ready' : 'not_ready',
+    checks,
+    missing,
+  };
+}
+
 // Application Configuration
 const config = {
   // Environment
@@ -39,6 +138,8 @@ const config = {
   port: parsePort(process.env.PORT || 8000),
   host: process.env.HOST || '0.0.0.0',
   sessionSecret: process.env.SESSION_SECRET,
+  publicAppUrl: process.env.PUBLIC_APP_URL || null,
+  emailWebhookSecret: process.env.EMAIL_WEBHOOK_SECRET || null,
 
   // Database
   database: {
@@ -180,7 +281,7 @@ const config = {
     bcryptRounds: 12,
     tokenExpiry: 8 * 60 * 60 * 1000, // 8 hours
     csrfProtection: !IS_DEV,
-    corsOrigins: parseCorsOrigins(process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:3001,http://localhost:4173,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:4173,http://127.0.0.1:5173,https://*.netlify.app'),
+    corsOrigins: parseCorsOrigins(process.env.CORS_ORIGINS || getDefaultCorsOrigins().join(',')),
   },
 
   // Monitoring & Analytics (maintainability, efficiency)
@@ -193,6 +294,11 @@ const config = {
 
 // Validation
 function validate() {
+  const errors = validateProductionConfig(config);
+  if (errors.length > 0) {
+    throw new Error(errors.join(' '));
+  }
+
   if (!config.sessionSecret) {
     throw new Error('Missing SESSION_SECRET environment variable');
   }
@@ -207,12 +313,6 @@ function validate() {
   }
   if (config.payment.mpesa.enabled && !config.payment.mpesa.consumerKey) {
     console.warn('M-Pesa enabled but credentials missing');
-  }
-  if (config.isProd && !config.wallets.bitcoin.address) {
-    throw new Error('BITCOIN_WALLET_ADDRESS must be configured in production');
-  }
-  if (config.isProd && !config.wallets.ethereum.address) {
-    throw new Error('ETHEREUM_WALLET_ADDRESS must be configured in production');
   }
 }
 
@@ -234,6 +334,8 @@ module.exports = {
   isFeatureEnabled,
   parseCorsOrigins,
   parsePort,
+  validateProductionConfig,
+  buildProductionSmokeCheckStatus,
   ENV,
   IS_PROD,
   IS_DEV,

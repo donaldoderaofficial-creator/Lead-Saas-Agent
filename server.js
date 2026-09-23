@@ -21,7 +21,7 @@ const compression = require('compression');
 const helmet = require('helmet');
 
 // Scalability & Configuration
-const { config } = require('./config');
+const { config, buildProductionSmokeCheckStatus } = require('./config');
 const { HTTP_STATUS, ERROR_MESSAGE, LEAD_SCORE } = require('./constants');
 const { validateEmail, validatePassword, validateLeadData, sanitizeString, validatePagination } = require('./validators');
 const { logger, requestLogger, errorHandler, asyncHandler, assignRequestId } = require('./logger');
@@ -87,6 +87,10 @@ app.use(requestLogger); // Request logging for monitoring
 app.set('trust proxy', config.isProd ? 1 : false);
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));
+
+app.get('/', (req, res) => {
+  res.redirect(302, '/dashboard-v2.html');
+});
 
 app.use((req, res, next) => {
   const legacyEbookPaths = ['/ebook-success.html', '/ebook-reader.html', '/ebook/access', '/ebook/download.pdf', '/ebook/read'];
@@ -260,11 +264,40 @@ app.get('/health', (req, res) => {
 
 app.get('/ready', (req, res) => {
   const database = checkDatabase();
-  const ready = database.status === 'ok';
+  const smokeCheck = buildProductionSmokeCheckStatus({
+    env: config.env,
+    sessionSecret: config.sessionSecret,
+    publicAppUrl: config.publicAppUrl,
+    corsOrigins: config.security.corsOrigins,
+    paypal: config.payment.paypal,
+    mpesa: { ...config.payment.mpesa, callbackUrl: process.env.MPESA_CALLBACK_URL },
+    wallets: config.wallets,
+  });
+  const ready = database.status === 'ok' && smokeCheck.status !== 'not_ready';
   res.status(ready ? 200 : 503).json({
     status: ready ? 'ready' : 'not_ready',
     timestamp: new Date().toISOString(),
     database,
+    deployment: smokeCheck,
+  });
+});
+
+app.get('/api/deploy/smoke', (req, res) => {
+  const smokeCheck = buildProductionSmokeCheckStatus({
+    env: config.env,
+    sessionSecret: config.sessionSecret,
+    publicAppUrl: config.publicAppUrl,
+    corsOrigins: config.security.corsOrigins,
+    paypal: config.payment.paypal,
+    mpesa: { ...config.payment.mpesa, callbackUrl: process.env.MPESA_CALLBACK_URL },
+    wallets: config.wallets,
+  });
+
+  res.status(smokeCheck.status === 'ready' ? 200 : 503).json({
+    status: smokeCheck.status,
+    timestamp: new Date().toISOString(),
+    missing: smokeCheck.missing,
+    checks: smokeCheck.checks,
   });
 });
 
@@ -1048,11 +1081,6 @@ app.post('/auth/register', async (req, res) => {
   const passwordValidation = validatePassword(password);
   if (!passwordValidation.valid) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Password does not meet requirements', details: passwordValidation.errors });
-  }
-
-  const isFirstUser = users.count() === 0;
-  if (!isFirstUser && !req.session?.userId) {
-    return res.status(401).json({ error: 'Only an existing logged-in user can create new accounts' });
   }
 
   if (users.findByUsername(username)) {

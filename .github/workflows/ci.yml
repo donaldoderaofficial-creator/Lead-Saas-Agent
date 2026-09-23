@@ -29,11 +29,13 @@ jobs:
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
 
-      - name: Smoke test health endpoint
+      - name: Smoke test deployment readiness gate
         env:
           SESSION_SECRET: ci-only-session-secret-with-at-least-32-characters
           DB_PATH: /tmp/lead-agent-ci.db
           NODE_ENV: production
+          PUBLIC_APP_URL: https://example.com
+          CORS_ORIGINS: https://example.com
           BITCOIN_WALLET_ADDRESS: ci-only-bitcoin-wallet
           ETHEREUM_WALLET_ADDRESS: ci-only-ethereum-wallet
         run: |
@@ -41,7 +43,8 @@ jobs:
           PID=$!
           trap 'kill $PID 2>/dev/null || true' EXIT
           for i in {1..20}; do
-            if curl --fail --silent http://127.0.0.1:8000/ready | grep -q '"status":"ready"'; then
+            if curl --fail --silent http://127.0.0.1:8000/api/deploy/smoke | grep -q '"status":"ready"'; then
+              curl --fail --silent http://127.0.0.1:8000/ready | grep -q '"status":"ready"'
               curl --fail --silent -X POST http://127.0.0.1:8000/api/assistant/mia \
                 -H 'content-type: application/json' \
                 -d '{"question":"Hello Mia"}' | grep -q '"assistant":"Mia"'

@@ -1,0 +1,16 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd /workspaces/Lead-Saas-Agent && git remote -v && echo '---' && git --no-pager branch -avv && echo '---' && git --no-pager rev-parse --verify 619da137b4c06d459bda7a41d171656c86c61dfc\\^\\{commit\\} 2>/dev/null \\|\\| echo 'commit-not-found-local'$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^grep -nE 'app\\\\\\.listen\\|PORT\\|HOST\\|/health\\|/ready\\|create-prompt' server\\.js config\\.js README\\.md DEPLOY\\.md QUICK_START\\.md \\|\\| true$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^docker compose ps --all 2>&1 \\|\\| true; printf '\\\\n--- port ---\\\\n'; \\(ss -ltnp 2>/dev/null \\|\\| netstat -ltnp 2>/dev/null \\|\\| true\\) \\| grep ':8000' \\|\\| true$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
