@@ -4,12 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Lead SaaS billing</title>
-  <style>body{margin:0;padding:32px 18px;background:#0b0d12;color:#e7e9ee;font:15px/1.5 sans-serif}.wrap{max-width:620px;margin:auto}.panel{background:#151822;border:1px solid #303747;border-radius:12px;padding:24px;margin-bottom:16px}h1{margin-top:0}label{display:block;color:#9aa1b1;font-size:13px;margin:12px 0 5px}input,select,button{width:100%;box-sizing:border-box;padding:11px;border-radius:8px;border:1px solid #303747;background:#1c202c;color:#e7e9ee;font:inherit}button{margin-top:16px;background:#6c8cff;border-color:#6c8cff;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.wallet{margin-top:18px;padding:14px;background:#1c202c;border-radius:8px;word-break:break-word}.wallet-list{display:grid;gap:10px;margin:16px 0}.wallet-row{padding:12px;background:#1c202c;border:1px solid #303747;border-radius:8px}.wallet-row strong{display:block;margin-bottom:4px}.wallet-row code{display:block;color:#b9c7ff;word-break:break-all}.wallet-row button{width:auto;margin:8px 0 0;padding:6px 10px}.card-plan{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}.card-plan>div{border:1px solid #303747;border-radius:8px;padding:14px}.card-plan h2{font-size:16px;margin:0 0 4px}.card-plan p{color:#9aa1b1;font-size:13px;margin:0 0 10px}.paypal-button{min-height:42px}#status{min-height:24px;margin-top:16px;color:#9aa1b1}@media(max-width:560px){.grid,.card-plan{grid-template-columns:1fr}}</style>
+  <style>body{margin:0;padding:32px 18px;background:#0b0d12;color:#e7e9ee;font:15px/1.5 sans-serif}.wrap{max-width:620px;margin:auto}.panel{background:#151822;border:1px solid #303747;border-radius:12px;padding:24px;margin-bottom:16px}h1{margin-top:0}label{display:block;color:#9aa1b1;font-size:13px;margin:12px 0 5px}input,select,button{width:100%;box-sizing:border-box;padding:11px;border-radius:8px;border:1px solid #303747;background:#1c202c;color:#e7e9ee;font:inherit}button{margin-top:16px;background:#6c8cff;border-color:#6c8cff;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.wallet{margin-top:18px;padding:14px;background:#1c202c;border-radius:8px;word-break:break-word}.wallet-list{display:grid;gap:10px;margin:16px 0}.wallet-row{padding:12px;background:#1c202c;border:1px solid #303747;border-radius:8px}.wallet-row strong{display:block;margin-bottom:4px}.wallet-row code{display:block;color:#b9c7ff;word-break:break-all}.wallet-row button{width:auto;margin:8px 0 0;padding:6px 10px}.card-plan{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}.card-plan>div{border:1px solid #303747;border-radius:8px;padding:14px}.card-plan h2{font-size:16px;margin:0 0 4px}.card-plan p{color:#9aa1b1;font-size:13px;margin:0 0 10px}.paypal-button{min-height:42px}#status{min-height:24px;margin-top:16px;color:#9aa1b1}@media(max-width:560px){.grid,.card-plan{grid-template-columns:1fr}}.hint{color:#9aa1b1;font-size:12px;margin:14px 0 2px}</style>
 </head>
 <body>
   <main class="wrap"><div class="panel">
     <h1>Lead SaaS subscription</h1>
-    <p>Pay by BTC or ETH. Service access is enabled only after payment review.</p>
+    <p>Send BTC or ETH anytime to the permanent addresses below — no form required.</p>
+    <div id="walletList" class="wallet-list" aria-live="polite"></div>
+    <p class="hint">Want a tracked order reference instead? Fill this in and create a payment:</p>
     <div class="grid">
       <div><label for="name">Name</label><input id="name"></div>
       <div><label for="email">Email</label><input id="email" type="email"></div>
@@ -17,7 +19,6 @@
       <div><label for="method">Payment method</label><select id="method"><option value="bitcoin">Bitcoin (BTC)</option><option value="ethereum">Ethereum (ETH)</option></select></div>
     </div>
     <button id="order" disabled>Create payment</button>
-    <div id="walletList" class="wallet-list" aria-live="polite"></div>
     <div id="wallet" class="wallet" hidden></div>
     <label id="hashLabel" for="hash" hidden>Transaction hash</label>
     <input id="hash" placeholder="Paste transaction hash" hidden>
@@ -42,6 +43,28 @@
       $('status').textContent = message;
       $('status').style.color = isError ? '#ff7373' : '#9aa1b1';
     }
+    async function copyText(text) {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch {}
+      try {
+        const el = document.createElement('textarea');
+        el.value = text;
+        el.style.position = 'fixed';
+        el.style.opacity = '0';
+        document.body.appendChild(el);
+        el.focus();
+        el.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(el);
+        return ok;
+      } catch {
+        return false;
+      }
+    }
     async function loadPaymentOptions() {
       try {
         let response;
@@ -59,12 +82,8 @@
         $('walletList').innerHTML = wallets.map((provider) => `<div class="wallet-row"><strong>${provider.currency} wallet</strong><code>${provider.address}</code><button type="button" data-address="${provider.address}" data-currency="${provider.currency}">Copy ${provider.currency} address</button></div>`).join('');
         $('walletList').querySelectorAll('button').forEach((button) => {
           button.onclick = async () => {
-            try {
-              await navigator.clipboard.writeText(button.dataset.address);
-              button.textContent = 'Copied';
-            } catch {
-              button.textContent = 'Copy failed';
-            }
+            const copied = await copyText(button.dataset.address);
+            button.textContent = copied ? 'Copied' : 'Copy failed';
             setTimeout(() => { button.textContent = `Copy ${button.dataset.currency} address`; }, 2000);
           };
         });
@@ -121,12 +140,8 @@
       $('wallet').hidden = false;
       $('wallet').innerHTML = `Send exactly <strong>${data.amountCrypto} ${data.currency}</strong> to:<br><code id="walletAddr" style="user-select:all;word-break:break-all;">${data.walletAddress}</code> <button type="button" id="copyAddr" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">Copy</button><br>Reference: ${data.reference}`;
       $('copyAddr').onclick = async () => {
-        try {
-          await navigator.clipboard.writeText(data.walletAddress);
-          $('copyAddr').textContent = 'Copied!';
-        } catch {
-          $('copyAddr').textContent = 'Copy failed';
-        }
+        const copied = await copyText(data.walletAddress);
+        $('copyAddr').textContent = copied ? 'Copied!' : 'Copy failed';
         setTimeout(() => { $('copyAddr').textContent = 'Copy'; }, 2000);
       };
       $('hashLabel').hidden = false;
