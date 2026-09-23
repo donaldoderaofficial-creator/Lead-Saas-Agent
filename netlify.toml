@@ -1,6 +1,4 @@
-git add netlify.toml
-GIT_EDITOR=true git commit -m "Update payment routing"git add netlify.toml
-GIT_EDITOR=true git commit -m "Update payment routing"[build]
+[build]
   publish = "public"
 
 [[redirects]]
