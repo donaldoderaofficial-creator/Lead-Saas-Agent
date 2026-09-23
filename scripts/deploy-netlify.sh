@@ -10,7 +10,7 @@ if [[ -z "$SITE_ID" || -z "$TOKEN" ]]; then
   echo "Example:"
   echo "  export NETLIFY_SITE_ID=your_site_id"
   echo "  export NETLIFY_AUTH_TOKEN=your_token"
-  echo "  npm run deploy:netlify"
+  echo "  npm run deploy"
   exit 1
 fi
 
