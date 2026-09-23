@@ -11,6 +11,18 @@
 # Point api.dispatchpro.ai at the Oracle VM managed by deploy/setup-server.sh.
 
 [[redirects]]
+  from = "/api/payments/options"
+  to = "https://api.dispatchpro.ai/api/payments/options"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/billing/crypto/*"
+  to = "https://api.dispatchpro.ai/api/billing/crypto/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/api/*"
   to = "https://api.dispatchpro.ai/api/:splat"
   status = 200
