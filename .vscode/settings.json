@@ -48,6 +48,10 @@
         "/^find \\.git/hooks -maxdepth 1 -type f -perm -111 -printf '%f %s bytes\\\\n' \\| sort && git config --show-origin --get-regexp 'core\\\\\\.\\(hooksPath\\|editor\\)\\|commit\\\\\\.\\|gpg' \\|\\| true$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "/^where\\.exe node; where\\.exe npm; \\$env:PATH -split ';' \\| Select-String 'node\\|npm'$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }
