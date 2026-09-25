@@ -131,6 +131,7 @@ async function main() {
   }
 
   let recoveryTriggered = false;
+  const recoveryFailures = [];
   for (const [name, url] of [
     ['Netlify', process.env.NETLIFY_BUILD_HOOK_URL],
     ['Render', process.env.RENDER_DEPLOY_HOOK_URL],
@@ -140,7 +141,16 @@ async function main() {
     }
 
     recoveryTriggered = true;
-    await triggerHook(name, url);
+    try {
+      await triggerHook(name, url);
+    } catch (error) {
+      recoveryFailures.push(`${name}: ${error.message}`);
+      console.error(`Recovery hook failed for ${name}: ${error.message}`);
+    }
+  }
+
+  if (recoveryFailures.length) {
+    throw new Error(`Recovery hook failures: ${recoveryFailures.join('; ')}`);
   }
 
   if (recoveryTriggered) {
