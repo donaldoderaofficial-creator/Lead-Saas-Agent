@@ -101,14 +101,16 @@ async function main() {
   const frontendUrl = normalizeUrl(process.env.FRONTEND_URL) || DEFAULT_FRONTEND_URL;
   const healthcheckUrl = normalizeUrl(process.env.HEALTHCHECK_URL) || DEFAULT_HEALTHCHECK_URL;
   const readycheckUrl = normalizeUrl(process.env.READYCHECK_URL);
+  const healthcheckExpectedStatus = normalizeUrl(process.env.HEALTHCHECK_EXPECTED_STATUS) || 'ok';
+  const readycheckExpectedStatus = normalizeUrl(process.env.READYCHECK_EXPECTED_STATUS) || 'ready';
 
   const checks = [
     { name: 'frontend', url: frontendUrl },
-    { name: 'health', url: healthcheckUrl, expectStatus: 'ok' },
+    { name: 'health', url: healthcheckUrl, expectStatus: healthcheckExpectedStatus },
   ];
 
   if (readycheckUrl) {
-    checks.push({ name: 'ready', url: readycheckUrl, expectStatus: 'ready' });
+    checks.push({ name: 'ready', url: readycheckUrl, expectStatus: readycheckExpectedStatus });
   }
 
   const failures = [];

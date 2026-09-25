@@ -38,7 +38,10 @@ every 5 minutes. The monitor script defaults to these checks:
 - `https://lead-saas-agent.netlify.app/health`
 
 The workflow also sets `READYCHECK_URL=https://lead-agent-saas.onrender.com/ready`
-so production runs include a backend readiness check as well.
+so production runs include a backend readiness check as well. Expected JSON
+status values are configurable through `HEALTHCHECK_EXPECTED_STATUS` and
+`READYCHECK_EXPECTED_STATUS` if you monitor endpoints with a different payload
+shape.
 
 You can override those URLs with workflow environment values if your production
 domains change. If the checks fail and you provide recovery hooks, GitHub
