@@ -152,14 +152,14 @@ async function main() {
   }
 
   if (recoveryFailures.length) {
-    throw new Error(`Recovery hook failures: ${recoveryFailures.join('; ')}`);
+    throw new Error(`Uptime failures: ${failures.join('; ')}. Recovery hook failures: ${recoveryFailures.join('; ')}`);
   }
 
   if (recoveryTriggered) {
-    throw new Error('Triggered configured recovery hook(s) after uptime failure.');
+    throw new Error(`Uptime failures: ${failures.join('; ')}. Triggered configured recovery hook(s).`);
   }
 
-  throw new Error('No recovery hooks configured. Add NETLIFY_BUILD_HOOK_URL and/or RENDER_DEPLOY_HOOK_URL secrets.');
+  throw new Error(`Uptime failures: ${failures.join('; ')}. No recovery hooks configured. Add NETLIFY_BUILD_HOOK_URL and/or RENDER_DEPLOY_HOOK_URL secrets.`);
 }
 
 main().catch((error) => {
