@@ -63,6 +63,21 @@ Set these in **Site configuration → Environment variables**:
 No secrets (session secret, database, PayPal secret) are needed by the
 functions — they are stateless and read-only.
 
+### Deploying (no build step)
+
+This repo publishes `public/` as-is; there is no build step. Always pass
+`--no-build`, otherwise the Netlify CLI runs whatever build command is set in
+the site UI and fails the deploy:
+
+```bash
+npx netlify deploy --prod --no-build --dir=public --functions=netlify/functions --site=<SITE_ID>
+```
+
+`npm run deploy:netlify` and `.github/workflows/netlify.yml` already do this.
+If the site UI has a leftover build command (for example `hugo` from a
+template), clear it under **Site configuration → Build & deploy → Build
+settings**.
+
 ### Frontend API URL resolution
 
 `public/api-base.js` is the single place where API URLs are resolved:
