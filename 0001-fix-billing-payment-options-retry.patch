@@ -1,0 +1,59 @@
+From 7cbf26aff678b6b0d869e56112d41f5471dbc4f0 Mon Sep 17 00:00:00 2001
+From: Donald Odera <donald@example.com>
+Date: Thu, 24 Sep 2026 11:13:09 +0000
+Subject: [PATCH] Make billing payment-options fetch tolerant of Render cold
+ starts
+
+- Increase retry attempts from 3 to 6
+- Add per-attempt 10s timeout via AbortController
+- Grow backoff between attempts up to 8s
+- Show clearer in-progress status while retrying
+- Replace vague 'temporarily unavailable' message with actionable guidance
+---
+ public/billing.html | 16 ++++++++++++----
+ 1 file changed, 12 insertions(+), 4 deletions(-)
+
+diff --git a/public/billing.html b/public/billing.html
+index 35e8aa6..3d7b9c1 100644
+--- a/public/billing.html
++++ b/public/billing.html
+@@ -68,12 +68,19 @@
+     async function loadPaymentOptions() {
+       try {
+         let response;
+-        for (let attempt = 0; attempt < 3; attempt += 1) {
++        const maxAttempts = 6;
++        const attemptTimeoutMs = 10000;
++        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
++          if (attempt === 0) status('Loading payment options...');
++          else status(`Waking up the payment server... (attempt ${attempt + 1} of ${maxAttempts})`);
+           try {
+-            response = await fetch('/api/payments/options', { cache: 'no-store' });
++            const controller = new AbortController();
++            const timer = setTimeout(() => controller.abort(), attemptTimeoutMs);
++            response = await fetch('/api/payments/options', { cache: 'no-store', signal: controller.signal });
++            clearTimeout(timer);
+             if (response.ok) break;
+           } catch {}
+-          if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
++          if (attempt < maxAttempts - 1) await new Promise((resolve) => setTimeout(resolve, Math.min(2000 * (attempt + 1), 8000)));
+         }
+         if (!response?.ok) throw new Error('Payment options request failed');
+         const data = await response.json();
+@@ -97,11 +104,12 @@
+         if (firstAvailable) {
+           $('method').value = firstAvailable;
+           $('order').disabled = false;
++          status('');
+         } else {
+           status('No wallet payment method is configured yet.', true);
+         }
+       } catch {
+-        status('Payment options are temporarily unavailable. Please try again later.', true);
++        status('The payment server is taking longer than usual to respond. Please wait a moment and refresh the page.', true);
+       }
+     }
+     async function loadCardCheckout() {
+-- 
+2.43.0
+
