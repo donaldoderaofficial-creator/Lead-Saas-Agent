@@ -33,6 +33,8 @@
       <div><h2>Growth</h2><p>$249/month</p><div class="paypal-button" id="paypal-growth"></div></div>
     </div>
   </section>
+  <script src="/runtime-config.js"></script>
+  <script src="/api-base.js"></script>
   <script>
     const $ = (id) => document.getElementById(id);
     let reference = '';
@@ -91,7 +93,8 @@
         return row;
       }));
     }
-    async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+    // Long enough for a sleeping Render instance to wake before falling back to offline checkout.
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
@@ -103,8 +106,7 @@
     async function loadPaymentOptions() {
       renderWallets();
       try {
-        const response = await fetchWithTimeout('/api/payments/options', { cache: 'no-store' });
-        if (!response.ok) return;
+        const response = await window.DispatchAPI.fetchWithRetry('/api/payments/options', { cache: 'no-store' });
         const data = await response.json();
         for (const key of Object.keys(wallets)) {
           const address = data.providers?.[key]?.address;
@@ -143,7 +145,7 @@
     }
     async function loadCardCheckout() {
       try {
-        const response = await fetch('/api/config');
+        const response = await window.DispatchAPI.fetch('/api/config');
         const data = await response.json();
         const starterId = data.plans?.starter?.paypalPlanId;
         const growthId = data.plans?.growth?.paypalPlanId;
@@ -171,7 +173,7 @@
       const plan = $('plan').value;
       status('Creating wallet payment...');
       try {
-        const response = await fetchWithTimeout('/api/billing/crypto/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('name').value, email: $('email').value, plan, method, referral }) });
+        const response = await fetchWithTimeout(window.DispatchAPI.url('/api/billing/crypto/order'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('name').value, email: $('email').value, plan, method, referral }) });
         const data = await response.json();
         if (response.ok) {
           offlineOrder = false;
@@ -188,7 +190,7 @@
       if (!txHash) return status('Paste the transaction hash first.', true);
       if (offlineOrder) return showEmailProof(txHash);
       try {
-        const response = await fetchWithTimeout('/api/billing/crypto/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference, txHash, amount: amountCrypto, plan: $('plan').value, method: $('method').value }) });
+        const response = await fetchWithTimeout(window.DispatchAPI.url('/api/billing/crypto/confirm'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference, txHash, amount: amountCrypto, plan: $('plan').value, method: $('method').value }) });
         const data = await response.json();
         if (response.ok) return status('Payment submitted. Access starts after verification.');
         if (response.status < 500) return status(data.error || 'Could not submit payment.', true);

@@ -9,8 +9,12 @@ require('dotenv').config();
 const ENV = process.env.NODE_ENV || 'development';
 const IS_PROD = ENV === 'production';
 const IS_DEV = ENV === 'development';
-const DEFAULT_BITCOIN_WALLET_ADDRESS = '3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k';
-const DEFAULT_ETHEREUM_WALLET_ADDRESS = '0xFFc40b1EcE21ce8A3b5e33caf95aA64bd8081330';
+const {
+  DEFAULT_BITCOIN_WALLET_ADDRESS,
+  DEFAULT_PRICING_USD,
+  DEFAULT_EBOOK,
+  resolveWallets,
+} = require('./payment-catalog');
 
 function parsePort(value) {
   const port = Number(value);
@@ -151,11 +155,7 @@ const config = {
 
   // Pricing Tiers (scalable, flexible)
   pricing: {
-    usd: {
-      starter: { price: '79.00', leads: 500 },
-      growth: { price: '249.00', leads: 5000 },
-      scale: { price: 'custom', leads: 'unlimited' },
-    },
+    usd: DEFAULT_PRICING_USD,
     kes: {
       starter: { price: 10200, leads: 500 },
       growth: { price: 32200, leads: 5000 },
@@ -232,26 +232,10 @@ const config = {
     },
   },
 
-  wallets: {
-    bitcoin: {
-      enabled: true,
-      address: process.env.BITCOIN_WALLET_ADDRESS || DEFAULT_BITCOIN_WALLET_ADDRESS,
-      currency: 'BTC',
-      label: 'Bitcoin',
-    },
-    ethereum: {
-      enabled: true,
-      address: process.env.ETHEREUM_WALLET_ADDRESS || DEFAULT_ETHEREUM_WALLET_ADDRESS,
-      currency: 'ETH',
-      label: 'Ethereum',
-    },
-  },
+  wallets: resolveWallets(process.env),
 
   ebook: {
-    enabled: true,
-    title: 'The Builder\'s Blueprint: From Zero to Profitable Product Engineer',
-    subtitle: 'A practical guide to turning coding skills into income, systems, and leverage.',
-    priceUsd: 9.99,
+    ...DEFAULT_EBOOK,
     walletAddress: process.env.BITCOIN_WALLET_ADDRESS || DEFAULT_BITCOIN_WALLET_ADDRESS,
   },
 
