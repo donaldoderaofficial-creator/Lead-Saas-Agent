@@ -27,5 +27,12 @@ jobs:
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
+          case "$RENDER_DEPLOY_HOOK_URL" in
+            https://*) ;;
+            *)
+              echo "::error::RENDER_DEPLOY_HOOK_URL must start with https://"
+              exit 1
+              ;;
+          esac
           curl --fail --show-error --silent --max-redirs 0 --retry 3 --retry-all-errors \
             -X POST "$RENDER_DEPLOY_HOOK_URL"
