@@ -32,11 +32,13 @@ webhooks, and the Netlify API proxy.
 ## 3. Add uptime monitoring and recovery
 
 The repository now includes `.github/workflows/uptime-monitor.yml`, which runs
-every 5 minutes and by default checks:
+every 5 minutes. The monitor script defaults to these checks:
 
 - `https://lead-saas-agent.netlify.app`
 - `https://lead-saas-agent.netlify.app/health`
-- `https://lead-agent-saas.onrender.com/ready`
+
+The workflow also sets `READYCHECK_URL=https://lead-agent-saas.onrender.com/ready`
+so production runs include a backend readiness check as well.
 
 You can override those URLs with workflow environment values if your production
 domains change. If the checks fail and you provide recovery hooks, GitHub
