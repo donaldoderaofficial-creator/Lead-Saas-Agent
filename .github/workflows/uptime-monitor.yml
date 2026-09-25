@@ -1,0 +1,35 @@
+name: Production uptime monitor
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: production-uptime-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check production uptime
+        env:
+          FRONTEND_URL: https://lead-saas-agent.netlify.app
+          HEALTHCHECK_URL: https://lead-saas-agent.netlify.app/health
+          READYCHECK_URL: https://lead-agent-saas.onrender.com/ready
+          NETLIFY_BUILD_HOOK_URL: ${{ secrets.NETLIFY_BUILD_HOOK_URL }}
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          UPTIME_TIMEOUT_MS: 15000
+          UPTIME_RETRIES: 3
+          UPTIME_RETRY_DELAY_MS: 20000
+        run: node scripts/uptime-monitor.js

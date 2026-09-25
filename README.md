@@ -80,6 +80,19 @@ calling the authenticated prospecting endpoints. Readiness is reported by
 
 ---
 
+## Production uptime
+
+- Netlify serves the frontend continuously.
+- `.github/workflows/uptime-monitor.yml` checks the live frontend and backend
+  every 5 minutes.
+- Optional `NETLIFY_BUILD_HOOK_URL` and `RENDER_DEPLOY_HOOK_URL` repository
+  secrets let the monitor trigger automatic recovery when checks fail.
+- For the backend, prefer the Oracle Always Free VM path in
+  [ORACLE_DEPLOY.md](ORACLE_DEPLOY.md) when you need non-sleeping 24/7 hosting
+  with systemd restarts.
+
+---
+
 ## Safety and compliance controls
 
 Lead submissions may include optional campaign, description, message, notes, instructions, goal, or targeting fields. Requests that clearly indicate high-risk activity are blocked before processing and recorded in an internal review queue.

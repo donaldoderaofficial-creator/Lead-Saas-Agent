@@ -4,7 +4,7 @@
 
 This app writes to SQLite for pending leads and completed reports. Production
 uses the Oracle Always Free VM path with persistent storage, systemd restart
-policy, and Caddy HTTPS.
+policy, Caddy HTTPS, and a scheduled uptime monitor workflow for recovery.
 
 ## 1. Push this folder to GitHub
 
@@ -29,7 +29,29 @@ SQLite on persistent disk, and is exposed through Caddy with HTTPS.
 Point `api.dispatchpro.ai` at the VM and use it for payment callbacks, email
 webhooks, and the Netlify API proxy.
 
-## 3. Optional alternative hosting
+## 3. Add uptime monitoring and recovery
+
+The repository now includes `.github/workflows/uptime-monitor.yml`, which runs
+every 5 minutes and checks:
+
+- `https://lead-saas-agent.netlify.app`
+- `https://lead-saas-agent.netlify.app/health`
+- `https://lead-agent-saas.onrender.com/ready`
+
+If the checks fail and you provide recovery hooks, GitHub Actions will trigger
+them automatically.
+
+Add these repository secrets before relying on the monitor:
+
+- `NETLIFY_BUILD_HOOK_URL` — optional Netlify build hook for redeploying the
+  frontend
+- `RENDER_DEPLOY_HOOK_URL` — optional Render deploy hook for restarting the API
+
+This monitor improves recovery time, but GitHub Actions cron is not a hard
+uptime SLA. For the strongest 24/7 posture, keep the backend on a non-sleeping
+host with automatic restarts (the Oracle VM path below does that).
+
+## 4. Optional alternative hosting
 
 Railway doesn't use a checked-in blueprint file — set it
 up from the dashboard:
@@ -46,7 +68,7 @@ For persistent production data without a recurring hosting bill, use the Oracle
 Always Free VM instructions in `ORACLE_DEPLOY.md`. You remain responsible for
 operating-system updates, backups, TLS, and monitoring.
 
-## 3c. Keep hosting options separate from customer options
+## 4c. Keep hosting options separate from customer options
 
 The service supports BTC and ETH wallet checkout, PayPal, and M-Pesa where
 credentials are configured. Customers can choose the payment method that fits
@@ -54,7 +76,7 @@ their market, while the same subscription entitlement and manual verification
 rules apply across all methods. Hosting providers do not process or guarantee
 payment; configure callbacks and webhooks against the permanent backend URL.
 
-## 4. Switch from sandbox to real payments (when ready)
+## 5. Switch from sandbox to real payments (when ready)
 
 - `PAYPAL_ENV=live` with your live PayPal app credentials
 - `MPESA_ENV=production` with your production Daraja shortcode/passkey
