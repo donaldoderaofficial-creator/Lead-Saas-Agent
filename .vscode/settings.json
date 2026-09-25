@@ -52,6 +52,10 @@
         "/^where\\.exe node; where\\.exe npm; \\$env:PATH -split ';' \\| Select-String 'node\\|npm'$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "/^git push origin main 2>&1 \\| ForEach-Object \\{ \"\\$_\" \\}; git status -sb \\| Select-Object -First 1$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }

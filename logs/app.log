@@ -660,3 +660,20 @@
 {"timestamp":"2026-09-23T12:09:57.076Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-23T12:09:57.083Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-23T12:09:57.086Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-25T11:14:00.420Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"3ms"}
+{"timestamp":"2026-09-25T11:14:00.457Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-25T11:14:00.485Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-25T11:14:00.502Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-25T11:16:33.296Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-25T11:16:33.310Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-25T11:16:33.312Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-25T11:16:33.315Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-25T11:30:42.578Z","level":"info","message":"Dispatch Pro API listening on 0.0.0.0:8017","env":"production","isProd":true}
+{"timestamp":"2026-09-25T11:30:42.956Z","level":"info","message":"GET /api/deploy/smoke","statusCode":200,"duration":"12ms"}
+{"timestamp":"2026-09-25T11:30:43.241Z","level":"info","message":"GET /ready","statusCode":200,"duration":"3ms"}
+{"timestamp":"2026-09-25T11:30:43.753Z","level":"info","message":"POST /api/assistant/mia","statusCode":200,"duration":"494ms"}
+{"timestamp":"2026-09-25T11:30:43.804Z","level":"info","message":"GET /api/payments/options","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-25T11:31:07.987Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-25T11:31:07.994Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-25T11:31:07.998Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-25T11:31:08.002Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
