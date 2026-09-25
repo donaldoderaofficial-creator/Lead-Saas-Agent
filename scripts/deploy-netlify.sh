@@ -20,4 +20,7 @@ if [[ ! -d "$DIR" ]]; then
   exit 1
 fi
 
-npx netlify deploy --prod --dir="$DIR" --functions="$FUNCTIONS_DIR" --site="$SITE_ID" --auth="$TOKEN"
+# --no-build: this repo publishes the static public/ folder as-is and has no
+# build step. Without the flag the CLI runs the site's UI-configured build
+# command, which fails the deploy.
+npx netlify deploy --prod --no-build --dir="$DIR" --functions="$FUNCTIONS_DIR" --site="$SITE_ID" --auth="$TOKEN"

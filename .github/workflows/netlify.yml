@@ -39,7 +39,10 @@ jobs:
         run: npm ci
 
       - name: Deploy to Netlify
-        run: npx --yes netlify-cli deploy --prod --dir=public --functions=netlify/functions
+        # --no-build: this repo publishes the static public/ folder as-is and has
+        # no build step. Without the flag the CLI runs the site's UI-configured
+        # build command, which fails the deploy.
+        run: npx --yes netlify-cli deploy --prod --no-build --dir=public --functions=netlify/functions
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
