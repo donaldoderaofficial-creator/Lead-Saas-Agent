@@ -112,7 +112,14 @@ app.get('/init', (req, res) => {
 app.use((req, res, next) => {
   const requestOrigin = req.get('origin');
   if (!requestOrigin) return next();
-  if (!app.isOriginAllowed(requestOrigin, req.path)) {
+  const isSameOriginRequest = (() => {
+    try {
+      return new URL(requestOrigin).host === req.get('host');
+    } catch (_) {
+      return false;
+    }
+  })();
+  if (!isSameOriginRequest && !app.isOriginAllowed(requestOrigin, req.path)) {
     return res.status(403).json({ error: 'Origin is not allowed' });
   }
   res.setHeader('Access-Control-Allow-Origin', requestOrigin);

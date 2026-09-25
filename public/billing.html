@@ -18,7 +18,7 @@
       <div><label for="plan">Plan</label><select id="plan"><option value="starter">Starter</option><option value="growth">Growth</option></select></div>
       <div><label for="method">Payment method</label><select id="method"><option value="bitcoin">Bitcoin (BTC)</option><option value="ethereum">Ethereum (ETH)</option></select></div>
     </div>
-    <button id="order" disabled>Create payment</button>
+    <button id="order">Create payment</button>
     <div id="wallet" class="wallet" hidden></div>
     <label id="hashLabel" for="hash" hidden>Transaction hash</label>
     <input id="hash" placeholder="Paste transaction hash" hidden>
@@ -37,8 +37,14 @@
     const $ = (id) => document.getElementById(id);
     let reference = '';
     let amountCrypto = '';
+    let offlineOrder = false;
     const referral = new URLSearchParams(window.location.search).get('ref') || '';
-    const configuredMethods = new Set();
+    const PAYMENT_PROOF_EMAIL = 'Donaldoderaofficial@gmail.com';
+    // Mirrors server.js defaults so crypto checkout works while the API is asleep or down.
+    const wallets = {
+      bitcoin: { currency: 'BTC', address: '3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k', amounts: { starter: '0.0010327', growth: '0.00325' } },
+      ethereum: { currency: 'ETH', address: '0xFFc40b1EcE21ce8A3b5e33caf95aA64bd8081330', amounts: { starter: '0.03238', growth: '0.10206' } },
+    };
     function status(message, isError = false) {
       $('status').textContent = message;
       $('status').style.color = isError ? '#ff7373' : '#9aa1b1';
@@ -65,44 +71,75 @@
         return false;
       }
     }
-    async function loadPaymentOptions() {
+    function renderWallets() {
+      $('walletList').replaceChildren(...Object.values(wallets).map(({ currency, address }) => {
+        const row = document.createElement('div');
+        row.className = 'wallet-row';
+        const title = document.createElement('strong');
+        title.textContent = `${currency} wallet`;
+        const code = document.createElement('code');
+        code.textContent = address;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = `Copy ${currency} address`;
+        button.onclick = async () => {
+          const copied = await copyText(address);
+          button.textContent = copied ? 'Copied' : 'Copy failed';
+          setTimeout(() => { button.textContent = `Copy ${currency} address`; }, 2000);
+        };
+        row.append(title, code, button);
+        return row;
+      }));
+    }
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        let response;
-        for (let attempt = 0; attempt < 3; attempt += 1) {
-          try {
-            response = await fetch('/api/payments/options', { cache: 'no-store' });
-            if (response.ok) break;
-          } catch {}
-          if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
-        }
-        if (!response?.ok) throw new Error('Payment options request failed');
-        const data = await response.json();
-        const wallets = [data.providers.bitcoin, data.providers.ethereum]
-          .filter((provider) => provider?.enabled && provider.address);
-        $('walletList').innerHTML = wallets.map((provider) => `<div class="wallet-row"><strong>${provider.currency} wallet</strong><code>${provider.address}</code><button type="button" data-address="${provider.address}" data-currency="${provider.currency}">Copy ${provider.currency} address</button></div>`).join('');
-        $('walletList').querySelectorAll('button').forEach((button) => {
-          button.onclick = async () => {
-            const copied = await copyText(button.dataset.address);
-            button.textContent = copied ? 'Copied' : 'Copy failed';
-            setTimeout(() => { button.textContent = `Copy ${button.dataset.currency} address`; }, 2000);
-          };
-        });
-        for (const option of $('method').options) {
-          const provider = option.value === 'bitcoin' ? data.providers.bitcoin : data.providers.ethereum;
-          option.hidden = !provider?.enabled;
-          option.disabled = !provider?.enabled;
-          if (provider?.enabled) configuredMethods.add(option.value);
-        }
-        const firstAvailable = [...configuredMethods][0];
-        if (firstAvailable) {
-          $('method').value = firstAvailable;
-          $('order').disabled = false;
-        } else {
-          status('No wallet payment method is configured yet.', true);
-        }
-      } catch {
-        status('Payment options are temporarily unavailable. Please try again later.', true);
+        return await fetch(url, { ...options, signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
       }
+    }
+    async function loadPaymentOptions() {
+      renderWallets();
+      try {
+        const response = await fetchWithTimeout('/api/payments/options', { cache: 'no-store' });
+        if (!response.ok) return;
+        const data = await response.json();
+        for (const key of Object.keys(wallets)) {
+          const address = data.providers?.[key]?.address;
+          if (data.providers?.[key]?.enabled && typeof address === 'string' && address) wallets[key].address = address;
+        }
+        renderWallets();
+      } catch {}
+    }
+    function showOrder({ amountCrypto: amount, currency, walletAddress, reference: ref }) {
+      reference = ref;
+      amountCrypto = amount;
+      $('wallet').hidden = false;
+      $('wallet').innerHTML = 'Send exactly <strong id="walletAmount"></strong> to:<br><code id="walletAddr" style="user-select:all;word-break:break-all;"></code> <button type="button" id="copyAddr" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">Copy</button><br>Reference: <span id="walletRef"></span>';
+      $('walletAmount').textContent = `${amount} ${currency}`;
+      $('walletAddr').textContent = walletAddress;
+      $('walletRef').textContent = ref;
+      $('copyAddr').onclick = async () => {
+        const copied = await copyText(walletAddress);
+        $('copyAddr').textContent = copied ? 'Copied!' : 'Copy failed';
+        setTimeout(() => { $('copyAddr').textContent = 'Copy'; }, 2000);
+      };
+      $('hashLabel').hidden = false;
+      $('hash').hidden = false;
+      $('confirm').hidden = false;
+      status('Send the amount, then submit the transaction hash.');
+    }
+    function showEmailProof(txHash) {
+      const subject = `Crypto payment proof ${reference}`;
+      const body = `Reference: ${reference}\nPlan: ${$('plan').value}\nMethod: ${$('method').value}\nAmount: ${amountCrypto}\nTransaction hash: ${txHash}\nName: ${$('name').value}\nEmail: ${$('email').value}`;
+      const link = document.createElement('a');
+      link.href = `mailto:${PAYMENT_PROOF_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      link.textContent = 'email your transaction hash';
+      link.style.color = '#b9c7ff';
+      $('status').style.color = '#9aa1b1';
+      $('status').replaceChildren('Your payment details are ready. Please ', link, ' so access can be verified.');
     }
     async function loadCardCheckout() {
       try {
@@ -131,28 +168,32 @@
     }
     $('order').onclick = async () => {
       const method = $('method').value;
+      const plan = $('plan').value;
       status('Creating wallet payment...');
-      const response = await fetch('/api/billing/crypto/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('name').value, email: $('email').value, plan: $('plan').value, method: $('method').value, referral }) });
-      const data = await response.json();
-      if (!response.ok) return status(data.error || 'Could not create payment.', true);
-      reference = data.reference;
-      amountCrypto = data.amountCrypto;
-      $('wallet').hidden = false;
-      $('wallet').innerHTML = `Send exactly <strong>${data.amountCrypto} ${data.currency}</strong> to:<br><code id="walletAddr" style="user-select:all;word-break:break-all;">${data.walletAddress}</code> <button type="button" id="copyAddr" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">Copy</button><br>Reference: ${data.reference}`;
-      $('copyAddr').onclick = async () => {
-        const copied = await copyText(data.walletAddress);
-        $('copyAddr').textContent = copied ? 'Copied!' : 'Copy failed';
-        setTimeout(() => { $('copyAddr').textContent = 'Copy'; }, 2000);
-      };
-      $('hashLabel').hidden = false;
-      $('hash').hidden = false;
-      $('confirm').hidden = false;
-      status('Send the amount, then submit the transaction hash.');
+      try {
+        const response = await fetchWithTimeout('/api/billing/crypto/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('name').value, email: $('email').value, plan, method, referral }) });
+        const data = await response.json();
+        if (response.ok) {
+          offlineOrder = false;
+          return showOrder(data);
+        }
+        if (response.status < 500) return status(data.error || 'Could not create payment.', true);
+      } catch {}
+      offlineOrder = true;
+      const wallet = wallets[method];
+      showOrder({ amountCrypto: wallet.amounts[plan], currency: wallet.currency, walletAddress: wallet.address, reference: crypto.randomUUID() });
     };
     $('confirm').onclick = async () => {
-      const response = await fetch('/api/billing/crypto/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference, txHash: $('hash').value.trim(), amount: amountCrypto, plan: $('plan').value, method: $('method').value }) });
-      const data = await response.json();
-      status(response.ok ? 'Payment submitted. Access starts after verification.' : (data.error || 'Could not submit payment.'), !response.ok);
+      const txHash = $('hash').value.trim();
+      if (!txHash) return status('Paste the transaction hash first.', true);
+      if (offlineOrder) return showEmailProof(txHash);
+      try {
+        const response = await fetchWithTimeout('/api/billing/crypto/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference, txHash, amount: amountCrypto, plan: $('plan').value, method: $('method').value }) });
+        const data = await response.json();
+        if (response.ok) return status('Payment submitted. Access starts after verification.');
+        if (response.status < 500) return status(data.error || 'Could not submit payment.', true);
+      } catch {}
+      showEmailProof(txHash);
     };
 
     const requestedPlan = new URLSearchParams(window.location.search).get('plan');

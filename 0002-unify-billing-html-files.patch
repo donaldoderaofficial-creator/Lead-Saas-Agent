@@ -1,0 +1,829 @@
+From f202014a14be2a8ba243bd38694ea3c0f22b824f Mon Sep 17 00:00:00 2001
+From: Donald Odera <donald@example.com>
+Date: Thu, 24 Sep 2026 11:48:41 +0000
+Subject: [PATCH 2/2] Unify all three billing.html variants on one template
+
+- All three files (public/, root, netlify-static/) now share identical
+  markup and JS, differing only in the API_BASE constant used for fetches
+- public/ and root: API_BASE = '' (relative, proxied by netlify.toml /
+  served by Express on the same origin)
+- netlify-static/: API_BASE points at its standalone backend since that
+  deploy has no redirect proxy
+- Carries forward the cold-start-tolerant retry logic from the previous
+  commit to all three
+---
+ billing.html                | 414 ++++++++++++++----------------------
+ netlify-static/billing.html | 309 ++++++++++++++-------------
+ public/billing.html         |   9 +-
+ 3 files changed, 325 insertions(+), 407 deletions(-)
+
+diff --git a/billing.html b/billing.html
+index 5971671..ec19030 100644
+--- a/billing.html
++++ b/billing.html
+@@ -1,265 +1,173 @@
+-<!DOCTYPE html>
++<!doctype html>
+ <html lang="en">
+ <head>
+-<meta charset="UTF-8" />
+-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+-<title>Plans & Billing</title>
+-<style>
+-  :root {
+-    --bg: #0b0d12; --surface: #151822; --surface-2: #1c202c; --border: #262b38;
+-    --text: #e7e9ee; --text-dim: #9aa1b1; --accent: #6c8cff; --nurture: #6cffa3;
+-  }
+-  * { box-sizing: border-box; }
+-  body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 48px 20px; }
+-  .wrap { max-width: 760px; margin: 0 auto; }
+-  h1 { font-size: 22px; margin: 0 0 4px; text-align: center; }
+-  p.sub { color: var(--text-dim); font-size: 14px; margin: 0 0 28px; text-align: center; }
+-
+-  .toggle { display: flex; justify-content: center; gap: 8px; margin-bottom: 32px; }
+-  .toggle button {
+-    background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
+-    padding: 8px 18px; border-radius: 999px; font-size: 13px; cursor: pointer;
+-  }
+-  .toggle button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+-  .toggle .save-badge { font-size: 11px; color: var(--nurture); margin-left: 4px; }
+-
+-  .plans { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+-  @media (max-width: 640px) { .plans { grid-template-columns: 1fr; } }
+-
+-  .plan-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; }
+-  .plan-card.featured { border-color: var(--accent); }
+-  .plan-name { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+-  .plan-price { font-size: 30px; font-weight: 700; margin: 12px 0 2px; }
+-  .plan-price span { font-size: 14px; color: var(--text-dim); font-weight: 400; }
+-  .plan-desc { font-size: 13px; color: var(--text-dim); margin: 0 0 18px; }
+-  .plan-features { list-style: none; padding: 0; margin: 0 0 20px; font-size: 13px; }
+-  .plan-features li { padding: 6px 0; border-top: 1px solid var(--border); }
+-  .plan-features li:first-child { border-top: none; }
+-
+-  .plan-btn {
+-    width: 100%; padding: 11px; border-radius: 8px; border: none;
+-    background: var(--accent); color: #fff; font-weight: 500; font-size: 14px; cursor: pointer;
+-  }
+-  .plan-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+-  #paypal-starter, #paypal-growth { margin-top: 4px; }
+-
+-  #status { text-align: center; font-size: 13px; color: var(--text-dim); margin-top: 20px; min-height: 18px; }
+-
+-  .current-plan-banner {
+-    background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+-    padding: 12px 16px; font-size: 13px; margin-bottom: 24px; text-align: center; display: none;
+-  }
+-</style>
++  <meta charset="utf-8">
++  <meta name="viewport" content="width=device-width,initial-scale=1">
++  <title>Lead SaaS billing</title>
++  <style>body{margin:0;padding:32px 18px;background:#0b0d12;color:#e7e9ee;font:15px/1.5 sans-serif}.wrap{max-width:620px;margin:auto}.panel{background:#151822;border:1px solid #303747;border-radius:12px;padding:24px;margin-bottom:16px}h1{margin-top:0}label{display:block;color:#9aa1b1;font-size:13px;margin:12px 0 5px}input,select,button{width:100%;box-sizing:border-box;padding:11px;border-radius:8px;border:1px solid #303747;background:#1c202c;color:#e7e9ee;font:inherit}button{margin-top:16px;background:#6c8cff;border-color:#6c8cff;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.wallet{margin-top:18px;padding:14px;background:#1c202c;border-radius:8px;word-break:break-word}.wallet-list{display:grid;gap:10px;margin:16px 0}.wallet-row{padding:12px;background:#1c202c;border:1px solid #303747;border-radius:8px}.wallet-row strong{display:block;margin-bottom:4px}.wallet-row code{display:block;color:#b9c7ff;word-break:break-all}.wallet-row button{width:auto;margin:8px 0 0;padding:6px 10px}.card-plan{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}.card-plan>div{border:1px solid #303747;border-radius:8px;padding:14px}.card-plan h2{font-size:16px;margin:0 0 4px}.card-plan p{color:#9aa1b1;font-size:13px;margin:0 0 10px}.paypal-button{min-height:42px}#status{min-height:24px;margin-top:16px;color:#9aa1b1}@media(max-width:560px){.grid,.card-plan{grid-template-columns:1fr}}.hint{color:#9aa1b1;font-size:12px;margin:14px 0 2px}</style>
+ </head>
+ <body>
+-  <div class="wrap">
+-    <h1>Plans & Billing</h1>
+-    <p class="sub">Choose how you want to bill — monthly or annual.</p>
+-
+-    <div class="current-plan-banner" id="currentBanner"></div>
+-
+-    <div class="toggle">
+-      <button id="btnMonthly" class="active">Monthly</button>
+-      <button id="btnAnnual">Annual <span class="save-badge">save 2 months</span></button>
++  <main class="wrap"><div class="panel">
++    <h1>Lead SaaS subscription</h1>
++    <p>Send BTC or ETH anytime to the permanent addresses below — no form required.</p>
++    <div id="walletList" class="wallet-list" aria-live="polite"></div>
++    <p class="hint">Want a tracked order reference instead? Fill this in and create a payment:</p>
++    <div class="grid">
++      <div><label for="name">Name</label><input id="name"></div>
++      <div><label for="email">Email</label><input id="email" type="email"></div>
++      <div><label for="plan">Plan</label><select id="plan"><option value="starter">Starter</option><option value="growth">Growth</option></select></div>
++      <div><label for="method">Payment method</label><select id="method"><option value="bitcoin">Bitcoin (BTC)</option><option value="ethereum">Ethereum (ETH)</option></select></div>
+     </div>
+-
+-    <div class="plans">
+-      <div class="plan-card">
+-        <p class="plan-name">Starter</p>
+-        <p class="plan-price" id="starterPrice">$79<span>/mo</span></p>
+-        <p class="plan-desc">Lead pipeline, payments, and dashboard</p>
+-        <ul class="plan-features">
+-          <li>Event-driven lead scoring</li>
+-          <li>PayPal + M-Pesa payments</li>
+-          <li>Leads dashboard with follow-up tracking</li>
+-        </ul>
+-        <button class="plan-btn" id="btnStarterAnnual" style="display:none;">Pay annually</button>
+-        <div id="paypal-starter"></div>
+-      </div>
+-
+-      <div class="plan-card featured">
+-        <p class="plan-name">Growth</p>
+-        <p class="plan-price" id="growthPrice">$249<span>/mo</span></p>
+-        <p class="plan-desc">Everything in Starter, plus prospecting</p>
+-        <ul class="plan-features">
+-          <li>Everything in Starter</li>
+-          <li>Company search by industry/size/location</li>
+-          <li>Contact enrichment (email + phone)</li>
+-        </ul>
+-        <button class="plan-btn" id="btnGrowthAnnual" style="display:none;">Pay annually</button>
+-        <div id="paypal-growth"></div>
+-      </div>
+-    </div>
+-
++    <button id="order" disabled>Create payment</button>
++    <div id="wallet" class="wallet" hidden></div>
++    <label id="hashLabel" for="hash" hidden>Transaction hash</label>
++    <input id="hash" placeholder="Paste transaction hash" hidden>
++    <button id="confirm" hidden>Submit payment for review</button>
+     <div id="status"></div>
+-
+-    <div class="plan-card" style="margin-top:16px;">
+-      <p class="plan-name">Pay with Bitcoin or Ethereum</p>
+-      <p class="plan-desc">Wallet payments remain pending until an administrator verifies the transaction.</p>
+-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+-        <input id="cryptoName" placeholder="Name" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:8px;">
+-        <input id="cryptoEmail" type="email" placeholder="Email" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:8px;">
+-        <select id="cryptoPlan" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:8px;"><option value="starter">Starter</option><option value="growth">Growth</option></select>
+-        <select id="cryptoMethod" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:8px;"><option value="bitcoin">Bitcoin (BTC)</option><option value="ethereum">Ethereum (ETH)</option></select>
+-      </div>
+-      <button class="plan-btn" id="cryptoOrder" style="margin-top:12px;">Create wallet payment</button>
+-      <div id="cryptoWallet" style="display:none;margin-top:14px;font-size:13px;line-height:1.6;"></div>
+-      <input id="cryptoTxHash" placeholder="Paste transaction hash after sending" style="display:none;width:100%;margin-top:10px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:8px;">
+-      <button class="plan-btn" id="cryptoConfirm" style="display:none;margin-top:10px;">Submit payment for review</button>
++  </div></main>
++  <section class="wrap panel" id="cardPanel" hidden>
++    <h2>Pay by card</h2>
++    <p>Use the hosted PayPal checkout to pay by debit or credit card on a recurring monthly plan. Dispatch Pro never stores card details.</p>
++    <div class="card-plan">
++      <div><h2>Starter</h2><p>$79/month</p><div class="paypal-button" id="paypal-starter"></div></div>
++      <div><h2>Growth</h2><p>$249/month</p><div class="paypal-button" id="paypal-growth"></div></div>
+     </div>
+-  </div>
+-
+-<script>
+-const el = (id) => document.getElementById(id);
+-let config = null;
+-let billingMode = 'monthly';
+-
+-function setStatus(msg, isError) {
+-  el('status').textContent = msg;
+-  el('status').style.color = isError ? '#ff6c6c' : '#9aa1b1';
+-}
+-
+-async function loadConfig() {
+-  const res = await fetch('/api/config');
+-  config = await res.json();
+-  el('starterPrice').innerHTML = `$${config.plans.starter.priceMonthly}<span>/mo</span>`;
+-  el('growthPrice').innerHTML = `$${config.plans.growth.priceMonthly}<span>/mo</span>`;
+-  loadPaypalSdk();
+-}
+-
+-async function loadCurrentStatus() {
+-  try {
+-    const res = await fetch('/api/billing/status', { credentials: 'include' });
+-    if (!res.ok) return; // not logged in — fine, they can still view pricing
+-    const sub = await res.json();
+-    if (sub.plan !== 'none' && sub.status === 'active') {
+-      const banner = el('currentBanner');
+-      banner.style.display = 'block';
+-      banner.textContent = `Current plan: ${sub.plan} (${sub.billingType}) — active`;
++  </section>
++  <script>
++    const $ = (id) => document.getElementById(id);
++    const API_BASE = '';
++    let reference = '';
++    let amountCrypto = '';
++    const referral = new URLSearchParams(window.location.search).get('ref') || '';
++    const configuredMethods = new Set();
++    function status(message, isError = false) {
++      $('status').textContent = message;
++      $('status').style.color = isError ? '#ff7373' : '#9aa1b1';
+     }
+-  } catch {}
+-}
+-
+-function loadPaypalSdk() {
+-  const script = document.createElement('script');
+-  script.src = `https://www.paypal.com/sdk/js?client-id=${config.paypalClientId}&vault=true&intent=subscription`;
+-  script.onload = renderMonthlyButtons;
+-  document.head.appendChild(script);
+-}
+-
+-function renderMonthlyButtons() {
+-  ['starter', 'growth'].forEach((plan) => {
+-    const container = el(`paypal-${plan}`);
+-    container.innerHTML = '';
+-    if (typeof paypal === 'undefined') return;
+-    paypal.Buttons({
+-      createSubscription: (data, actions) => actions.subscription.create({ plan_id: config.plans[plan].paypalPlanId }),
+-      onApprove: (data) => {
+-        setStatus(`Subscribed to ${plan}! Subscription ID: ${data.subscriptionID}`);
+-        setTimeout(loadCurrentStatus, 1500);
+-      },
+-      onError: (err) => setStatus('PayPal error — see console for details.', true),
+-    }).render(`#paypal-${plan}`);
+-  });
+-}
+-
+-async function payAnnual(plan) {
+-  setStatus(`Creating annual order for ${plan}…`);
+-  try {
+-    const res = await fetch('/api/billing/annual', {
+-      method: 'POST',
+-      credentials: 'include',
+-      headers: { 'Content-Type': 'application/json' },
+-      body: JSON.stringify({ plan }),
+-    });
+-    const data = await res.json();
+-    if (!res.ok) throw new Error(data.error);
+-    window.location.href = data.approveUrl;
+-  } catch (err) {
+-    setStatus(err.message, true);
+-  }
+-}
+-
+-el('btnStarterAnnual').addEventListener('click', () => payAnnual('starter'));
+-el('btnGrowthAnnual').addEventListener('click', () => payAnnual('growth'));
+-
+-function setBillingMode(mode) {
+-  billingMode = mode;
+-  el('btnMonthly').classList.toggle('active', mode === 'monthly');
+-  el('btnAnnual').classList.toggle('active', mode === 'annual');
+-
+-  const showAnnual = mode === 'annual';
+-  el('btnStarterAnnual').style.display = showAnnual ? 'block' : 'none';
+-  el('btnGrowthAnnual').style.display = showAnnual ? 'block' : 'none';
+-  el('paypal-starter').style.display = showAnnual ? 'none' : 'block';
+-  el('paypal-growth').style.display = showAnnual ? 'none' : 'block';
+-
+-  if (config) {
+-    el('starterPrice').innerHTML = showAnnual
+-      ? `$${config.plans.starter.priceAnnual}<span>/yr</span>`
+-      : `$${config.plans.starter.priceMonthly}<span>/mo</span>`;
+-    el('growthPrice').innerHTML = showAnnual
+-      ? `$${config.plans.growth.priceAnnual}<span>/yr</span>`
+-      : `$${config.plans.growth.priceMonthly}<span>/mo</span>`;
+-  }
+-}
+-
+-el('btnMonthly').addEventListener('click', () => setBillingMode('monthly'));
+-el('btnAnnual').addEventListener('click', () => setBillingMode('annual'));
+-
+-let cryptoReference = '';
+-let cryptoAmount = '';
+-el('cryptoOrder').addEventListener('click', async () => {
+-  setStatus('Creating wallet payment…');
+-  const res = await fetch('/api/billing/crypto/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+-    name: el('cryptoName').value.trim(), email: el('cryptoEmail').value.trim(), plan: el('cryptoPlan').value, method: el('cryptoMethod').value,
+-  }) });
+-  const data = await res.json();
+-  if (!res.ok) return setStatus(data.error || 'Unable to create wallet payment.', true);
+-  cryptoReference = data.reference;
+-  cryptoAmount = data.amountCrypto;
+-  el('cryptoWallet').innerHTML = `Send exactly <strong>${data.amountCrypto} ${data.currency}</strong> to:<br><code id="cryptoAddr" style="user-select:all;word-break:break-all;">${data.walletAddress}</code> <button type="button" id="copyCryptoAddr" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">Copy</button><br>Reference: ${data.reference}`;
+-  el('cryptoWallet').style.display = 'block'; el('cryptoTxHash').style.display = 'block'; el('cryptoConfirm').style.display = 'block';
+-  el('copyCryptoAddr').addEventListener('click', async () => {
+-    try {
+-      await navigator.clipboard.writeText(data.walletAddress);
+-      el('copyCryptoAddr').textContent = 'Copied!';
+-    } catch {
+-      el('copyCryptoAddr').textContent = 'Copy failed';
++    async function copyText(text) {
++      try {
++        if (navigator.clipboard && window.isSecureContext) {
++          await navigator.clipboard.writeText(text);
++          return true;
++        }
++      } catch {}
++      try {
++        const el = document.createElement('textarea');
++        el.value = text;
++        el.style.position = 'fixed';
++        el.style.opacity = '0';
++        document.body.appendChild(el);
++        el.focus();
++        el.select();
++        const ok = document.execCommand('copy');
++        document.body.removeChild(el);
++        return ok;
++      } catch {
++        return false;
++      }
+     }
+-    setTimeout(() => { el('copyCryptoAddr').textContent = 'Copy'; }, 2000);
+-  });
+-  setStatus('Send the amount, then submit the transaction hash for review.');
+-});
+-el('cryptoConfirm').addEventListener('click', async () => {
+-  const res = await fetch('/api/billing/crypto/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference: cryptoReference, txHash: el('cryptoTxHash').value.trim(), amount: cryptoAmount, plan: el('cryptoPlan').value, method: el('cryptoMethod').value }) });
+-  const data = await res.json();
+-  setStatus(res.ok ? 'Payment submitted. Service access starts after verification.' : (data.error || 'Unable to submit payment.'), !res.ok);
+-});
+-
+-// Handle returning from an annual PayPal approval redirect
+-(async function handleReturn() {
+-  const params = new URLSearchParams(window.location.search);
+-  const orderId = params.get('token');
+-  if (params.has('paypal_cancel')) return setStatus('Checkout cancelled.', true);
+-  if (!orderId) return;
+-  setStatus('Confirming annual payment…');
+-  try {
+-    const res = await fetch(`/payments/capture-order/${orderId}`, { method: 'POST', credentials: 'include' });
+-    const data = await res.json();
+-    if (data.status === 'COMPLETED') {
+-      setStatus('Annual plan activated!');
+-      loadCurrentStatus();
+-    } else {
+-      setStatus('Payment not completed.', true);
++    async function loadPaymentOptions() {
++      try {
++        let response;
++        const maxAttempts = 6;
++        const attemptTimeoutMs = 10000;
++        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
++          if (attempt === 0) status('Loading payment options...');
++          else status(`Waking up the payment server... (attempt ${attempt + 1} of ${maxAttempts})`);
++          try {
++            const controller = new AbortController();
++            const timer = setTimeout(() => controller.abort(), attemptTimeoutMs);
++            response = await fetch(`${API_BASE}/api/payments/options`, { cache: 'no-store', signal: controller.signal });
++            clearTimeout(timer);
++            if (response.ok) break;
++          } catch {}
++          if (attempt < maxAttempts - 1) await new Promise((resolve) => setTimeout(resolve, Math.min(2000 * (attempt + 1), 8000)));
++        }
++        if (!response?.ok) throw new Error('Payment options request failed');
++        const data = await response.json();
++        const wallets = [data.providers.bitcoin, data.providers.ethereum]
++          .filter((provider) => provider?.enabled && provider.address);
++        $('walletList').innerHTML = wallets.map((provider) => `<div class="wallet-row"><strong>${provider.currency} wallet</strong><code>${provider.address}</code><button type="button" data-address="${provider.address}" data-currency="${provider.currency}">Copy ${provider.currency} address</button></div>`).join('');
++        $('walletList').querySelectorAll('button').forEach((button) => {
++          button.onclick = async () => {
++            const copied = await copyText(button.dataset.address);
++            button.textContent = copied ? 'Copied' : 'Copy failed';
++            setTimeout(() => { button.textContent = `Copy ${button.dataset.currency} address`; }, 2000);
++          };
++        });
++        for (const option of $('method').options) {
++          const provider = option.value === 'bitcoin' ? data.providers.bitcoin : data.providers.ethereum;
++          option.hidden = !provider?.enabled;
++          option.disabled = !provider?.enabled;
++          if (provider?.enabled) configuredMethods.add(option.value);
++        }
++        const firstAvailable = [...configuredMethods][0];
++        if (firstAvailable) {
++          $('method').value = firstAvailable;
++          $('order').disabled = false;
++          status('');
++        } else {
++          status('No wallet payment method is configured yet.', true);
++        }
++      } catch {
++        status('The payment server is taking longer than usual to respond. Please wait a moment and refresh the page.', true);
++      }
+     }
+-  } catch (err) {
+-    setStatus(err.message, true);
+-  }
+-})();
+-
+-loadConfig();
+-loadCurrentStatus();
+-</script>
++    async function loadCardCheckout() {
++      try {
++        const response = await fetch(`${API_BASE}/api/config`);
++        const data = await response.json();
++        const starterId = data.plans?.starter?.paypalPlanId;
++        const growthId = data.plans?.growth?.paypalPlanId;
++        if (!data.paypalClientId || !starterId || !growthId) return;
++        const script = document.createElement('script');
++        script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(data.paypalClientId)}&vault=true&intent=subscription&currency=USD`;
++        script.onload = () => {
++          if (!window.paypal) return;
++          $('cardPanel').hidden = false;
++          [['paypal-starter', starterId, 'Starter'], ['paypal-growth', growthId, 'Growth']].forEach(([id, planId, label]) => {
++            window.paypal.Buttons({
++              style: { layout: 'vertical', shape: 'rect', label: 'subscribe' },
++              createSubscription: (data, actions) => actions.subscription.create({ plan_id: planId }),
++              onApprove: () => status(`${label} subscription started. Access will activate after provider confirmation.`),
++              onError: () => status('Card checkout is temporarily unavailable. Please try again or use a wallet payment.', true),
++            }).render(`#${id}`);
++          });
++        };
++        script.onerror = () => {};
++        document.head.appendChild(script);
++      } catch {}
++    }
++    $('order').onclick = async () => {
++      const method = $('method').value;
++      status('Creating wallet payment...');
++      const response = await fetch(`${API_BASE}/api/billing/crypto/order`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('name').value, email: $('email').value, plan: $('plan').value, method: $('method').value, referral }) });
++      const data = await response.json();
++      if (!response.ok) return status(data.error || 'Could not create payment.', true);
++      reference = data.reference;
++      amountCrypto = data.amountCrypto;
++      $('wallet').hidden = false;
++      $('wallet').innerHTML = `Send exactly <strong>${data.amountCrypto} ${data.currency}</strong> to:<br><code id="walletAddr" style="user-select:all;word-break:break-all;">${data.walletAddress}</code> <button type="button" id="copyAddr" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">Copy</button><br>Reference: ${data.reference}`;
++      $('copyAddr').onclick = async () => {
++        const copied = await copyText(data.walletAddress);
++        $('copyAddr').textContent = copied ? 'Copied!' : 'Copy failed';
++        setTimeout(() => { $('copyAddr').textContent = 'Copy'; }, 2000);
++      };
++      $('hashLabel').hidden = false;
++      $('hash').hidden = false;
++      $('confirm').hidden = false;
++      status('Send the amount, then submit the transaction hash.');
++    };
++    $('confirm').onclick = async () => {
++      const response = await fetch(`${API_BASE}/api/billing/crypto/confirm`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference, txHash: $('hash').value.trim(), amount: amountCrypto, plan: $('plan').value, method: $('method').value }) });
++      const data = await response.json();
++      status(response.ok ? 'Payment submitted. Access starts after verification.' : (data.error || 'Could not submit payment.'), !response.ok);
++    };
++
++    const requestedPlan = new URLSearchParams(window.location.search).get('plan');
++    if (requestedPlan === 'growth') $('plan').value = 'growth';
++    loadPaymentOptions();
++    loadCardCheckout();
++  </script>
+ </body>
+ </html>
+diff --git a/netlify-static/billing.html b/netlify-static/billing.html
+index 763335c..676e1c2 100644
+--- a/netlify-static/billing.html
++++ b/netlify-static/billing.html
+@@ -1,164 +1,173 @@
+-<!DOCTYPE html>
++<!doctype html>
+ <html lang="en">
+ <head>
+-  <meta charset="UTF-8" />
+-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+-  <title>Plans & Billing</title>
+-  <style>
+-    :root {
+-      --bg:#0B1220; --panel:#0F1830; --line:#22304F; --text:#E7ECF5; --muted:#8493B3; --signal:#5EEAD4; --amber:#FFB454; --danger:#FF6B6B;
+-    }
+-    * { box-sizing:border-box; }
+-    body {
+-      margin:0; background:var(--bg); color:var(--text); font-family:Inter, Arial, sans-serif; padding:48px 20px;
+-    }
+-    .wrap { max-width:760px; margin:0 auto; }
+-    .card {
+-      background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:24px;
+-    }
+-    h1 { margin:0 0 16px; }
+-    .muted { color:var(--muted); }
+-    .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+-    label { display:block; margin:12px 0 8px; color:var(--muted); font-size:13px; }
+-    input, select, button { width:100%; padding:11px; border-radius:8px; border:1px solid var(--line); background:#101b2f; color:var(--text); font:inherit; }
+-    button { margin-top:16px; background:var(--signal); color:#062421; border:none; cursor:pointer; font-weight:600; }
+-    .status { margin-top:18px; min-height:20px; color:var(--muted); }
+-    .box { margin-top:18px; padding:16px; border:1px solid var(--line); border-radius:10px; background:#101b2f; display:none; }
+-    @media (max-width:640px) { .grid { grid-template-columns:1fr; } }
+-  </style>
++  <meta charset="utf-8">
++  <meta name="viewport" content="width=device-width,initial-scale=1">
++  <title>Lead SaaS billing</title>
++  <style>body{margin:0;padding:32px 18px;background:#0b0d12;color:#e7e9ee;font:15px/1.5 sans-serif}.wrap{max-width:620px;margin:auto}.panel{background:#151822;border:1px solid #303747;border-radius:12px;padding:24px;margin-bottom:16px}h1{margin-top:0}label{display:block;color:#9aa1b1;font-size:13px;margin:12px 0 5px}input,select,button{width:100%;box-sizing:border-box;padding:11px;border-radius:8px;border:1px solid #303747;background:#1c202c;color:#e7e9ee;font:inherit}button{margin-top:16px;background:#6c8cff;border-color:#6c8cff;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.wallet{margin-top:18px;padding:14px;background:#1c202c;border-radius:8px;word-break:break-word}.wallet-list{display:grid;gap:10px;margin:16px 0}.wallet-row{padding:12px;background:#1c202c;border:1px solid #303747;border-radius:8px}.wallet-row strong{display:block;margin-bottom:4px}.wallet-row code{display:block;color:#b9c7ff;word-break:break-all}.wallet-row button{width:auto;margin:8px 0 0;padding:6px 10px}.card-plan{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}.card-plan>div{border:1px solid #303747;border-radius:8px;padding:14px}.card-plan h2{font-size:16px;margin:0 0 4px}.card-plan p{color:#9aa1b1;font-size:13px;margin:0 0 10px}.paypal-button{min-height:42px}#status{min-height:24px;margin-top:16px;color:#9aa1b1}@media(max-width:560px){.grid,.card-plan{grid-template-columns:1fr}}.hint{color:#9aa1b1;font-size:12px;margin:14px 0 2px}</style>
+ </head>
+ <body>
+-  <div class="wrap">
+-    <div class="card">
+-      <h1>Plans & Billing</h1>
+-      <p class="muted">Create a BTC or ETH payment request, send the exact amount, then submit the transaction hash for review.</p>
+-
+-      <div class="grid">
+-        <div>
+-          <label for="name">Name</label>
+-          <input id="name" placeholder="Your name" />
+-        </div>
+-        <div>
+-          <label for="email">Email</label>
+-          <input id="email" type="email" placeholder="you@example.com" />
+-        </div>
+-        <div>
+-          <label for="plan">Plan</label>
+-          <select id="plan">
+-            <option value="starter">Starter</option>
+-            <option value="growth">Growth</option>
+-          </select>
+-        </div>
+-        <div>
+-          <label for="method">Payment method</label>
+-          <select id="method">
+-            <option value="bitcoin">Bitcoin</option>
+-            <option value="ethereum">Ethereum</option>
+-          </select>
+-        </div>
+-      </div>
+-
+-      <button id="order" type="button">Create wallet payment</button>
+-      <div id="wallet" class="box"></div>
+-      <label id="txHashLabel" for="txHash" hidden>Transaction hash</label>
+-      <input id="txHash" placeholder="Paste transaction hash after sending" hidden />
+-      <button id="confirm" type="button" hidden>Submit payment for review</button>
+-      <div id="status" class="status"></div>
++  <main class="wrap"><div class="panel">
++    <h1>Lead SaaS subscription</h1>
++    <p>Send BTC or ETH anytime to the permanent addresses below — no form required.</p>
++    <div id="walletList" class="wallet-list" aria-live="polite"></div>
++    <p class="hint">Want a tracked order reference instead? Fill this in and create a payment:</p>
++    <div class="grid">
++      <div><label for="name">Name</label><input id="name"></div>
++      <div><label for="email">Email</label><input id="email" type="email"></div>
++      <div><label for="plan">Plan</label><select id="plan"><option value="starter">Starter</option><option value="growth">Growth</option></select></div>
++      <div><label for="method">Payment method</label><select id="method"><option value="bitcoin">Bitcoin (BTC)</option><option value="ethereum">Ethereum (ETH)</option></select></div>
+     </div>
+-  </div>
+-
++    <button id="order" disabled>Create payment</button>
++    <div id="wallet" class="wallet" hidden></div>
++    <label id="hashLabel" for="hash" hidden>Transaction hash</label>
++    <input id="hash" placeholder="Paste transaction hash" hidden>
++    <button id="confirm" hidden>Submit payment for review</button>
++    <div id="status"></div>
++  </div></main>
++  <section class="wrap panel" id="cardPanel" hidden>
++    <h2>Pay by card</h2>
++    <p>Use the hosted PayPal checkout to pay by debit or credit card on a recurring monthly plan. Dispatch Pro never stores card details.</p>
++    <div class="card-plan">
++      <div><h2>Starter</h2><p>$79/month</p><div class="paypal-button" id="paypal-starter"></div></div>
++      <div><h2>Growth</h2><p>$249/month</p><div class="paypal-button" id="paypal-growth"></div></div>
++    </div>
++  </section>
+   <script>
+-    const API_BASE_URL = 'https://api.dispatchpro.ai';
+-    const plan = new URLSearchParams(window.location.search).get('plan');
+-    const planField = document.getElementById('plan');
+-    const orderButton = document.getElementById('order');
+-    const confirmButton = document.getElementById('confirm');
+-    const txHashInput = document.getElementById('txHash');
+-    if (plan === 'growth') planField.value = 'growth';
+-    let checkout = null;
+-
+-    const setStatus = (msg, isError = false) => {
+-      const status = document.getElementById('status');
+-      status.textContent = msg;
+-      status.style.color = isError ? '#FF6B6B' : '#8493B3';
+-    };
+-
+-    orderButton.addEventListener('click', async () => {
+-      const name = document.getElementById('name').value.trim() || 'Customer';
+-      const email = document.getElementById('email').value.trim() || 'noreply@example.com';
+-      const selectedPlan = document.getElementById('plan').value;
+-      const method = document.getElementById('method').value;
+-      const walletBox = document.getElementById('wallet');
+-      orderButton.disabled = true;
+-      setStatus('Creating wallet payment...');
+-
++    const $ = (id) => document.getElementById(id);
++    const API_BASE = 'https://api.dispatchpro.ai';
++    let reference = '';
++    let amountCrypto = '';
++    const referral = new URLSearchParams(window.location.search).get('ref') || '';
++    const configuredMethods = new Set();
++    function status(message, isError = false) {
++      $('status').textContent = message;
++      $('status').style.color = isError ? '#ff7373' : '#9aa1b1';
++    }
++    async function copyText(text) {
+       try {
+-        const response = await fetch(`${API_BASE_URL}/api/billing/crypto/order`, {
+-          method: 'POST',
+-          headers: { 'Content-Type': 'application/json' },
+-          body: JSON.stringify({ name, email, plan: selectedPlan, method }),
+-        });
+-        const payload = await response.json();
+-        if (!response.ok) throw new Error(payload.error || 'Unable to create wallet payment.');
+-        checkout = { ...payload, method, plan: selectedPlan };
+-
+-        walletBox.innerHTML = `
+-          Send exactly <strong>${payload.amountCrypto} ${payload.currency}</strong> to:<br>
+-          <code id="walletAddr" style="user-select:all;word-break:break-all;"></code>
+-          <button type="button" id="copyAddr" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">Copy</button><br>
+-          Reference: <strong></strong>
+-        `;
+-        document.getElementById('walletAddr').textContent = payload.walletAddress;
+-        walletBox.querySelector('strong:last-child').textContent = payload.reference;
+-        walletBox.style.display = 'block';
+-        document.getElementById('txHashLabel').hidden = false;
+-        txHashInput.hidden = false;
+-        confirmButton.hidden = false;
+-        document.getElementById('copyAddr').addEventListener('click', async () => {
+-          const button = document.getElementById('copyAddr');
+-          try {
+-            await navigator.clipboard.writeText(payload.walletAddress);
+-            button.textContent = 'Copied!';
+-          } catch {
+-            button.textContent = 'Copy failed';
+-          }
+-          setTimeout(() => { button.textContent = 'Copy'; }, 2000);
+-        });
+-        setStatus('Send the amount, then submit the transaction hash for review.');
+-      } catch (error) {
+-        setStatus(error.message || 'Unable to create wallet payment.', true);
+-      } finally {
+-        orderButton.disabled = false;
++        if (navigator.clipboard && window.isSecureContext) {
++          await navigator.clipboard.writeText(text);
++          return true;
++        }
++      } catch {}
++      try {
++        const el = document.createElement('textarea');
++        el.value = text;
++        el.style.position = 'fixed';
++        el.style.opacity = '0';
++        document.body.appendChild(el);
++        el.focus();
++        el.select();
++        const ok = document.execCommand('copy');
++        document.body.removeChild(el);
++        return ok;
++      } catch {
++        return false;
+       }
+-    });
+-
+-    confirmButton.addEventListener('click', async () => {
+-      if (!checkout) return;
+-      confirmButton.disabled = true;
+-      setStatus('Submitting payment for review...');
+-
++    }
++    async function loadPaymentOptions() {
+       try {
+-        const response = await fetch(`${API_BASE_URL}/api/billing/crypto/confirm`, {
+-          method: 'POST',
+-          headers: { 'Content-Type': 'application/json' },
+-          body: JSON.stringify({
+-            reference: checkout.reference,
+-            txHash: txHashInput.value.trim(),
+-            amount: checkout.amountCrypto,
+-            plan: checkout.plan,
+-            method: checkout.method,
+-          }),
++        let response;
++        const maxAttempts = 6;
++        const attemptTimeoutMs = 10000;
++        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
++          if (attempt === 0) status('Loading payment options...');
++          else status(`Waking up the payment server... (attempt ${attempt + 1} of ${maxAttempts})`);
++          try {
++            const controller = new AbortController();
++            const timer = setTimeout(() => controller.abort(), attemptTimeoutMs);
++            response = await fetch(`${API_BASE}/api/payments/options`, { cache: 'no-store', signal: controller.signal });
++            clearTimeout(timer);
++            if (response.ok) break;
++          } catch {}
++          if (attempt < maxAttempts - 1) await new Promise((resolve) => setTimeout(resolve, Math.min(2000 * (attempt + 1), 8000)));
++        }
++        if (!response?.ok) throw new Error('Payment options request failed');
++        const data = await response.json();
++        const wallets = [data.providers.bitcoin, data.providers.ethereum]
++          .filter((provider) => provider?.enabled && provider.address);
++        $('walletList').innerHTML = wallets.map((provider) => `<div class="wallet-row"><strong>${provider.currency} wallet</strong><code>${provider.address}</code><button type="button" data-address="${provider.address}" data-currency="${provider.currency}">Copy ${provider.currency} address</button></div>`).join('');
++        $('walletList').querySelectorAll('button').forEach((button) => {
++          button.onclick = async () => {
++            const copied = await copyText(button.dataset.address);
++            button.textContent = copied ? 'Copied' : 'Copy failed';
++            setTimeout(() => { button.textContent = `Copy ${button.dataset.currency} address`; }, 2000);
++          };
+         });
+-        const payload = await response.json();
+-        if (!response.ok) throw new Error(payload.error || 'Unable to submit payment.');
+-        setStatus(payload.message || 'Payment submitted. Access starts after verification.');
+-        confirmButton.hidden = true;
+-      } catch (error) {
+-        setStatus(error.message || 'Unable to submit payment.', true);
+-      } finally {
+-        confirmButton.disabled = false;
++        for (const option of $('method').options) {
++          const provider = option.value === 'bitcoin' ? data.providers.bitcoin : data.providers.ethereum;
++          option.hidden = !provider?.enabled;
++          option.disabled = !provider?.enabled;
++          if (provider?.enabled) configuredMethods.add(option.value);
++        }
++        const firstAvailable = [...configuredMethods][0];
++        if (firstAvailable) {
++          $('method').value = firstAvailable;
++          $('order').disabled = false;
++          status('');
++        } else {
++          status('No wallet payment method is configured yet.', true);
++        }
++      } catch {
++        status('The payment server is taking longer than usual to respond. Please wait a moment and refresh the page.', true);
+       }
+-    });
++    }
++    async function loadCardCheckout() {
++      try {
++        const response = await fetch(`${API_BASE}/api/config`);
++        const data = await response.json();
++        const starterId = data.plans?.starter?.paypalPlanId;
++        const growthId = data.plans?.growth?.paypalPlanId;
++        if (!data.paypalClientId || !starterId || !growthId) return;
++        const script = document.createElement('script');
++        script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(data.paypalClientId)}&vault=true&intent=subscription&currency=USD`;
++        script.onload = () => {
++          if (!window.paypal) return;
++          $('cardPanel').hidden = false;
++          [['paypal-starter', starterId, 'Starter'], ['paypal-growth', growthId, 'Growth']].forEach(([id, planId, label]) => {
++            window.paypal.Buttons({
++              style: { layout: 'vertical', shape: 'rect', label: 'subscribe' },
++              createSubscription: (data, actions) => actions.subscription.create({ plan_id: planId }),
++              onApprove: () => status(`${label} subscription started. Access will activate after provider confirmation.`),
++              onError: () => status('Card checkout is temporarily unavailable. Please try again or use a wallet payment.', true),
++            }).render(`#${id}`);
++          });
++        };
++        script.onerror = () => {};
++        document.head.appendChild(script);
++      } catch {}
++    }
++    $('order').onclick = async () => {
++      const method = $('method').value;
++      status('Creating wallet payment...');
++      const response = await fetch(`${API_BASE}/api/billing/crypto/order`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('name').value, email: $('email').value, plan: $('plan').value, method: $('method').value, referral }) });
++      const data = await response.json();
++      if (!response.ok) return status(data.error || 'Could not create payment.', true);
++      reference = data.reference;
++      amountCrypto = data.amountCrypto;
++      $('wallet').hidden = false;
++      $('wallet').innerHTML = `Send exactly <strong>${data.amountCrypto} ${data.currency}</strong> to:<br><code id="walletAddr" style="user-select:all;word-break:break-all;">${data.walletAddress}</code> <button type="button" id="copyAddr" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">Copy</button><br>Reference: ${data.reference}`;
++      $('copyAddr').onclick = async () => {
++        const copied = await copyText(data.walletAddress);
++        $('copyAddr').textContent = copied ? 'Copied!' : 'Copy failed';
++        setTimeout(() => { $('copyAddr').textContent = 'Copy'; }, 2000);
++      };
++      $('hashLabel').hidden = false;
++      $('hash').hidden = false;
++      $('confirm').hidden = false;
++      status('Send the amount, then submit the transaction hash.');
++    };
++    $('confirm').onclick = async () => {
++      const response = await fetch(`${API_BASE}/api/billing/crypto/confirm`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference, txHash: $('hash').value.trim(), amount: amountCrypto, plan: $('plan').value, method: $('method').value }) });
++      const data = await response.json();
++      status(response.ok ? 'Payment submitted. Access starts after verification.' : (data.error || 'Could not submit payment.'), !response.ok);
++    };
++
++    const requestedPlan = new URLSearchParams(window.location.search).get('plan');
++    if (requestedPlan === 'growth') $('plan').value = 'growth';
++    loadPaymentOptions();
++    loadCardCheckout();
+   </script>
+ </body>
+ </html>
+diff --git a/public/billing.html b/public/billing.html
+index 3d7b9c1..ec19030 100644
+--- a/public/billing.html
++++ b/public/billing.html
+@@ -35,6 +35,7 @@
+   </section>
+   <script>
+     const $ = (id) => document.getElementById(id);
++    const API_BASE = '';
+     let reference = '';
+     let amountCrypto = '';
+     const referral = new URLSearchParams(window.location.search).get('ref') || '';
+@@ -76,7 +77,7 @@
+           try {
+             const controller = new AbortController();
+             const timer = setTimeout(() => controller.abort(), attemptTimeoutMs);
+-            response = await fetch('/api/payments/options', { cache: 'no-store', signal: controller.signal });
++            response = await fetch(`${API_BASE}/api/payments/options`, { cache: 'no-store', signal: controller.signal });
+             clearTimeout(timer);
+             if (response.ok) break;
+           } catch {}
+@@ -114,7 +115,7 @@
+     }
+     async function loadCardCheckout() {
+       try {
+-        const response = await fetch('/api/config');
++        const response = await fetch(`${API_BASE}/api/config`);
+         const data = await response.json();
+         const starterId = data.plans?.starter?.paypalPlanId;
+         const growthId = data.plans?.growth?.paypalPlanId;
+@@ -140,7 +141,7 @@
+     $('order').onclick = async () => {
+       const method = $('method').value;
+       status('Creating wallet payment...');
+-      const response = await fetch('/api/billing/crypto/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('name').value, email: $('email').value, plan: $('plan').value, method: $('method').value, referral }) });
++      const response = await fetch(`${API_BASE}/api/billing/crypto/order`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('name').value, email: $('email').value, plan: $('plan').value, method: $('method').value, referral }) });
+       const data = await response.json();
+       if (!response.ok) return status(data.error || 'Could not create payment.', true);
+       reference = data.reference;
+@@ -158,7 +159,7 @@
+       status('Send the amount, then submit the transaction hash.');
+     };
+     $('confirm').onclick = async () => {
+-      const response = await fetch('/api/billing/crypto/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference, txHash: $('hash').value.trim(), amount: amountCrypto, plan: $('plan').value, method: $('method').value }) });
++      const response = await fetch(`${API_BASE}/api/billing/crypto/confirm`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference, txHash: $('hash').value.trim(), amount: amountCrypto, plan: $('plan').value, method: $('method').value }) });
+       const data = await response.json();
+       status(response.ok ? 'Payment submitted. Access starts after verification.' : (data.error || 'Could not submit payment.'), !response.ok);
+     };
+-- 
+2.43.0
+
