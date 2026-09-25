@@ -246,6 +246,14 @@ deployment. PayPal handles international USD checkout; M-Pesa handles KES STK
 Push; Bitcoin and Ethereum use manual wallet verification. These providers
 settle independently.
 
+This endpoint (and `GET /api/config`) is **stateless and canonical on Netlify
+Functions**: on the deployed site it is served by
+`/.netlify/functions/payments-options` via `netlify.toml`, and locally by
+Express. Both share `payment-catalog.js`, so the payload is identical. Wallet
+addresses come from `BITCOIN_WALLET_ADDRESS` / `ETHEREUM_WALLET_ADDRESS`, with
+documented defaults so BTC/ETH are never unavailable. See DEPLOY.md section
+"2b".
+
 **Response:** `200 OK`
 ```json
 {

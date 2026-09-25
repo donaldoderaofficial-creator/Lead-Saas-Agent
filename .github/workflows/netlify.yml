@@ -25,7 +25,7 @@ jobs:
       - name: Deploy to Netlify
         uses: netlify/actions/cli@v3
         with:
-          args: deploy --prod --dir=public
+          args: deploy --prod --dir=public --functions=netlify/functions
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}

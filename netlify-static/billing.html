@@ -24,6 +24,11 @@
     button { margin-top:16px; background:var(--signal); color:#062421; border:none; cursor:pointer; font-weight:600; }
     .status { margin-top:18px; min-height:20px; color:var(--muted); }
     .box { margin-top:18px; padding:16px; border:1px solid var(--line); border-radius:10px; background:#101b2f; display:none; }
+    .wallet-list { display:grid; gap:10px; margin:16px 0; }
+    .wallet-row { padding:12px; background:#101b2f; border:1px solid var(--line); border-radius:10px; }
+    .wallet-row strong { display:block; margin-bottom:4px; }
+    .wallet-row code { display:block; color:var(--signal); word-break:break-all; }
+    .wallet-row button { width:auto; margin:8px 0 0; padding:6px 10px; }
     @media (max-width:640px) { .grid { grid-template-columns:1fr; } }
   </style>
 </head>
@@ -31,7 +36,8 @@
   <div class="wrap">
     <div class="card">
       <h1>Plans & Billing</h1>
-      <p class="muted">Create a BTC or ETH payment request, send the exact amount, then submit the transaction hash for review.</p>
+      <p class="muted">Send BTC or ETH anytime to the permanent addresses below, or create a tracked payment request and submit the transaction hash for review.</p>
+      <div id="walletList" class="wallet-list" aria-live="polite"></div>
 
       <div class="grid">
         <div>
@@ -67,8 +73,9 @@
     </div>
   </div>
 
+  <script src="runtime-config.js"></script>
+  <script src="api-base.js"></script>
   <script>
-    const API_BASE_URL = 'https://api.dispatchpro.ai';
     const plan = new URLSearchParams(window.location.search).get('plan');
     const planField = document.getElementById('plan');
     const orderButton = document.getElementById('order');
@@ -83,6 +90,37 @@
       status.style.color = isError ? '#FF6B6B' : '#8493B3';
     };
 
+    async function loadWalletAddresses() {
+      try {
+        const response = await window.DispatchAPI.fetchWithRetry('/api/payments/options', { cache: 'no-store' });
+        const data = await response.json();
+        const wallets = [data.providers.bitcoin, data.providers.ethereum]
+          .filter((provider) => provider?.enabled && provider.address);
+        const list = document.getElementById('walletList');
+        list.innerHTML = wallets.map((provider) => `<div class="wallet-row"><strong>${provider.currency} wallet</strong><code>${provider.address}</code><button type="button" data-address="${provider.address}" data-currency="${provider.currency}">Copy ${provider.currency} address</button></div>`).join('');
+        list.querySelectorAll('button').forEach((button) => {
+          button.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(button.dataset.address);
+              button.textContent = 'Copied!';
+            } catch {
+              button.textContent = 'Copy failed';
+            }
+            setTimeout(() => { button.textContent = `Copy ${button.dataset.currency} address`; }, 2000);
+          });
+        });
+        for (const option of document.getElementById('method').options) {
+          const provider = option.value === 'bitcoin' ? data.providers.bitcoin : data.providers.ethereum;
+          option.hidden = !provider?.enabled;
+          option.disabled = !provider?.enabled;
+        }
+      } catch {
+        setStatus('Payment options are temporarily unavailable. Please try again later.', true);
+      }
+    }
+
+    loadWalletAddresses();
+
     orderButton.addEventListener('click', async () => {
       const name = document.getElementById('name').value.trim() || 'Customer';
       const email = document.getElementById('email').value.trim() || 'noreply@example.com';
@@ -93,7 +131,7 @@
       setStatus('Creating wallet payment...');
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/billing/crypto/order`, {
+        const response = await fetch(window.DispatchAPI.url('/api/billing/crypto/order'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, plan: selectedPlan, method }),
@@ -138,7 +176,7 @@
       setStatus('Submitting payment for review...');
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/billing/crypto/confirm`, {
+        const response = await fetch(window.DispatchAPI.url('/api/billing/crypto/confirm'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

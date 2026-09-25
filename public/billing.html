@@ -33,6 +33,8 @@
       <div><h2>Growth</h2><p>$249/month</p><div class="paypal-button" id="paypal-growth"></div></div>
     </div>
   </section>
+  <script src="/runtime-config.js"></script>
+  <script src="/api-base.js"></script>
   <script>
     const $ = (id) => document.getElementById(id);
     let reference = '';
@@ -67,15 +69,7 @@
     }
     async function loadPaymentOptions() {
       try {
-        let response;
-        for (let attempt = 0; attempt < 3; attempt += 1) {
-          try {
-            response = await fetch('/api/payments/options', { cache: 'no-store' });
-            if (response.ok) break;
-          } catch {}
-          if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
-        }
-        if (!response?.ok) throw new Error('Payment options request failed');
+        const response = await window.DispatchAPI.fetchWithRetry('/api/payments/options', { cache: 'no-store' });
         const data = await response.json();
         const wallets = [data.providers.bitcoin, data.providers.ethereum]
           .filter((provider) => provider?.enabled && provider.address);
@@ -106,7 +100,7 @@
     }
     async function loadCardCheckout() {
       try {
-        const response = await fetch('/api/config');
+        const response = await window.DispatchAPI.fetch('/api/config');
         const data = await response.json();
         const starterId = data.plans?.starter?.paypalPlanId;
         const growthId = data.plans?.growth?.paypalPlanId;
@@ -132,7 +126,7 @@
     $('order').onclick = async () => {
       const method = $('method').value;
       status('Creating wallet payment...');
-      const response = await fetch('/api/billing/crypto/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('name').value, email: $('email').value, plan: $('plan').value, method: $('method').value, referral }) });
+      const response = await fetch(window.DispatchAPI.url('/api/billing/crypto/order'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('name').value, email: $('email').value, plan: $('plan').value, method: $('method').value, referral }) });
       const data = await response.json();
       if (!response.ok) return status(data.error || 'Could not create payment.', true);
       reference = data.reference;
@@ -150,7 +144,7 @@
       status('Send the amount, then submit the transaction hash.');
     };
     $('confirm').onclick = async () => {
-      const response = await fetch('/api/billing/crypto/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference, txHash: $('hash').value.trim(), amount: amountCrypto, plan: $('plan').value, method: $('method').value }) });
+      const response = await fetch(window.DispatchAPI.url('/api/billing/crypto/confirm'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference, txHash: $('hash').value.trim(), amount: amountCrypto, plan: $('plan').value, method: $('method').value }) });
       const data = await response.json();
       status(response.ok ? 'Payment submitted. Access starts after verification.' : (data.error || 'Could not submit payment.'), !response.ok);
     };

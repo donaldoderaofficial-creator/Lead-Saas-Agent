@@ -39,6 +39,7 @@ const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, genera
 const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = require('./explorium-client');
 const { parseDataset, validateObservation } = require('./geospatial-safety');
 const { getBtcUsdRate, getCryptoUsdRate, startBtcUsdSync } = require('./crypto-rates');
+const { buildPaymentOptions, buildPublicConfig } = require('./payment-catalog');
 const { buildCustomReply, buildMiaReply, improveReplyWithAI, verifyWebhookSignature: verifyEmailWebhookSignature, sendReply } = require('./email-assistant');
 
 const app = express();
@@ -374,77 +375,21 @@ app.post('/api/email/inbound', asyncHandler(async (req, res) => {
 
 // ---- Global payment capabilities ----
 app.get('/api/payments/options', (req, res) => {
-  const bitcoinEnabled = Boolean(config.wallets.bitcoin.address);
-  const ethereumEnabled = Boolean(config.wallets.ethereum.address);
-  const supportedCurrencies = [];
-  if (config.payment.paypal.enabled) supportedCurrencies.push('USD');
-  if (config.payment.mpesa.enabled) supportedCurrencies.push('KES');
-  if (bitcoinEnabled) supportedCurrencies.push('BTC');
-  if (ethereumEnabled) supportedCurrencies.push('ETH');
-  res.json({
-    providers: {
-      paypal: {
-        enabled: config.payment.paypal.enabled,
-        currency: 'USD',
-        methods: config.payment.paypal.enabled ? ['checkout'] : [],
-      },
-      mpesa: {
-        enabled: config.payment.mpesa.enabled,
-        currency: 'KES',
-        methods: config.payment.mpesa.enabled ? ['stk-push'] : [],
-      },
-      bitcoin: {
-        enabled: bitcoinEnabled,
-        currency: 'BTC',
-        methods: bitcoinEnabled ? ['wallet-transfer'] : [],
-        address: config.wallets.bitcoin.address,
-        rate: getBtcUsdRate(),
-      },
-      ethereum: {
-        enabled: ethereumEnabled,
-        currency: 'ETH',
-        methods: ethereumEnabled ? ['wallet-transfer'] : [],
-        address: config.wallets.ethereum.address,
-        rate: getCryptoUsdRate('ethereum'),
-      },
-    },
-    supportedCurrencies,
-    settlement: 'Direct Bitcoin and Ethereum wallet transfers are accepted manually and require transaction confirmation before a report is released.',
-  });
+  res.json(buildPaymentOptions({
+    wallets: config.wallets,
+    paypalEnabled: config.payment.paypal.enabled,
+    mpesaEnabled: config.payment.mpesa.enabled,
+  }));
 });
 
 app.get('/api/config', (req, res) => {
-  res.json({
-    prospecting: {
-      enabled: Boolean(process.env.EXPLORIUM_API_KEY),
-      provider: 'Explorium',
-    },
-    paypalClientId: config.payment.paypal.clientId || null,
-    payments: {
-      paypal: config.payment.paypal.enabled,
-      mpesa: config.payment.mpesa.enabled,
-      bitcoin: Boolean(config.wallets.bitcoin.address),
-      ethereum: Boolean(config.wallets.ethereum.address),
-    },
-    plans: {
-      starter: {
-        paypalPlanId: process.env.PAYPAL_PLAN_STARTER_MONTHLY || null,
-        priceMonthly: PRICING.usd.starter.price,
-        priceAnnual: (Number(PRICING.usd.starter.price) * 10).toFixed(2),
-      },
-      growth: {
-        paypalPlanId: process.env.PAYPAL_PLAN_GROWTH_MONTHLY || null,
-        priceMonthly: PRICING.usd.growth.price,
-        priceAnnual: (Number(PRICING.usd.growth.price) * 10).toFixed(2),
-      },
-    },
-    ebook: {
-      enabled: config.ebook?.enabled,
-      title: config.ebook?.title,
-      priceUsd: Number(config.ebook?.priceUsd || 19.99),
-      walletAddress: config.ebook?.walletAddress || config.wallets.bitcoin.address,
-    },
-  });
+  res.json(buildPublicConfig({
+    wallets: config.wallets,
+    pricingUsd: PRICING.usd,
+    ebook: config.ebook,
+    paypalEnabled: config.payment.paypal.enabled,
+    mpesaEnabled: config.payment.mpesa.enabled,
+  }));
 });
 
 app.get('/api/billing/status', (req, res) => {
