@@ -14,6 +14,12 @@ test('render deployment workflow triggers a cloud deploy hook', () => {
   assert.match(workflow, /permissions:\s*\{\}/);
   assert.match(workflow, /RENDER_DEPLOY_HOOK_URL/);
   assert.match(workflow, /RENDER_DEPLOY_HOOK_URL must start with https:\/\//);
-  assert.match(workflow, /curl --fail --show-error --silent --max-redirs 0 --retry 3 --retry-all-errors/);
+  assert.match(workflow, /curl /);
+  assert.match(workflow, /--fail/);
+  assert.match(workflow, /--show-error/);
+  assert.match(workflow, /--silent/);
+  assert.match(workflow, /--max-redirs 0/);
+  assert.match(workflow, /--retry 3/);
+  assert.match(workflow, /--retry-all-errors/);
   assert.match(workflow, /-X POST "\$RENDER_DEPLOY_HOOK_URL"/);
 });
