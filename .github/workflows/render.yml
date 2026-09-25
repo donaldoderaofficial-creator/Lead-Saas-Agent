@@ -1,0 +1,38 @@
+name: Render deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: {}
+
+    steps:
+      - name: Check Render deploy hook secret
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -n "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::notice::RENDER_DEPLOY_HOOK_URL secret is set"
+          else
+            echo "::error::RENDER_DEPLOY_HOOK_URL secret is not set. Add it under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - name: Trigger Render deploy
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          case "$RENDER_DEPLOY_HOOK_URL" in
+            https://*) ;;
+            *)
+              echo "::error::RENDER_DEPLOY_HOOK_URL must start with https://"
+              exit 1
+              ;;
+          esac
+          curl --fail --show-error --silent --max-redirs 0 --retry 3 --retry-all-errors \
+            -X POST "$RENDER_DEPLOY_HOOK_URL"

@@ -29,6 +29,24 @@ SQLite on persistent disk, and is exposed through Caddy with HTTPS.
 Point `api.dispatchpro.ai` at the VM and use it for payment callbacks, email
 webhooks, and the Netlify API proxy.
 
+## 2a. Automatic cloud upload for the Render backend
+
+If you use Render for the stateful backend, the repository now includes
+`.github/workflows/render.yml` so every push to `main` can trigger a cloud
+deploy automatically.
+
+### Required GitHub Actions secret
+
+Add this repository secret under **Settings → Secrets and variables → Actions**:
+
+| Secret | Required? | Purpose |
+| --- | --- | --- |
+| `RENDER_DEPLOY_HOOK_URL` | Yes | Calls your Render service's deploy hook so the latest commit is uploaded and released |
+
+To get the hook URL in Render: open the web service → **Settings** →
+**Deploy Hook** → create or copy the hook URL, then save it as the GitHub
+secret above.
+
 ## 2b. Netlify Functions are the canonical public payment/config API
 
 The billing page must never show "Payment options are temporarily unavailable"
