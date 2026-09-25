@@ -2,6 +2,7 @@
 set -euo pipefail
 
 DIR="${1:-public}"
+FUNCTIONS_DIR="${2:-netlify/functions}"
 SITE_ID="${NETLIFY_SITE_ID:-}"
 TOKEN="${NETLIFY_AUTH_TOKEN:-}"
 
@@ -19,4 +20,4 @@ if [[ ! -d "$DIR" ]]; then
   exit 1
 fi
 
-npx netlify deploy --prod --dir="$DIR" --site="$SITE_ID" --auth="$TOKEN"
+npx netlify deploy --prod --dir="$DIR" --functions="$FUNCTIONS_DIR" --site="$SITE_ID" --auth="$TOKEN"

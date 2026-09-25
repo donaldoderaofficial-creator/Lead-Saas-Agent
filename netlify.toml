@@ -1,5 +1,9 @@
 [build]
   publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
 
 [[redirects]]
   from = "/init"
@@ -7,14 +11,24 @@
   status = 301
   force = true
 
-# The frontend is static; the backend runs on the self-hosted production API.
-# Point the Netlify frontend at the live Render backend.
+# Netlify Functions are the canonical backend for the stateless public
+# payment/config API. These must stay above the generic /api/* proxy so the
+# billing page never depends on the stateful origin being awake.
 
 [[redirects]]
   from = "/api/payments/options"
-  to = "https://lead-agent-saas.onrender.com/api/payments/options"
+  to = "/.netlify/functions/payments-options"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/api/config"
+  to = "/.netlify/functions/public-config"
+  status = 200
+  force = true
+
+# Stateful endpoints (orders, confirmations, auth, leads) still run on the
+# self-hosted production API.
 
 [[redirects]]
   from = "/api/billing/crypto/*"

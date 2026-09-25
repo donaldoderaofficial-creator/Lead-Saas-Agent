@@ -29,6 +29,59 @@ SQLite on persistent disk, and is exposed through Caddy with HTTPS.
 Point `api.dispatchpro.ai` at the VM and use it for payment callbacks, email
 webhooks, and the Netlify API proxy.
 
+## 2b. Netlify Functions are the canonical public payment/config API
+
+The billing page must never show "Payment options are temporarily unavailable"
+just because the stateful origin is asleep. Two stateless endpoints therefore
+run as Netlify Functions and are served from the same site as the frontend:
+
+| Public path | Netlify Function | Source |
+| --- | --- | --- |
+| `/api/payments/options` | `/.netlify/functions/payments-options` | `netlify/functions/payments-options.js` |
+| `/api/config` | `/.netlify/functions/public-config` | `netlify/functions/public-config.js` |
+
+Both build their payload from `payment-catalog.js`, which is also used by
+`server.js`, so local Express and Netlify always return the same contract.
+Stateful endpoints (`/api/billing/crypto/*`, `/auth/*`, `/leads/*`, …) continue
+to proxy to the self-hosted backend through `netlify.toml`.
+
+### Required Netlify site environment variables
+
+Set these in **Site configuration → Environment variables**:
+
+| Variable | Required? | Default if unset |
+| --- | --- | --- |
+| `BITCOIN_WALLET_ADDRESS` | Recommended | `3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k` |
+| `ETHEREUM_WALLET_ADDRESS` | Recommended | `0xFFc40b1EcE21ce8A3b5e33caf95aA64bd8081330` |
+| `BTC_USD_PRICE` | Optional | `70000` (live CoinGecko rate is used when reachable) |
+| `ETH_USD_PRICE` | Optional | `3500` |
+| `PAYPAL_CLIENT_ID` | Optional | card checkout panel stays hidden |
+| `PAYPAL_PLAN_STARTER_MONTHLY` | Optional | card checkout panel stays hidden |
+| `PAYPAL_PLAN_GROWTH_MONTHLY` | Optional | card checkout panel stays hidden |
+| `EXPLORIUM_API_KEY` | Optional | prospecting reported as disabled |
+
+No secrets (session secret, database, PayPal secret) are needed by the
+functions — they are stateless and read-only.
+
+### Frontend API URL resolution
+
+`public/api-base.js` is the single place where API URLs are resolved:
+
+1. `window.DISPATCH_API_URL` from `runtime-config.js` (absolute origin, used by
+   frontends hosted on a different site).
+2. `<meta name="dispatch-api-base">`.
+3. Same-origin relative paths (default) — resolved by `netlify.toml` on Netlify
+   and by Express locally.
+
+Stateless calls additionally fall back to the direct
+`/.netlify/functions/...` path, so the BTC/ETH addresses still render even if a
+redirect rule is missing.
+
+The standalone `netlify-static/` drag-and-drop site is a *different* Netlify
+site, so its `runtime-config.js` points at the canonical site
+(`https://lead-saas-agent.netlify.app`). If you deploy it, add its origin to
+`CORS_ORIGINS` on the stateful backend so crypto order/confirm calls succeed.
+
 ## 3. Optional alternative hosting
 
 Railway doesn't use a checked-in blueprint file — set it
