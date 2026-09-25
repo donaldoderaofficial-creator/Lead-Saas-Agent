@@ -280,8 +280,9 @@ app.get('/ready', (req, res) => {
     sessionSecret: config.sessionSecret,
     publicAppUrl: config.publicAppUrl,
     corsOrigins: config.security.corsOrigins,
-    paypal: config.payment.paypal,
-    mpesa: { ...config.payment.mpesa, callbackUrl: process.env.MPESA_CALLBACK_URL },
+    // Providers are always advertised; readiness only checks credentials for configured ones.
+    paypal: { ...config.payment.paypal, enabled: config.payment.paypal.configured },
+    mpesa: { ...config.payment.mpesa, enabled: config.payment.mpesa.configured, callbackUrl: process.env.MPESA_CALLBACK_URL },
     wallets: config.wallets,
   });
   const ready = database.status === 'ok' && smokeCheck.status !== 'not_ready';
@@ -299,8 +300,8 @@ app.get('/api/deploy/smoke', (req, res) => {
     sessionSecret: config.sessionSecret,
     publicAppUrl: config.publicAppUrl,
     corsOrigins: config.security.corsOrigins,
-    paypal: config.payment.paypal,
-    mpesa: { ...config.payment.mpesa, callbackUrl: process.env.MPESA_CALLBACK_URL },
+    paypal: { ...config.payment.paypal, enabled: config.payment.paypal.configured },
+    mpesa: { ...config.payment.mpesa, enabled: config.payment.mpesa.configured, callbackUrl: process.env.MPESA_CALLBACK_URL },
     wallets: config.wallets,
   });
 
