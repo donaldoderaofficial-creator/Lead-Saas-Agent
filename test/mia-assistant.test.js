@@ -1,6 +1,8 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
+process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-only-session-secret';
+
 const { buildMiaReply } = require('../email-assistant');
 
 test('greets and asks for the goal when the message is empty', () => {

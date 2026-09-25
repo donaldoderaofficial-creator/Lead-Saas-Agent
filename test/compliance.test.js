@@ -9,6 +9,7 @@ for (const suffix of ['', '-wal', '-shm']) {
   try { fs.unlinkSync(dbPath + suffix); } catch (_) {}
 }
 process.env.DB_PATH = dbPath;
+process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-only-session-secret';
 
 const { assess } = require('../compliance');
 const { compliance, users } = require('../store');
