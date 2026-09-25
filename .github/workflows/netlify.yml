@@ -11,6 +11,22 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      - name: Check Netlify secrets
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          missing=0
+          for name in NETLIFY_AUTH_TOKEN NETLIFY_SITE_ID; do
+            if [ -n "${!name}" ]; then
+              echo "::notice::$name secret is set"
+            else
+              echo "::error::$name secret is not set. Add it under Settings > Secrets and variables > Actions."
+              missing=1
+            fi
+          done
+          exit $missing
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
