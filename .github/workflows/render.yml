@@ -27,5 +27,5 @@ jobs:
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
-          curl --fail --show-error --silent --location --retry 3 --retry-all-errors \
+          curl --fail --show-error --silent --retry 3 --retry-all-errors \
             -X POST "$RENDER_DEPLOY_HOOK_URL"

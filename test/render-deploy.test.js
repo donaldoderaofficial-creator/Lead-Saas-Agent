@@ -13,6 +13,6 @@ test('render deployment workflow triggers a cloud deploy hook', () => {
   assert.match(workflow, /branches:\s*\[main\]/);
   assert.match(workflow, /permissions:\s*\{\}/);
   assert.match(workflow, /RENDER_DEPLOY_HOOK_URL/);
-  assert.match(workflow, /curl --fail --show-error --silent --location --retry 3 --retry-all-errors/);
+  assert.match(workflow, /curl --fail --show-error --silent --retry 3 --retry-all-errors/);
   assert.match(workflow, /-X POST "\$RENDER_DEPLOY_HOOK_URL"/);
 });
