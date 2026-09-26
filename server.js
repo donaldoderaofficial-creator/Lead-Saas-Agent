@@ -44,6 +44,39 @@ const { buildCustomReply, buildMiaReply, improveReplyWithAI, verifyWebhookSignat
 
 const app = express();
 const DISPATCH_PRO = config.company;
+const RELEASE_VERSION = require('./package.json').version;
+const PUBLIC_READ_CACHE_CONTROL = 'public, max-age=30, stale-while-revalidate=300';
+const PUBLIC_READ_CACHE_TTL_SECONDS = 30;
+const DEPLOYMENT_SMOKE_CACHE_KEY = 'http:deploy-smoke';
+const PAYMENT_OPTIONS_CACHE_KEY = 'http:payments-options';
+const PUBLIC_CONFIG_CACHE_KEY = 'http:public-config';
+
+function getCachedValue(key, ttlSeconds, buildValue) {
+  if (!config.cache.enabled) {
+    return buildValue();
+  }
+
+  const cached = cache.get(key);
+  if (cached !== null) {
+    return cached;
+  }
+
+  const value = buildValue();
+  cache.set(key, value, ttlSeconds);
+  return value;
+}
+
+function getDeploymentSmokeCheck() {
+  return getCachedValue(DEPLOYMENT_SMOKE_CACHE_KEY, PUBLIC_READ_CACHE_TTL_SECONDS, () => buildProductionSmokeCheckStatus({
+    env: config.env,
+    sessionSecret: config.sessionSecret,
+    publicAppUrl: config.publicAppUrl,
+    corsOrigins: config.security.corsOrigins,
+    paypal: { ...config.payment.paypal, enabled: config.payment.paypal.configured },
+    mpesa: { ...config.payment.mpesa, enabled: config.payment.mpesa.configured, callbackUrl: process.env.MPESA_CALLBACK_URL },
+    wallets: config.wallets,
+  }));
+}
 
 function matchesAllowedOrigin(origin, allowedOrigins) {
   if (!origin) return true;
@@ -263,7 +296,7 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     release: {
-      version: require('./package.json').version,
+      version: RELEASE_VERSION,
       build: process.env.BUILD_SHA || 'local',
       attribution: DISPATCH_PRO.releaseAttribution,
     },
@@ -275,16 +308,7 @@ app.get('/health', (req, res) => {
 
 app.get('/ready', (req, res) => {
   const database = checkDatabase();
-  const smokeCheck = buildProductionSmokeCheckStatus({
-    env: config.env,
-    sessionSecret: config.sessionSecret,
-    publicAppUrl: config.publicAppUrl,
-    corsOrigins: config.security.corsOrigins,
-    // Providers are always advertised; readiness only checks credentials for configured ones.
-    paypal: { ...config.payment.paypal, enabled: config.payment.paypal.configured },
-    mpesa: { ...config.payment.mpesa, enabled: config.payment.mpesa.configured, callbackUrl: process.env.MPESA_CALLBACK_URL },
-    wallets: config.wallets,
-  });
+  const smokeCheck = getDeploymentSmokeCheck();
   const ready = database.status === 'ok' && smokeCheck.status !== 'not_ready';
   res.status(ready ? 200 : 503).json({
     status: ready ? 'ready' : 'not_ready',
@@ -295,15 +319,7 @@ app.get('/ready', (req, res) => {
 });
 
 app.get('/api/deploy/smoke', (req, res) => {
-  const smokeCheck = buildProductionSmokeCheckStatus({
-    env: config.env,
-    sessionSecret: config.sessionSecret,
-    publicAppUrl: config.publicAppUrl,
-    corsOrigins: config.security.corsOrigins,
-    paypal: { ...config.payment.paypal, enabled: config.payment.paypal.configured },
-    mpesa: { ...config.payment.mpesa, enabled: config.payment.mpesa.configured, callbackUrl: process.env.MPESA_CALLBACK_URL },
-    wallets: config.wallets,
-  });
+  const smokeCheck = getDeploymentSmokeCheck();
 
   res.status(smokeCheck.status === 'ready' ? 200 : 503).json({
     status: smokeCheck.status,
@@ -353,14 +369,16 @@ app.post('/api/email/inbound', asyncHandler(async (req, res) => {
   const draft = await improveReplyWithAI(buildCustomReply({ subject, body: text || body }));
   const clientAddress = from || sender;
   const messageSubject = subject || draft.subject;
-  const delivery = await sendReply({ to: clientAddress, subject: messageSubject, text: draft.reply, replyTo: process.env.EMAIL_NOTIFY_TO || 'Donaldoderaofficial@gmail.com' });
-  const ownerNotification = await sendReply({
-    to: process.env.EMAIL_NOTIFY_TO || 'Donaldoderaofficial@gmail.com',
-    subject: `New custom-package request from ${clientAddress}`,
-    text: `A new custom-package request arrived for Dispatch Pro.\n\nFrom: ${clientAddress}\nSubject: ${messageSubject}\nMessage:\n${text || body}\n\nGenerated client reply:\n${draft.reply}\n\nQuote:\n${JSON.stringify(draft.quote, null, 2)}`,
-    replyTo: clientAddress,
-    prefixSubject: false,
-  });
+  const [delivery, ownerNotification] = await Promise.all([
+    sendReply({ to: clientAddress, subject: messageSubject, text: draft.reply, replyTo: process.env.EMAIL_NOTIFY_TO || 'Donaldoderaofficial@gmail.com' }),
+    sendReply({
+      to: process.env.EMAIL_NOTIFY_TO || 'Donaldoderaofficial@gmail.com',
+      subject: `New custom-package request from ${clientAddress}`,
+      text: `A new custom-package request arrived for Dispatch Pro.\n\nFrom: ${clientAddress}\nSubject: ${messageSubject}\nMessage:\n${text || body}\n\nGenerated client reply:\n${draft.reply}\n\nQuote:\n${JSON.stringify(draft.quote, null, 2)}`,
+      replyTo: clientAddress,
+      prefixSubject: false,
+    }),
+  ]);
   emailThreads.create({
     messageId: id,
     sender: from || sender,
@@ -376,21 +394,23 @@ app.post('/api/email/inbound', asyncHandler(async (req, res) => {
 
 // ---- Global payment capabilities ----
 app.get('/api/payments/options', (req, res) => {
-  res.json(buildPaymentOptions({
+  res.set('Cache-Control', PUBLIC_READ_CACHE_CONTROL);
+  res.json(getCachedValue(PAYMENT_OPTIONS_CACHE_KEY, PUBLIC_READ_CACHE_TTL_SECONDS, () => buildPaymentOptions({
     wallets: config.wallets,
     paypalEnabled: config.payment.paypal.enabled,
     mpesaEnabled: config.payment.mpesa.enabled,
-  }));
+  })));
 });
 
 app.get('/api/config', (req, res) => {
-  res.json(buildPublicConfig({
+  res.set('Cache-Control', PUBLIC_READ_CACHE_CONTROL);
+  res.json(getCachedValue(PUBLIC_CONFIG_CACHE_KEY, PUBLIC_READ_CACHE_TTL_SECONDS, () => buildPublicConfig({
     wallets: config.wallets,
     pricingUsd: PRICING.usd,
     ebook: config.ebook,
     paypalEnabled: config.payment.paypal.enabled,
     mpesaEnabled: config.payment.mpesa.enabled,
-  }));
+  })));
 });
 
 app.get('/api/billing/status', (req, res) => {

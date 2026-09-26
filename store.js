@@ -295,9 +295,19 @@ const payments = {
 
 const leads = {
   listAll() {
-    return db.prepare('SELECT ref, report_json, created_at FROM completed_reports ORDER BY created_at DESC').all().map((row) => {
+    return db.prepare(`
+      SELECT
+        completed_reports.ref,
+        completed_reports.report_json,
+        completed_reports.created_at,
+        COALESCE(followups.status, 'new') AS followup_status,
+        COALESCE(followups.notes, '') AS followup_notes,
+        followups.updated_at AS followup_updated_at
+      FROM completed_reports
+      LEFT JOIN followups ON followups.ref = completed_reports.ref
+      ORDER BY completed_reports.created_at DESC
+    `).all().map((row) => {
       const report = JSON.parse(row.report_json);
-      const followup = db.prepare('SELECT status, notes, updated_at FROM followups WHERE ref = ?').get(row.ref) || { status: 'new', notes: '', updated_at: null };
       return {
         ref: row.ref,
         createdAt: row.created_at,
@@ -310,9 +320,9 @@ const leads = {
         urgency: report.result.urgency,
         path: report.result.path,
         recommendedNextStep: report.premium?.recommendedNextStep,
-        followupStatus: followup.status,
-        followupNotes: followup.notes,
-        followupUpdatedAt: followup.updated_at,
+        followupStatus: row.followup_status,
+        followupNotes: row.followup_notes,
+        followupUpdatedAt: row.followup_updated_at,
       };
     });
   },

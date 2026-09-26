@@ -49,7 +49,12 @@ test('permanently advertises all payment methods and currencies', () => {
   const app = require('../server');
   const optionsRoute = app._router.stack.find((layer) => layer.route?.path === '/api/payments/options');
   const options = optionsRoute.route.stack.at(-1).handle;
-  const response = { body: null, json(body) { this.body = body; return this; } };
+  const response = {
+    body: null,
+    headers: {},
+    set(name, value) { this.headers[name] = value; return this; },
+    json(body) { this.body = body; return this; },
+  };
 
   options({}, response);
 
@@ -58,6 +63,7 @@ test('permanently advertises all payment methods and currencies', () => {
   assert.deepEqual(response.body.providers.bitcoin.methods, ['wallet-transfer']);
   assert.deepEqual(response.body.providers.ethereum.methods, ['wallet-transfer']);
   assert.deepEqual(response.body.supportedCurrencies, ['USD', 'KES', 'BTC', 'ETH']);
+  assert.equal(response.headers['Cache-Control'], 'public, max-age=30, stale-while-revalidate=300');
 });
 
 test('health response exposes a release build identifier', () => {
@@ -69,6 +75,24 @@ test('health response exposes a release build identifier', () => {
   health({}, response);
 
   assert.equal(response.body.release.build, 'local');
+});
+
+test('public billing config is cacheable for repeated reads', () => {
+  const app = require('../server');
+  const configRoute = app._router.stack.find((layer) => layer.route?.path === '/api/config');
+  const getConfig = configRoute.route.stack.at(-1).handle;
+  const response = {
+    body: null,
+    headers: {},
+    set(name, value) { this.headers[name] = value; return this; },
+    json(body) { this.body = body; return this; },
+  };
+
+  getConfig({}, response);
+
+  assert.equal(response.headers['Cache-Control'], 'public, max-age=30, stale-while-revalidate=300');
+  assert.equal(typeof response.body.plans.starter.priceMonthly, 'string');
+  assert.equal(response.body.ebook.walletAddress, 'bc1qwalletbitcoinaddress');
 });
 
 test('stores validated AI referral attribution on subscription orders', () => {
