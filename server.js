@@ -198,11 +198,14 @@ if (!config.sessionSecret) {
   throw new Error('Missing SESSION_SECRET. Set a long random string in your .env file.');
 }
 
+const sessionStore = createSessionStore(session);
+app.sessionStore = sessionStore;
+
 app.use(session({
   secret: config.sessionSecret,
   resave: false,
   saveUninitialized: false,
-  store: createSessionStore(session),
+  store: sessionStore,
   cookie: {
     httpOnly: true,
     secure: config.isProd,

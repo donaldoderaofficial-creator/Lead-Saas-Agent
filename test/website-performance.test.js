@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const signature = require('cookie-signature');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -21,21 +22,10 @@ process.env.ETHEREUM_WALLET_ADDRESS = process.env.ETHEREUM_WALLET_ADDRESS || '0x
 
 const app = require('../server');
 
-function routeIndex(routePath) {
-  return app._router.stack.findIndex((layer) => layer.route?.path === routePath);
+function buildSessionCookie(sid = 'website-speed-test') {
+  const value = `s:${signature.sign(sid, process.env.SESSION_SECRET)}`;
+  return `connect.sid=${encodeURIComponent(value)}`;
 }
-
-test('public website routes are registered before the session middleware', () => {
-  const sessionIndex = app._router.stack.findIndex((layer) => layer.name === 'session');
-
-  assert.ok(sessionIndex > -1, 'expected express-session middleware to be registered');
-  assert.ok(routeIndex('/api/assistant/mia') > -1);
-  assert.ok(routeIndex('/api/payments/options') > -1);
-  assert.ok(routeIndex('/api/config') > -1);
-  assert.ok(routeIndex('/api/assistant/mia') < sessionIndex);
-  assert.ok(routeIndex('/api/payments/options') < sessionIndex);
-  assert.ok(routeIndex('/api/config') < sessionIndex);
-});
 
 test('public pages and config endpoints send browser cache headers', async () => {
   const server = app.listen(0);
@@ -56,6 +46,35 @@ test('public pages and config endpoints send browser cache headers', async () =>
     assert.equal(config.status, 200);
     assert.equal(config.headers.get('cache-control'), 'public, max-age=300, stale-while-revalidate=900');
   } finally {
+    server.close();
+  }
+});
+
+test('public website routes bypass session store lookups', async () => {
+  const server = app.listen(0);
+  await new Promise((resolve) => server.once('listening', resolve));
+  const { port } = server.address();
+  const originalGet = app.sessionStore.get.bind(app.sessionStore);
+  const observedSids = [];
+
+  app.sessionStore.get = (sid, callback) => {
+    observedSids.push(sid);
+    return originalGet(sid, callback);
+  };
+
+  try {
+    const headers = { Cookie: buildSessionCookie() };
+    const publicResponse = await fetch(`http://127.0.0.1:${port}/api/config`, { headers });
+
+    assert.equal(publicResponse.status, 200);
+    assert.equal(observedSids.length, 0, 'public config should not touch the session store');
+
+    const sessionResponse = await fetch(`http://127.0.0.1:${port}/health`, { headers });
+
+    assert.equal(sessionResponse.status, 200);
+    assert.equal(observedSids.length, 1, 'session-backed routes should still resolve the supplied session');
+  } finally {
+    app.sessionStore.get = originalGet;
     server.close();
   }
 });
