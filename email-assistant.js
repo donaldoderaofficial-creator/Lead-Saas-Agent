@@ -101,7 +101,7 @@ function buildMiaReply(question) {
     return `Good question — security is built in: passwords are hashed, accounts require 2FA, production sessions use secure cookies, and access is rate-limited and audited. ${closeWithNextStep(null)}`;
   }
 
-  if (/guerrilla|guerilla|gorilla marketing|street team|pop-?up|qr code|flyers?|activation|field campaign/.test(lower)) {
+  if (/\bguerrilla\b|\bguerilla\b|gorilla marketing|street team|pop-?up|qr code|flyers?|\bactivations?\b|\bfield campaign\b/.test(lower)) {
     const volume = extractLeadVolume(lower);
     const recommendation = recommendPlanForVolume(volume);
     const leadVolumeText = volume ? ` With about ${volume.toLocaleString()} leads a month, ${recommendation === 'growth' ? 'Growth' : 'Starter'} is likely the better fit.` : '';

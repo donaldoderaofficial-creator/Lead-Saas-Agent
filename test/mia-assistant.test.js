@@ -45,6 +45,14 @@ test('answers a security objection without fabricating guarantees', () => {
   assert.doesNotMatch(reply, /guarantee/i);
 });
 
+test('explains how guerrilla marketing leads can be captured and qualified', () => {
+  const reply = buildMiaReply('Can this handle a guerrilla campaign with QR code activations and 250 leads a month?');
+  assert.match(reply, /guerrilla marketing/i);
+  assert.match(reply, /QR codes?/i);
+  assert.match(reply, /Starter is likely the better fit/);
+  assert.match(reply, /\/billing\.html\?plan=starter/);
+});
+
 test('every fallback reply still ends with a next-step question', () => {
   const reply = buildMiaReply('tell me something random');
   assert.match(reply, /\?\s*$/);
