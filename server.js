@@ -417,13 +417,14 @@ app.post('/api/email/inbound', asyncHandler(async (req, res) => {
     ? ownerNotificationResult.value
     : { sent: false, error: ownerNotificationResult.reason.message };
   const ownerNotificationSent = shouldSendOwnerNotification && ownerNotification.sent;
+  const deliveryCompleted = !shouldSendDelivery || delivery.sent;
   const deliverySent = shouldSendDelivery && delivery.sent;
   if (ownerNotificationSent) emailThreads.markOwnerNotificationSent(id);
   if (deliverySent) emailThreads.markSent(id);
-  if (!delivery.sent) {
+  if (!deliveryCompleted) {
     return res.status(502).json({ error: delivery.error || 'Unable to send client reply', id, quote: draft.quote, delivery, ownerNotification });
   }
-  res.status(202).json({ status: delivery.sent ? 'sent' : 'draft', id, quote: draft.quote, delivery, ownerNotification });
+  res.status(202).json({ status: 'sent', id, quote: draft.quote, delivery, ownerNotification });
 }));
 
 // ---- Global payment capabilities ----
