@@ -164,39 +164,53 @@
       setStatus('Creating wallet payment...');
 
       try {
-        const response = await fetchWithTimeout(window.DispatchAPI.url('/api/billing/crypto/order'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, plan: selectedPlan, method }),
-        });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || 'Unable to create wallet payment.');
-        checkout = { ...payload, method, plan: selectedPlan };
-
-        walletBox.innerHTML = `
-          Send exactly <strong>${payload.amountCrypto} ${payload.currency}</strong> to:<br>
-          <code id="walletAddr" style="user-select:all;word-break:break-all;"></code>
-          <button type="button" id="copyAddr" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">Copy</button><br>
-          Reference: <strong></strong>
-        `;
-        document.getElementById('walletAddr').textContent = payload.walletAddress;
-        walletBox.querySelector('strong:last-child').textContent = payload.reference;
-        walletBox.style.display = 'block';
-        document.getElementById('txHashLabel').hidden = false;
-        txHashInput.hidden = false;
-        confirmButton.hidden = false;
-        document.getElementById('copyAddr').addEventListener('click', async () => {
-          const button = document.getElementById('copyAddr');
+        let response;
+        try {
+          response = await fetchWithTimeout(window.DispatchAPI.url('/api/billing/crypto/order'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, plan: selectedPlan, method }),
+          });
+        } catch {
+          response = null;
+        }
+        if (response) {
+          let payload = null;
           try {
-            await navigator.clipboard.writeText(payload.walletAddress);
-            button.textContent = 'Copied!';
-          } catch {
-            button.textContent = 'Copy failed';
+            payload = await response.json();
+          } catch {}
+          if (response.ok && payload?.amountCrypto && payload?.walletAddress && payload?.currency && payload?.reference) {
+            checkout = { ...payload, method, plan: selectedPlan };
+            walletBox.innerHTML = `
+              Send exactly <strong>${payload.amountCrypto} ${payload.currency}</strong> to:<br>
+              <code id="walletAddr" style="user-select:all;word-break:break-all;"></code>
+              <button type="button" id="copyAddr" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">Copy</button><br>
+              Reference: <strong></strong>
+            `;
+            document.getElementById('walletAddr').textContent = payload.walletAddress;
+            walletBox.querySelector('strong:last-child').textContent = payload.reference;
+            walletBox.style.display = 'block';
+            document.getElementById('txHashLabel').hidden = false;
+            txHashInput.hidden = false;
+            confirmButton.hidden = false;
+            document.getElementById('copyAddr').addEventListener('click', async () => {
+              const button = document.getElementById('copyAddr');
+              try {
+                await navigator.clipboard.writeText(payload.walletAddress);
+                button.textContent = 'Copied!';
+              } catch {
+                button.textContent = 'Copy failed';
+              }
+              setTimeout(() => { button.textContent = 'Copy'; }, 2000);
+            });
+            setStatus('Send the amount, then submit the transaction hash for review.');
+            return;
           }
-          setTimeout(() => { button.textContent = 'Copy'; }, 2000);
-        });
-        setStatus('Send the amount, then submit the transaction hash for review.');
-      } catch (error) {
+          if (response.status < 500) {
+            setStatus(payload?.error || 'Unable to create wallet payment.', true);
+            return;
+          }
+        }
         const fallbackAmount = liveQuotes?.[selectedPlan]?.[method]?.amount;
         const wallet = fallbackWallets[method];
         if (fallbackAmount && wallet?.address) {
@@ -233,7 +247,7 @@
           });
           setStatus('Using live fallback quote. If API confirmation stays down, email your transaction hash and reference to support.');
         } else {
-          setStatus(error.message || 'Unable to create wallet payment.', true);
+          setStatus('Unable to create wallet payment.', true);
         }
       } finally {
         orderButton.disabled = false;

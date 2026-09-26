@@ -193,19 +193,30 @@
       $('order').disabled = true;
       status('Creating wallet payment...');
       try {
+        let response;
         try {
-          const response = await fetchWithTimeout(window.DispatchAPI.url('/api/billing/crypto/order'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('name').value, email: $('email').value, plan, method, referral }) });
-          const data = await response.json();
-          if (response.ok) {
+          response = await fetchWithTimeout(window.DispatchAPI.url('/api/billing/crypto/order'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('name').value, email: $('email').value, plan, method, referral }) });
+        } catch {
+          response = null;
+        }
+        if (response) {
+          let data = null;
+          try {
+            data = await response.json();
+          } catch {}
+          if (response.ok && data?.amountCrypto && data?.walletAddress && data?.currency && data?.reference) {
             offlineOrder = false;
             showOrder(data);
             return;
           }
           if (response.status < 500) {
-            status(data.error || 'Could not create payment.', true);
+            status(data?.error || 'Could not create payment.', true);
             return;
           }
-        } catch {}
+          if (!response.ok) {
+            status('Payment service is temporarily unavailable. Falling back to the latest live quote.', true);
+          }
+        }
         const fallbackAmount = liveQuotes?.[plan]?.[method]?.amount;
         const wallet = wallets[method];
         if (!wallet?.address) {
