@@ -40,3 +40,24 @@ test('lists leads with follow-up details in one result set', () => {
   assert.equal(row.followupNotes, 'Scheduled demo');
   assert.match(row.followupUpdatedAt, /\d{4}-\d{2}-\d{2}/);
 });
+
+test('defaults follow-up fields when no follow-up row exists', () => {
+  completedReports.set('lead-no-followup-test', {
+    result: {
+      name: 'Uncontacted Buyer',
+      email: 'fresh@example.com',
+      company: 'example.com',
+      score: 81,
+      companySizeGuess: 'small',
+      intent: 'medium',
+      urgency: 'soon',
+      path: 'nurture-sequence',
+    },
+  });
+
+  const row = leads.listAll().find((lead) => lead.ref === 'lead-no-followup-test');
+
+  assert.equal(row.followupStatus, 'new');
+  assert.equal(row.followupNotes, '');
+  assert.equal(row.followupUpdatedAt, null);
+});

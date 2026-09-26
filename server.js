@@ -66,8 +66,8 @@ function getCachedValue(key, ttlSeconds, buildValue) {
   return value;
 }
 
-function getDeploymentSmokeCheck() {
-  return getCachedValue(DEPLOYMENT_SMOKE_CACHE_KEY, PUBLIC_READ_CACHE_TTL_SECONDS, () => buildProductionSmokeCheckStatus({
+function buildDeploymentSmokeCheck() {
+  return buildProductionSmokeCheckStatus({
     env: config.env,
     sessionSecret: config.sessionSecret,
     publicAppUrl: config.publicAppUrl,
@@ -75,7 +75,11 @@ function getDeploymentSmokeCheck() {
     paypal: { ...config.payment.paypal, enabled: config.payment.paypal.configured },
     mpesa: { ...config.payment.mpesa, enabled: config.payment.mpesa.configured, callbackUrl: process.env.MPESA_CALLBACK_URL },
     wallets: config.wallets,
-  }));
+  });
+}
+
+function getCachedDeploymentSmokeCheck() {
+  return getCachedValue(DEPLOYMENT_SMOKE_CACHE_KEY, PUBLIC_READ_CACHE_TTL_SECONDS, buildDeploymentSmokeCheck);
 }
 
 function matchesAllowedOrigin(origin, allowedOrigins) {
@@ -308,7 +312,7 @@ app.get('/health', (req, res) => {
 
 app.get('/ready', (req, res) => {
   const database = checkDatabase();
-  const smokeCheck = getDeploymentSmokeCheck();
+  const smokeCheck = buildDeploymentSmokeCheck();
   const ready = database.status === 'ok' && smokeCheck.status !== 'not_ready';
   res.status(ready ? 200 : 503).json({
     status: ready ? 'ready' : 'not_ready',
@@ -319,7 +323,7 @@ app.get('/ready', (req, res) => {
 });
 
 app.get('/api/deploy/smoke', (req, res) => {
-  const smokeCheck = getDeploymentSmokeCheck();
+  const smokeCheck = getCachedDeploymentSmokeCheck();
 
   res.status(smokeCheck.status === 'ready' ? 200 : 503).json({
     status: smokeCheck.status,
@@ -412,8 +416,10 @@ app.post('/api/email/inbound', asyncHandler(async (req, res) => {
   const ownerNotification = ownerNotificationResult.status === 'fulfilled'
     ? ownerNotificationResult.value
     : { sent: false, error: ownerNotificationResult.reason.message };
-  if (shouldSendDelivery && delivery.sent) emailThreads.markSent(id);
-  if (shouldSendOwnerNotification && ownerNotification.sent) emailThreads.markOwnerNotificationSent(id);
+  const ownerNotificationSent = shouldSendOwnerNotification && ownerNotification.sent;
+  const deliverySent = shouldSendDelivery && delivery.sent;
+  if (ownerNotificationSent) emailThreads.markOwnerNotificationSent(id);
+  if (deliverySent) emailThreads.markSent(id);
   if (!delivery.sent) {
     return res.status(502).json({ error: delivery.error || 'Unable to send client reply', id, quote: draft.quote, delivery, ownerNotification });
   }
