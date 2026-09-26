@@ -47,6 +47,8 @@ const DISPATCH_PRO = config.company;
 const RELEASE_VERSION = require('./package.json').version;
 const PUBLIC_READ_CACHE_CONTROL = 'public, max-age=30, stale-while-revalidate=300';
 const PUBLIC_READ_CACHE_TTL_SECONDS = 30;
+const READY_SMOKE_CACHE_TTL_SECONDS = 1;
+const READY_SMOKE_CACHE_KEY = 'http:ready-smoke';
 const DEPLOYMENT_SMOKE_CACHE_KEY = 'http:deploy-smoke';
 const PAYMENT_OPTIONS_CACHE_KEY = 'http:payments-options';
 const PUBLIC_CONFIG_CACHE_KEY = 'http:public-config';
@@ -57,7 +59,7 @@ function getCachedValue(key, ttlSeconds, buildValue) {
   }
 
   const cached = cache.get(key);
-  if (cached !== null) {
+  if (cached !== null && cached !== undefined) {
     return cached;
   }
 
@@ -80,6 +82,10 @@ function buildDeploymentSmokeCheck() {
 
 function getCachedDeploymentSmokeCheck() {
   return getCachedValue(DEPLOYMENT_SMOKE_CACHE_KEY, PUBLIC_READ_CACHE_TTL_SECONDS, buildDeploymentSmokeCheck);
+}
+
+function getReadyDeploymentSmokeCheck() {
+  return getCachedValue(READY_SMOKE_CACHE_KEY, READY_SMOKE_CACHE_TTL_SECONDS, buildDeploymentSmokeCheck);
 }
 
 function matchesAllowedOrigin(origin, allowedOrigins) {
@@ -312,7 +318,7 @@ app.get('/health', (req, res) => {
 
 app.get('/ready', (req, res) => {
   const database = checkDatabase();
-  const smokeCheck = buildDeploymentSmokeCheck();
+  const smokeCheck = getReadyDeploymentSmokeCheck();
   const ready = database.status === 'ok' && smokeCheck.status !== 'not_ready';
   res.status(ready ? 200 : 503).json({
     status: ready ? 'ready' : 'not_ready',
@@ -424,7 +430,7 @@ app.post('/api/email/inbound', asyncHandler(async (req, res) => {
   if (!deliveryCompleted) {
     return res.status(502).json({ error: delivery.error || 'Unable to send client reply', id, quote: draft.quote, delivery, ownerNotification });
   }
-  res.status(202).json({ status: 'sent', id, quote: draft.quote, delivery, ownerNotification });
+  res.status(202).json({ status: shouldSendDelivery ? 'sent' : 'duplicate', id, quote: draft.quote, delivery, ownerNotification });
 }));
 
 // ---- Global payment capabilities ----
