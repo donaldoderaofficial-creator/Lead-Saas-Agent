@@ -365,30 +365,53 @@ app.post('/api/email/inbound', asyncHandler(async (req, res) => {
   if (!id || !(from || sender) || !(text || body)) {
     return res.status(400).json({ error: 'id, from, and text are required' });
   }
-  if (emailThreads.find(id)) return res.json({ status: 'duplicate', id });
-  const draft = await improveReplyWithAI(buildCustomReply({ subject, body: text || body }));
+  const existingThread = emailThreads.find(id);
+  if (existingThread?.status === 'sent' && existingThread.ownerNotificationSentAt) {
+    return res.json({ status: 'duplicate', id });
+  }
+  const draft = existingThread
+    ? { reply: existingThread.reply, quote: existingThread.quote, subject: existingThread.subject || subject || 'Custom package enquiry' }
+    : await improveReplyWithAI(buildCustomReply({ subject, body: text || body }));
+  if (!existingThread) {
+    emailThreads.create({
+      messageId: id,
+      sender: from || sender,
+      subject: subject || draft.subject,
+      body: text || body,
+      reply: draft.reply,
+      quote: draft.quote,
+      status: 'draft',
+    });
+  }
   const clientAddress = from || sender;
   const messageSubject = subject || draft.subject;
-  const [delivery, ownerNotification] = await Promise.all([
-    sendReply({ to: clientAddress, subject: messageSubject, text: draft.reply, replyTo: process.env.EMAIL_NOTIFY_TO || 'Donaldoderaofficial@gmail.com' }),
-    sendReply({
-      to: process.env.EMAIL_NOTIFY_TO || 'Donaldoderaofficial@gmail.com',
-      subject: `New custom-package request from ${clientAddress}`,
-      text: `A new custom-package request arrived for Dispatch Pro.\n\nFrom: ${clientAddress}\nSubject: ${messageSubject}\nMessage:\n${text || body}\n\nGenerated client reply:\n${draft.reply}\n\nQuote:\n${JSON.stringify(draft.quote, null, 2)}`,
-      replyTo: clientAddress,
-      prefixSubject: false,
-    }),
+  const shouldSendDelivery = existingThread?.status !== 'sent';
+  const shouldSendOwnerNotification = !existingThread?.ownerNotificationSentAt;
+  const [deliveryResult, ownerNotificationResult] = await Promise.allSettled([
+    shouldSendDelivery
+      ? sendReply({ to: clientAddress, subject: messageSubject, text: draft.reply, replyTo: process.env.EMAIL_NOTIFY_TO || 'Donaldoderaofficial@gmail.com' })
+      : Promise.resolve({ sent: true, skipped: true }),
+    shouldSendOwnerNotification
+      ? sendReply({
+        to: process.env.EMAIL_NOTIFY_TO || 'Donaldoderaofficial@gmail.com',
+        subject: `New custom-package request from ${clientAddress}`,
+        text: `A new custom-package request arrived for Dispatch Pro.\n\nFrom: ${clientAddress}\nSubject: ${messageSubject}\nMessage:\n${text || body}\n\nGenerated client reply:\n${draft.reply}\n\nQuote:\n${JSON.stringify(draft.quote, null, 2)}`,
+        replyTo: clientAddress,
+        prefixSubject: false,
+      })
+      : Promise.resolve({ sent: true, skipped: true }),
   ]);
-  emailThreads.create({
-    messageId: id,
-    sender: from || sender,
-    subject: subject || draft.subject,
-    body: text || body,
-    reply: draft.reply,
-    quote: draft.quote,
-    status: delivery.sent ? 'sent' : 'draft',
-  });
-  if (delivery.sent) emailThreads.markSent(id);
+  const delivery = deliveryResult.status === 'fulfilled'
+    ? deliveryResult.value
+    : { sent: false, error: deliveryResult.reason.message };
+  const ownerNotification = ownerNotificationResult.status === 'fulfilled'
+    ? ownerNotificationResult.value
+    : { sent: false, error: ownerNotificationResult.reason.message };
+  if (shouldSendDelivery && delivery.sent) emailThreads.markSent(id);
+  if (shouldSendOwnerNotification && ownerNotification.sent) emailThreads.markOwnerNotificationSent(id);
+  if (!delivery.sent) {
+    return res.status(502).json({ error: delivery.error || 'Unable to send client reply', id, quote: draft.quote, delivery, ownerNotification });
+  }
   res.status(202).json({ status: delivery.sent ? 'sent' : 'draft', id, quote: draft.quote, delivery, ownerNotification });
 }));
 

@@ -75,7 +75,8 @@ db.exec(`
     quote_json TEXT,
     status TEXT NOT NULL DEFAULT 'draft',
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    sent_at TEXT
+    sent_at TEXT,
+    owner_notification_sent_at TEXT
   );
 
   CREATE TABLE IF NOT EXISTS users (
@@ -217,6 +218,9 @@ for (const column of ['crypto_payment_reference', 'crypto_transaction_id']) {
 }
 for (const column of ['product', 'payment_method', 'plan', 'amount_crypto', 'referral_source']) {
   try { db.exec(`ALTER TABLE pending_leads ADD COLUMN ${column} TEXT`); } catch (_) {}
+}
+for (const column of ['owner_notification_sent_at TEXT']) {
+  try { db.exec(`ALTER TABLE email_threads ADD COLUMN ${column}`); } catch (_) {}
 }
 
 const pendingLeads = {
@@ -738,19 +742,31 @@ function businessMetrics() {
   };
 }
 
+function rowToEmailThread(row) {
+  if (!row) return undefined;
+  return {
+    ...row,
+    quote: row.quote_json ? JSON.parse(row.quote_json) : null,
+    ownerNotificationSentAt: row.owner_notification_sent_at || null,
+  };
+}
+
 const emailThreads = {
   create({ messageId, sender, subject, body, reply, quote, status = 'draft' }) {
     db.prepare(`INSERT INTO email_threads
       (message_id, sender, subject, body, reply, quote_json, status)
       VALUES (?, ?, ?, ?, ?, ?, ?)`)
       .run(messageId, sender, subject || '', body, reply, quote ? JSON.stringify(quote) : null, status);
-    return db.prepare('SELECT * FROM email_threads WHERE message_id = ?').get(messageId);
+    return rowToEmailThread(db.prepare('SELECT * FROM email_threads WHERE message_id = ?').get(messageId));
   },
   markSent(messageId) {
     db.prepare("UPDATE email_threads SET status = 'sent', sent_at = datetime('now') WHERE message_id = ?").run(messageId);
   },
+  markOwnerNotificationSent(messageId) {
+    db.prepare("UPDATE email_threads SET owner_notification_sent_at = datetime('now') WHERE message_id = ?").run(messageId);
+  },
   find(messageId) {
-    return db.prepare('SELECT * FROM email_threads WHERE message_id = ?').get(messageId);
+    return rowToEmailThread(db.prepare('SELECT * FROM email_threads WHERE message_id = ?').get(messageId));
   },
 };
 
