@@ -715,6 +715,11 @@ app.post('/api/lead', requireActiveSubscription, async (req, res) => {
       pendingLeads.set(leadRef, { name, email, phone });
       await finalizeLead(leadRef);
       const report = completedReports.get(leadRef);
+      if (!report) {
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+          error: 'Lead rendering did not complete. Please retry shortly.',
+        });
+      }
       return res.json({
         status: 'rendered',
         method: 'included-with-subscription',

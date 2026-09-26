@@ -125,6 +125,29 @@ test('renders a completed lead report immediately for paid clients without per-l
   }
 });
 
+test('rejects no-method lead ingestion when no active subscription is present', async () => {
+  const app = require('../server');
+  const leadRoute = app._router.stack.find((layer) => layer.route?.path === '/api/lead');
+  const lead = leadRoute.route.stack.at(-1).handle;
+  const response = { statusCode: 200, body: null, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
+  const previousSubscription = subscription.get();
+  subscription.set({
+    plan: 'none',
+    billingType: 'monthly',
+    status: 'inactive',
+    currentPeriodEnd: null,
+  });
+
+  try {
+    await lead({ body: { name: 'Unpaid Client', email: 'unpaid@example.com' } }, response);
+
+    assert.equal(response.statusCode, 402);
+    assert.equal(response.body.code, 'subscription_required');
+  } finally {
+    subscription.set(previousSubscription);
+  }
+});
+
 test('uses the required bitcoin amounts for starter and growth subscription packages', () => {
   const { buildSubscriptionCheckoutPayload } = require('../server');
 
