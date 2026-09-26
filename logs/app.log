@@ -703,3 +703,14 @@
 {"timestamp":"2026-09-26T06:21:57.773Z","level":"info","message":"GET /api/payments/options","statusCode":200,"duration":"1ms"}
 {"timestamp":"2026-09-26T06:21:57.775Z","level":"info","message":"GET /api/billing/status","statusCode":200,"duration":"1ms"}
 {"timestamp":"2026-09-26T06:21:57.782Z","level":"info","message":"GET /health","statusCode":200,"duration":"3ms"}
+{"timestamp":"2026-09-26T06:23:04.823Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-26T06:23:04.827Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-26T06:23:04.829Z","level":"info","message":"GET /api/config","statusCode":200,"duration":"6ms"}
+{"timestamp":"2026-09-26T06:23:04.835Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-26T06:23:04.841Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-26T06:23:04.842Z","level":"info","message":"GET /","statusCode":200,"duration":"26ms"}
+{"timestamp":"2026-09-26T06:23:04.842Z","level":"info","message":"GET /api-base.js","statusCode":200,"duration":"21ms"}
+{"timestamp":"2026-09-26T06:23:04.865Z","level":"info","message":"GET /api/config","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-26T06:23:04.867Z","level":"info","message":"GET /api/payments/options","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-26T06:23:04.869Z","level":"info","message":"GET /api/billing/status","statusCode":200,"duration":"1ms"}
+{"timestamp":"2026-09-26T06:23:04.882Z","level":"info","message":"GET /health","statusCode":200,"duration":"7ms"}

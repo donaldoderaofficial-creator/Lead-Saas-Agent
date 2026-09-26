@@ -328,6 +328,7 @@
     message.textContent = text;
     miaMessages.appendChild(message);
     miaMessages.scrollTop = miaMessages.scrollHeight;
+    return message;
   }
   function buildMiaInstantReply(question) {
     const text = String(question || '').trim();
@@ -353,16 +354,18 @@
     addMiaMessage(question, false);
     miaInput.value = '';
     const instantReply = buildMiaInstantReply(question);
-    if (instantReply) {
-      addMiaMessage(instantReply, true);
-      return;
-    }
+    const instantMessage = instantReply ? addMiaMessage(instantReply, true) : null;
     try {
       const response = await fetch('/api/assistant/mia', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question }) });
       const data = await response.json();
-      addMiaMessage(response.ok ? data.answer : 'I could not process that request. Please email hello@dispatchpro.ai.', true);
+      const reply = response.ok ? data.answer : 'I could not process that request. Please email hello@dispatchpro.ai.';
+      if (instantMessage && response.ok) {
+        instantMessage.textContent = reply;
+      } else if (!instantMessage || !response.ok) {
+        addMiaMessage(reply, true);
+      }
     } catch (_) {
-      addMiaMessage('I am temporarily unavailable. Please email hello@dispatchpro.ai.', true);
+      if (!instantMessage) addMiaMessage('I am temporarily unavailable. Please email hello@dispatchpro.ai.', true);
     }
   });
 </script>

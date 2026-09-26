@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
+const vm = require('node:vm');
 
 const dbPath = path.join(os.tmpdir(), `lead-agent-website-${process.pid}.db`);
 const sessionDbPath = path.join(os.tmpdir(), `lead-agent-website-sessions-${process.pid}.sqlite`);
@@ -44,7 +45,7 @@ test('public pages and config endpoints send browser cache headers', async () =>
     assert.equal(asset.status, 200);
     assert.equal(asset.headers.get('cache-control'), 'public, max-age=300, stale-while-revalidate=86400');
     assert.equal(config.status, 200);
-    assert.equal(config.headers.get('cache-control'), 'private, max-age=30, stale-while-revalidate=300');
+    assert.equal(config.headers.get('cache-control'), 'public, max-age=30, stale-while-revalidate=300');
   } finally {
     server.close();
   }
@@ -87,7 +88,13 @@ test('public website routes bypass session store lookups', async () => {
 
 test('landing page can answer common Mia prompts without waiting for the API', () => {
   const landingPage = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+  const match = landingPage.match(/function buildMiaInstantReply\(question\) \{[\s\S]*?\n  \}/);
 
-  assert.match(landingPage, /function buildMiaInstantReply\(question\)/);
+  assert.ok(match, 'expected inline Mia fast-path helper');
+  const sandbox = {};
+  vm.runInNewContext(`${match[0]}\nthis.buildMiaInstantReply = buildMiaInstantReply;`, sandbox);
+
+  assert.match(sandbox.buildMiaInstantReply('How secure is Dispatch Pro?'), /security is built in/i);
+  assert.equal(sandbox.buildMiaInstantReply('I need a custom package with BTC billing'), null);
   assert.match(landingPage, /const instantReply = buildMiaInstantReply\(question\);/);
 });

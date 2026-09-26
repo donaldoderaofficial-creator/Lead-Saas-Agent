@@ -46,7 +46,7 @@ const app = express();
 const DISPATCH_PRO = config.company;
 const PUBLIC_HTML_CACHE_CONTROL = 'public, max-age=0, must-revalidate';
 const PUBLIC_STATIC_CACHE_CONTROL = 'public, max-age=300, stale-while-revalidate=86400';
-const PUBLIC_CONFIG_CACHE_CONTROL = 'private, max-age=30, stale-while-revalidate=300';
+const PUBLIC_CONFIG_CACHE_CONTROL = 'public, max-age=30, stale-while-revalidate=300';
 
 function matchesAllowedOrigin(origin, allowedOrigins) {
   if (!origin) return true;
