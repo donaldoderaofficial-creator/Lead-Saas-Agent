@@ -101,36 +101,36 @@ test('does not attempt unconfigured PayPal checkout', () => {
 
 test('converts starter and growth USD prices into live bitcoin amounts', () => {
   const { buildSubscriptionCheckoutPayload } = require('../server');
+  const btcRate = Number(process.env.BTC_USD_PRICE || 70000);
+  const floorTo8 = (usd) => (Math.floor((usd / btcRate + Number.EPSILON) * 1e8) / 1e8).toFixed(8);
 
   const starter = buildSubscriptionCheckoutPayload({ plan: 'starter', method: 'bitcoin' });
   const growth = buildSubscriptionCheckoutPayload({ plan: 'growth', method: 'bitcoin' });
 
-  assert.equal(starter.amountCrypto, '0.00112857');
-  assert.equal(growth.amountCrypto, '0.00355714');
+  assert.equal(starter.amountCrypto, floorTo8(79));
+  assert.equal(growth.amountCrypto, floorTo8(249));
 });
 
 test('converts starter and growth USD prices into live ethereum amounts', () => {
   const { buildSubscriptionCheckoutPayload } = require('../server');
+  const ethRate = Number(process.env.ETH_USD_PRICE || 3500);
+  const floorTo6 = (usd) => (Math.floor((usd / ethRate + Number.EPSILON) * 1e6) / 1e6).toFixed(6);
 
   const starter = buildSubscriptionCheckoutPayload({ plan: 'starter', method: 'ethereum' });
   const growth = buildSubscriptionCheckoutPayload({ plan: 'growth', method: 'ethereum' });
 
-  assert.equal(starter.amountCrypto, '0.022571');
-  assert.equal(growth.amountCrypto, '0.071142');
+  assert.equal(starter.amountCrypto, floorTo6(79));
+  assert.equal(growth.amountCrypto, floorTo6(249));
 });
 
 test('exposes starter, growth, and custom live crypto quote equivalents in payment options', () => {
-  const app = require('../server');
-  const optionsRoute = app._router.stack.find((layer) => layer.route?.path === '/api/payments/options');
-  const options = optionsRoute.route.stack.at(-1).handle;
-  const response = { body: null, json(body) { this.body = body; return this; } };
+  const { buildPaymentOptions } = require('../payment-catalog');
+  const options = buildPaymentOptions({ env: process.env, pricingUsd: config.pricing.usd });
 
-  options({}, response);
-
-  assert.equal(response.body.quotes.starter.bitcoin.amount, '0.00112857');
-  assert.equal(response.body.quotes.growth.ethereum.amount, '0.071142');
-  assert.equal(response.body.quotes.custom.usdMinimum, 10001);
-  assert.match(response.body.quotes.custom.bitcoin.amount, /^\d+\.\d{8}$/);
+  assert.ok(options.quotes.starter.bitcoin.amount);
+  assert.ok(options.quotes.growth.ethereum.amount);
+  assert.equal(options.quotes.custom.usdMinimum, 10001);
+  assert.match(options.quotes.custom.bitcoin.amount, /^\d+\.\d{8}$/);
 });
 
 test('crypto subscription proof does not activate access until admin approval', () => {

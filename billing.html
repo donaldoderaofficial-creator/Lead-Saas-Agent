@@ -207,12 +207,16 @@
           }
         } catch {}
         const fallbackAmount = liveQuotes?.[plan]?.[method]?.amount;
+        const wallet = wallets[method];
+        if (!wallet?.address) {
+          status('No wallet address is configured for this payment method. Please retry later.', true);
+          return;
+        }
         if (!fallbackAmount) {
           status('Could not create payment right now. Please retry to lock a fresh quote.', true);
           return;
         }
         offlineOrder = true;
-        const wallet = wallets[method];
         showOrder({ amountCrypto: fallbackAmount, currency: wallet.currency, walletAddress: wallet.address, reference: crypto.randomUUID() });
         status('Using live fallback quote. Send payment, then email your transaction hash if API confirmation is unavailable.');
       } finally {
