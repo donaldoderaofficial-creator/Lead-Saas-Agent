@@ -366,24 +366,29 @@ app.post('/api/email/inbound', asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'id, from, and text are required' });
   }
   const existingThread = emailThreads.find(id);
+  const inboundBody = text || body;
+  const inboundSender = from || sender;
+  const canReuseDraft = existingThread?.status !== 'sent'
+    && existingThread?.sender === inboundSender
+    && existingThread?.body === inboundBody;
   if (existingThread?.status === 'sent' && existingThread.ownerNotificationSentAt) {
     return res.json({ status: 'duplicate', id });
   }
-  const draft = existingThread
+  const draft = canReuseDraft
     ? { reply: existingThread.reply, quote: existingThread.quote, subject: existingThread.subject || subject || 'Custom package enquiry' }
     : await improveReplyWithAI(buildCustomReply({ subject, body: text || body }));
-  if (!existingThread) {
-    emailThreads.create({
+  if (!existingThread || !canReuseDraft) {
+    emailThreads.saveDraft({
       messageId: id,
-      sender: from || sender,
+      sender: inboundSender,
       subject: subject || draft.subject,
-      body: text || body,
+      body: inboundBody,
       reply: draft.reply,
       quote: draft.quote,
       status: 'draft',
     });
   }
-  const clientAddress = from || sender;
+  const clientAddress = inboundSender;
   const messageSubject = subject || draft.subject;
   const shouldSendDelivery = existingThread?.status !== 'sent';
   const shouldSendOwnerNotification = !existingThread?.ownerNotificationSentAt;

@@ -55,8 +55,15 @@ test('permanently advertises all payment methods and currencies', () => {
     set(name, value) { this.headers[name] = value; return this; },
     json(body) { this.body = body; return this; },
   };
+  const repeatResponse = {
+    body: null,
+    headers: {},
+    set(name, value) { this.headers[name] = value; return this; },
+    json(body) { this.body = body; return this; },
+  };
 
   options({}, response);
+  options({}, repeatResponse);
 
   assert.deepEqual(response.body.providers.paypal.methods, ['checkout']);
   assert.deepEqual(response.body.providers.mpesa.methods, ['stk-push']);
@@ -64,6 +71,7 @@ test('permanently advertises all payment methods and currencies', () => {
   assert.deepEqual(response.body.providers.ethereum.methods, ['wallet-transfer']);
   assert.deepEqual(response.body.supportedCurrencies, ['USD', 'KES', 'BTC', 'ETH']);
   assert.equal(response.headers['Cache-Control'], 'public, max-age=30, stale-while-revalidate=300');
+  assert.equal(response.body, repeatResponse.body);
 });
 
 test('health response exposes a release build identifier', () => {
@@ -87,12 +95,20 @@ test('public billing config is cacheable for repeated reads', () => {
     set(name, value) { this.headers[name] = value; return this; },
     json(body) { this.body = body; return this; },
   };
+  const repeatResponse = {
+    body: null,
+    headers: {},
+    set(name, value) { this.headers[name] = value; return this; },
+    json(body) { this.body = body; return this; },
+  };
 
   getConfig({}, response);
+  getConfig({}, repeatResponse);
 
   assert.equal(response.headers['Cache-Control'], 'public, max-age=30, stale-while-revalidate=300');
   assert.equal(typeof response.body.plans.starter.priceMonthly, 'string');
   assert.equal(response.body.ebook.walletAddress, 'bc1qwalletbitcoinaddress');
+  assert.equal(response.body, repeatResponse.body);
 });
 
 test('stores validated AI referral attribution on subscription orders', () => {

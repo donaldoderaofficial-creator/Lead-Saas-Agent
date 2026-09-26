@@ -752,10 +752,19 @@ function rowToEmailThread(row) {
 }
 
 const emailThreads = {
-  create({ messageId, sender, subject, body, reply, quote, status = 'draft' }) {
+  saveDraft({ messageId, sender, subject, body, reply, quote, status = 'draft' }) {
     db.prepare(`INSERT INTO email_threads
-      (message_id, sender, subject, body, reply, quote_json, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      (message_id, sender, subject, body, reply, quote_json, status, sent_at, owner_notification_sent_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL)
+      ON CONFLICT(message_id) DO UPDATE SET
+        sender = excluded.sender,
+        subject = excluded.subject,
+        body = excluded.body,
+        reply = excluded.reply,
+        quote_json = excluded.quote_json,
+        status = excluded.status,
+        sent_at = NULL,
+        owner_notification_sent_at = NULL`)
       .run(messageId, sender, subject || '', body, reply, quote ? JSON.stringify(quote) : null, status);
     return rowToEmailThread(db.prepare('SELECT * FROM email_threads WHERE message_id = ?').get(messageId));
   },
