@@ -705,6 +705,12 @@ app.post('/api/lead', requireActiveSubscription, async (req, res) => {
 
   try {
     if (!method) {
+      if (!hasActiveSubscription(subscription.get())) {
+        return res.status(HTTP_STATUS.PAYMENT_REQUIRED).json({
+          error: 'An active Dispatch Pro package is required for this service.',
+          code: 'subscription_required',
+        });
+      }
       const leadRef = crypto.randomUUID();
       pendingLeads.set(leadRef, { name, email, phone });
       await finalizeLead(leadRef);

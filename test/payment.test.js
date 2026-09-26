@@ -104,14 +104,25 @@ test('renders a completed lead report immediately for paid clients without per-l
   const leadRoute = app._router.stack.find((layer) => layer.route?.path === '/api/lead');
   const lead = leadRoute.route.stack.at(-1).handle;
   const response = { statusCode: 200, body: null, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
+  const previousSubscription = subscription.get();
+  subscription.set({
+    plan: 'starter',
+    billingType: 'monthly',
+    status: 'active',
+    currentPeriodEnd: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+  });
 
-  await lead({ body: { name: 'Paid Client', email: 'paid@example.com' } }, response);
+  try {
+    await lead({ body: { name: 'Paid Client', email: 'paid@example.com' } }, response);
 
-  assert.equal(response.statusCode, 200);
-  assert.equal(response.body.status, 'rendered');
-  assert.equal(response.body.method, 'included-with-subscription');
-  assert.ok(response.body.reference);
-  assert.equal(response.body.report.result.email, 'paid@example.com');
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.status, 'rendered');
+    assert.equal(response.body.method, 'included-with-subscription');
+    assert.ok(response.body.reference);
+    assert.equal(response.body.report.result.email, 'paid@example.com');
+  } finally {
+    subscription.set(previousSubscription);
+  }
 });
 
 test('uses the required bitcoin amounts for starter and growth subscription packages', () => {
