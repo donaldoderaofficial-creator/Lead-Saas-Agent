@@ -268,7 +268,7 @@ documented defaults so BTC/ETH are never unavailable. See DEPLOY.md section
 ```
 
 #### `POST /api/lead`
-Submit a new lead and initiate payment.
+Submit a new lead for processing.
 
 **Request:**
 ```json
@@ -276,11 +276,24 @@ Submit a new lead and initiate payment.
   "name": "John Doe",
   "email": "john@example.com",
   "phone": "254712345678",
-  "method": "paypal|mpesa"
+  "method": "paypal|mpesa|bitcoin|ethereum"
 }
 ```
 
+For clients on an active paid package, omit `method` to ingest and process the
+lead immediately (no per-lead checkout required).
+
 **Response:** `200 OK`
+```json
+{
+  "status": "rendered",
+  "method": "included-with-subscription",
+  "reference": "lead_xyz789",
+  "report": { "result": { "email": "john@example.com" } }
+}
+```
+
+or (PayPal checkout):
 ```json
 {
   "status": "created",
@@ -290,7 +303,7 @@ Submit a new lead and initiate payment.
 }
 ```
 
-or (M-Pesa):
+or (M-Pesa STK Push):
 ```json
 {
   "status": "pending",

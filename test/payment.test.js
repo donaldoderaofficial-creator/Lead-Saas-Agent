@@ -99,6 +99,21 @@ test('does not attempt unconfigured PayPal checkout', () => {
   assert.match(response.body.error, /not configured/i);
 });
 
+test('renders a completed lead report immediately for paid clients without per-lead checkout', async () => {
+  const app = require('../server');
+  const leadRoute = app._router.stack.find((layer) => layer.route?.path === '/api/lead');
+  const lead = leadRoute.route.stack.at(-1).handle;
+  const response = { statusCode: 200, body: null, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
+
+  await lead({ body: { name: 'Paid Client', email: 'paid@example.com' } }, response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.status, 'rendered');
+  assert.equal(response.body.method, 'included-with-subscription');
+  assert.ok(response.body.reference);
+  assert.equal(response.body.report.result.email, 'paid@example.com');
+});
+
 test('uses the required bitcoin amounts for starter and growth subscription packages', () => {
   const { buildSubscriptionCheckoutPayload } = require('../server');
 
@@ -180,6 +195,7 @@ test('allows the deployed billing page to load wallet payment options', () => {
 
   assert.equal(app.isOriginAllowed('https://lead-saas-agent.netlify.app', '/api/payments/options'), true);
   assert.equal(app.isOriginAllowed('https://lead-saas-agent.netlify.app', '/api/billing/crypto/order'), true);
+  assert.equal(app.isOriginAllowed('https://agent-6a81dca937d9510b5c359--dispatch-lead-agent.netlify.app', '/api/lead'), true);
 });
 
 test('accepts a deposit screenshot as ebook payment confirmation', () => {

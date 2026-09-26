@@ -63,11 +63,16 @@ function isOriginAllowed(origin, path = '') {
 
   try {
     const { hostname } = new URL(origin);
+    const hostedNetlifyHosts = new Set([
+      'lead-saas-agent.netlify.app',
+      'agent-6a81dca937d9510b5c359--dispatch-lead-agent.netlify.app',
+    ]);
     const isLocalDevelopmentHost = ['localhost', '127.0.0.1', '::1'].includes(hostname) || hostname.endsWith('.localhost');
     if (isLocalDevelopmentHost) return true;
     const isHostedPaymentPath = path === '/api/payments/options'
       || path.startsWith('/api/billing/crypto/');
-    if (isHostedPaymentPath && hostname === 'lead-saas-agent.netlify.app') return true;
+    const isHostedLeadPath = path === '/api/lead' || path === '/api/config';
+    if ((isHostedPaymentPath || isHostedLeadPath) && hostedNetlifyHosts.has(hostname)) return true;
     if (path.startsWith('/api/ebook/') || path.startsWith('/ebook/')) {
       return hostname.endsWith('.netlify.app') || hostname.endsWith('.vercel.app') || hostname.endsWith('.pages.dev');
     }
@@ -699,6 +704,19 @@ app.post('/api/lead', requireActiveSubscription, async (req, res) => {
   }
 
   try {
+    if (!method) {
+      const leadRef = crypto.randomUUID();
+      pendingLeads.set(leadRef, { name, email, phone });
+      await finalizeLead(leadRef);
+      const report = completedReports.get(leadRef);
+      return res.json({
+        status: 'rendered',
+        method: 'included-with-subscription',
+        reference: leadRef,
+        report,
+      });
+    }
+
     if (method === 'paypal') {
       if (!config.payment.paypal.configured || !config.payment.paypal.clientSecret) {
         return res.status(503).json({ error: 'PayPal payments are not configured. Use Bitcoin or Ethereum checkout.' });
