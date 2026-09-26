@@ -44,7 +44,7 @@ test('public pages and config endpoints send browser cache headers', async () =>
     assert.equal(asset.status, 200);
     assert.equal(asset.headers.get('cache-control'), 'public, max-age=300, stale-while-revalidate=86400');
     assert.equal(config.status, 200);
-    assert.equal(config.headers.get('cache-control'), 'public, max-age=300, stale-while-revalidate=900');
+    assert.equal(config.headers.get('cache-control'), 'private, max-age=30, stale-while-revalidate=300');
   } finally {
     server.close();
   }
@@ -64,10 +64,16 @@ test('public website routes bypass session store lookups', async () => {
 
   try {
     const headers = { Cookie: buildSessionCookie() };
-    const publicResponse = await fetch(`http://127.0.0.1:${port}/api/config`, { headers });
+    const [configResponse, optionsResponse, statusResponse] = await Promise.all([
+      fetch(`http://127.0.0.1:${port}/api/config`, { headers }),
+      fetch(`http://127.0.0.1:${port}/api/payments/options`, { headers }),
+      fetch(`http://127.0.0.1:${port}/api/billing/status`, { headers }),
+    ]);
 
-    assert.equal(publicResponse.status, 200);
-    assert.equal(observedSids.length, 0, 'public config should not touch the session store');
+    assert.equal(configResponse.status, 200);
+    assert.equal(optionsResponse.status, 200);
+    assert.equal(statusResponse.status, 200);
+    assert.equal(observedSids.length, 0, 'public website data endpoints should not touch the session store');
 
     const sessionResponse = await fetch(`http://127.0.0.1:${port}/health`, { headers });
 
@@ -77,4 +83,11 @@ test('public website routes bypass session store lookups', async () => {
     app.sessionStore.get = originalGet;
     server.close();
   }
+});
+
+test('landing page can answer common Mia prompts without waiting for the API', () => {
+  const landingPage = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+
+  assert.match(landingPage, /function buildMiaInstantReply\(question\)/);
+  assert.match(landingPage, /const instantReply = buildMiaInstantReply\(question\);/);
 });

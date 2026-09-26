@@ -46,7 +46,7 @@ const app = express();
 const DISPATCH_PRO = config.company;
 const PUBLIC_HTML_CACHE_CONTROL = 'public, max-age=0, must-revalidate';
 const PUBLIC_STATIC_CACHE_CONTROL = 'public, max-age=300, stale-while-revalidate=86400';
-const PUBLIC_CONFIG_CACHE_CONTROL = 'public, max-age=300, stale-while-revalidate=900';
+const PUBLIC_CONFIG_CACHE_CONTROL = 'private, max-age=30, stale-while-revalidate=300';
 
 function matchesAllowedOrigin(origin, allowedOrigins) {
   if (!origin) return true;
@@ -163,16 +163,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.post('/api/assistant/mia', (req, res) => {
-  const { question } = req.body || {};
-  if (typeof question !== 'string' || question.length > 2000) {
-    return res.status(400).json({ error: 'question must be a string of 2,000 characters or fewer' });
-  }
-  setResponseHeader(res, 'Cache-Control', 'no-store');
-  res.json({ assistant: 'Mia', answer: buildMiaReply(question) });
-});
-
-// ---- Global payment capabilities ----
+// ---- Public website data endpoints ----
 app.get('/api/payments/options', (req, res) => {
   setResponseHeader(res, 'Cache-Control', PUBLIC_CONFIG_CACHE_CONTROL);
   res.json(buildPaymentOptions({
@@ -193,6 +184,11 @@ app.get('/api/config', (req, res) => {
   }));
 });
 
+app.get('/api/billing/status', (req, res) => {
+  setResponseHeader(res, 'Cache-Control', PUBLIC_CONFIG_CACHE_CONTROL);
+  res.json(subscription.get());
+});
+
 // ---- Session Configuration ----
 if (!config.sessionSecret) {
   throw new Error('Missing SESSION_SECRET. Set a long random string in your .env file.');
@@ -200,7 +196,6 @@ if (!config.sessionSecret) {
 
 const sessionStore = createSessionStore(session);
 app.sessionStore = sessionStore;
-
 app.use(session({
   secret: config.sessionSecret,
   resave: false,
@@ -213,6 +208,15 @@ app.use(session({
     maxAge: config.security.tokenExpiry,
   },
 }));
+
+app.post('/api/assistant/mia', (req, res) => {
+  const { question } = req.body || {};
+  if (typeof question !== 'string' || question.length > 2000) {
+    return res.status(400).json({ error: 'question must be a string of 2,000 characters or fewer' });
+  }
+  setResponseHeader(res, 'Cache-Control', 'no-store');
+  res.json({ assistant: 'Mia', answer: buildMiaReply(question) });
+});
 
 // ---- Rate Limiting: Profitability & Security ----
 const rateLimiter = new RateLimiter();
@@ -431,10 +435,6 @@ app.post('/api/email/inbound', asyncHandler(async (req, res) => {
 }));
 
 
-
-app.get('/api/billing/status', (req, res) => {
-  res.json(subscription.get());
-});
 
 app.post('/api/billing/crypto/order', (req, res) => {
   const { plan = 'starter', method = 'bitcoin', name, email, referral } = req.body || {};

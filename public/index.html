@@ -329,6 +329,17 @@
     miaMessages.appendChild(message);
     miaMessages.scrollTop = miaMessages.scrollHeight;
   }
+  function buildMiaInstantReply(question) {
+    const text = String(question || '').trim();
+    const lower = text.toLowerCase();
+    if (!text) return 'Hi, I am Mia from Dispatch Pro. I am happy to help. Ask me about plans, lead workflows, or crypto payments.';
+    if (/secure|security|safe|trust|data privacy|gdpr/.test(lower)) return 'Good question — security is built in: passwords are hashed, accounts require 2FA, production sessions use secure cookies, and access is rate-limited and audited. Would you like me to point you to the right plan so you can get started today?';
+    if (/starter|growth|plan|pricing|cost/.test(lower) && !/(\d[\d,]{1,6})\s*(?:leads?|contacts?|inquiries|enquiries|prospects|signups?)/i.test(text)) return 'I can help you compare them. Starter covers up to 500 leads/month at $79/mo, and Growth covers up to 5,000 leads/month at $249/mo with priority support and custom qualification logic. About how many leads do you get each month?';
+    if (/lead|qualif|dashboard|workflow|integration/.test(lower)) return 'That is exactly the kind of workflow Dispatch Pro is built for. It captures inbound leads, qualifies them with structured business signals, and keeps follow-up work visible in one dashboard. Which sources or integrations do you need first?';
+    if (/hello|hi|hey|good morning|good afternoon/.test(lower)) return 'Hello, it is lovely to meet you. I am Mia from Dispatch Pro. What would you like to accomplish?';
+    if (/thank|thanks|appreciate/.test(lower)) return 'You are very welcome. I am glad to help. What would you like to explore next?';
+    return null;
+  }
   miaToggle.addEventListener('click', () => setMiaOpen(miaPanel.hidden));
   miaClose.addEventListener('click', () => setMiaOpen(false));
   miaQuickPrompts.forEach((button) => button.addEventListener('click', () => {
@@ -341,6 +352,11 @@
     if (!question) return;
     addMiaMessage(question, false);
     miaInput.value = '';
+    const instantReply = buildMiaInstantReply(question);
+    if (instantReply) {
+      addMiaMessage(instantReply, true);
+      return;
+    }
     try {
       const response = await fetch('/api/assistant/mia', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question }) });
       const data = await response.json();
