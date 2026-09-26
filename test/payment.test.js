@@ -15,7 +15,7 @@ process.env.BITCOIN_WALLET_ADDRESS = 'bc1qwalletbitcoinaddress';
 process.env.ETHEREUM_WALLET_ADDRESS = '0x1234567890abcdef1234567890abcdef12345678';
 
 const { config } = require('../config');
-const { payments, pendingLeads, subscription, stkIngestTriage } = require('../store');
+const { payments, pendingLeads, subscription, stkIngestTriage, users } = require('../store');
 const { hasActiveSubscription } = require('../subscription-policy');
 
 test('requires an active paid package before service access', () => {
@@ -143,7 +143,7 @@ test('crypto subscription proof does not activate access until admin approval', 
   assert.equal(hasActiveSubscription(subscription.get()), true);
 });
 
-test('queues hash-confirmed requests in STK ingest triage', () => {
+test('queues hash-confirmed requests in STK ingest triage', async () => {
   const app = require('../server');
   const reference = 'wallet-triage-test';
   pendingLeads.set(reference, { name: 'Queue User', email: 'queue@example.com', paymentMethod: 'bitcoin' });
@@ -151,7 +151,7 @@ test('queues hash-confirmed requests in STK ingest triage', () => {
   const confirmRoute = app._router.stack.find((layer) => layer.route?.path === '/api/payments/wallet/confirm');
   const confirm = confirmRoute.route.stack.at(-1).handle;
   const response = { statusCode: 200, body: null, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
-  confirm({ body: { reference, txHash: '0xqueueproof', method: 'bitcoin', amount: 0.001 } }, response);
+  await Promise.resolve(confirm({ body: { reference, txHash: '0xqueueproof', method: 'bitcoin', amount: 0.001 } }, response));
 
   assert.equal(response.statusCode, 202);
   const queued = stkIngestTriage.listQueued().find((item) => item.reference === reference);
@@ -159,15 +159,38 @@ test('queues hash-confirmed requests in STK ingest triage', () => {
   assert.equal(queued?.paymentMethod, 'bitcoin');
 });
 
-test('exposes STK control-room ingest triage queue', () => {
+test('exposes STK control-room ingest triage queue', async () => {
   const app = require('../server');
   const route = app._router.stack.find((layer) => layer.route?.path === '/api/stk/control-room/ingest-triage');
-  const handler = route.route.stack.at(-1).handle;
-  const response = { body: null, json(body) { this.body = body; return this; } };
-
-  handler({}, response);
+  const middleware = route.route.stack;
+  const adminId = users.create(`admin-${Date.now()}@example.com`, 'hash', 'totp-secret', 'admin');
+  const request = { session: { userId: adminId } };
+  const response = { statusCode: 200, body: null, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
+  middleware[0].handle(request, response, () => {});
+  middleware[1].handle(request, response, () => {});
+  await Promise.resolve(middleware.at(-1).handle(request, response));
 
   assert.equal(Array.isArray(response.body.queue), true);
+});
+
+test('blocks non-admin access to STK control-room ingest triage queue', () => {
+  const app = require('../server');
+  const route = app._router.stack.find((layer) => layer.route?.path === '/api/stk/control-room/ingest-triage');
+  const middleware = route.route.stack;
+  const userId = users.create(`user-${Date.now()}@example.com`, 'hash', 'totp-secret', 'user');
+  const request = { session: { userId } };
+  const response = {
+    statusCode: 200,
+    body: null,
+    status(code) { this.statusCode = code; return this; },
+    json(body) { this.body = body; return this; },
+  };
+
+  middleware[0].handle(request, response, () => {});
+  middleware[1].handle(request, response, () => {});
+
+  assert.equal(response.statusCode, 403);
+  assert.equal(response.body.error, 'Administrator access required');
 });
 
 test('allows repeated ebook report writes without finalized statement errors', () => {

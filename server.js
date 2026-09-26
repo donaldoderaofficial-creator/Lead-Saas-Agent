@@ -448,15 +448,17 @@ app.post('/api/billing/crypto/confirm', (req, res) => {
       referralSource: order.referralSource || null,
     },
   });
-  stkIngestTriage.enqueue({
-    reference,
-    txHash,
-    paymentMethod: order.paymentMethod,
-    amount: submittedAmount,
-    currency: config.wallets[walletType].currency,
-    clientName: order.name || null,
-    clientEmail: order.email || null,
-  });
+  if (txHash && ['bitcoin', 'ethereum'].includes(order.paymentMethod)) {
+    stkIngestTriage.enqueue({
+      reference,
+      txHash,
+      paymentMethod: order.paymentMethod,
+      amount: submittedAmount,
+      currency: config.wallets[walletType].currency,
+      clientName: order.name || null,
+      clientEmail: order.email || null,
+    });
+  }
   res.status(202).json({ status: 'pending_review', reference, message: 'Payment proof received. Service access will be enabled after payment verification.' });
 });
 
@@ -907,6 +909,8 @@ app.post('/api/payments/wallet/confirm', async (req, res) => {
   if (!['bitcoin', 'ethereum'].includes(method)) {
     return res.status(400).json({ error: "method must be 'bitcoin' or 'ethereum'" });
   }
+  const walletType = method === 'bitcoin' ? 'bitcoin' : 'ethereum';
+  const walletConfig = config.wallets[walletType];
   const lead = pendingLeads.get(reference);
   if (!lead) {
     return res.status(404).json({ error: 'Unknown payment reference' });
@@ -916,19 +920,21 @@ app.post('/api/payments/wallet/confirm', async (req, res) => {
     transactionId: txHash,
     reference,
     amount: Number(amount) || Number(PRICING.usd.starter.price),
-    currency: config.wallets[method].currency,
+    currency: walletConfig.currency,
     status: 'pending_review',
     raw: { txHash, method, amount: Number(amount) || Number(PRICING.usd.starter.price) },
   });
-  stkIngestTriage.enqueue({
-    reference,
-    txHash,
-    paymentMethod: method,
-    amount: Number(amount) || Number(PRICING.usd.starter.price),
-    currency: config.wallets[method].currency,
-    clientName: lead.name || null,
-    clientEmail: lead.email || null,
-  });
+  if (txHash && ['bitcoin', 'ethereum'].includes(method)) {
+    stkIngestTriage.enqueue({
+      reference,
+      txHash,
+      paymentMethod: method,
+      amount: Number(amount) || Number(PRICING.usd.starter.price),
+      currency: walletConfig.currency,
+      clientName: lead.name || null,
+      clientEmail: lead.email || null,
+    });
+  }
   res.status(202).json({ status: 'pending_review', method, reference, txHash });
 });
 
