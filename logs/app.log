@@ -660,3 +660,17 @@
 {"timestamp":"2026-09-23T12:09:57.076Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-23T12:09:57.083Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-23T12:09:57.086Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-26T06:17:08.679Z","level":"info","message":"GET /api/config","statusCode":200,"duration":"4ms"}
+{"timestamp":"2026-09-26T06:17:08.684Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-26T06:17:08.685Z","level":"info","message":"GET /","statusCode":200,"duration":"17ms"}
+{"timestamp":"2026-09-26T06:17:08.686Z","level":"info","message":"GET /api-base.js","statusCode":200,"duration":"14ms"}
+{"timestamp":"2026-09-26T06:17:08.688Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-26T06:17:08.697Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-26T06:17:08.699Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-26T06:17:18.692Z","level":"info","message":"GET /api/config","statusCode":200,"duration":"6ms"}
+{"timestamp":"2026-09-26T06:17:18.698Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"2ms"}
+{"timestamp":"2026-09-26T06:17:18.700Z","level":"info","message":"GET /","statusCode":200,"duration":"19ms"}
+{"timestamp":"2026-09-26T06:17:18.701Z","level":"info","message":"GET /api-base.js","statusCode":200,"duration":"17ms"}
+{"timestamp":"2026-09-26T06:17:18.703Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-26T06:17:18.710Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-26T06:17:18.713Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
