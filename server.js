@@ -71,7 +71,7 @@ function isOriginAllowed(origin, path = '') {
     if (isLocalDevelopmentHost) return true;
     const isHostedPaymentPath = path === '/api/payments/options'
       || path.startsWith('/api/billing/crypto/');
-    const isHostedLeadPath = path === '/api/lead' || path === '/api/config';
+    const isHostedLeadPath = path === '/api/lead';
     if ((isHostedPaymentPath || isHostedLeadPath) && hostedNetlifyHosts.has(hostname)) return true;
     if (path.startsWith('/api/ebook/') || path.startsWith('/ebook/')) {
       return hostname.endsWith('.netlify.app') || hostname.endsWith('.vercel.app') || hostname.endsWith('.pages.dev');
