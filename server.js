@@ -174,16 +174,11 @@ function recordFailedAttempt(username, req) {
 // Flexible, configurable pricing from config system
 const PRICING = config.pricing;
 const EBOOK_PRICE_USD = Number(config.ebook?.priceUsd || 19.99);
-const BTC_SUBSCRIPTION_AMOUNTS = {
-  starter: '0.0010327',
-  growth: '0.00325',
-};
-const BTC_REFERENCE_USD_PRICE = Number(process.env.BTC_USD_PRICE || 70000);
-const ETH_SUBSCRIPTION_AMOUNTS = {
-  starter: '0.03238',
-  growth: '0.10206',
-};
-const ETH_REFERENCE_USD_PRICE = Number(process.env.ETH_USD_PRICE || 3500);
+
+function floorToDecimals(value, decimals) {
+  const factor = 10 ** decimals;
+  return Math.floor((value + Number.EPSILON) * factor) / factor;
+}
 
 function getEbookBtcAmount() {
   const { rate } = getBtcUsdRate();
@@ -212,21 +207,13 @@ function buildEbookCheckoutPayload({ name, email, reference } = {}) {
   };
 }
 
-function getCryptoAmount(amountUsd, method, plan = 'starter') {
-  const subscriptionAmounts = method === 'bitcoin' ? BTC_SUBSCRIPTION_AMOUNTS : ETH_SUBSCRIPTION_AMOUNTS;
-  const referenceRate = method === 'bitcoin' ? BTC_REFERENCE_USD_PRICE : ETH_REFERENCE_USD_PRICE;
-  if (subscriptionAmounts[plan]) {
-    const { rate } = getCryptoUsdRate(method);
-    const baseline = Number(subscriptionAmounts[plan]);
-    if (Number.isFinite(rate) && rate > 0 && Number.isFinite(baseline)) {
-      if (rate === referenceRate) return subscriptionAmounts[plan];
-      return (baseline * referenceRate / rate).toFixed(method === 'bitcoin' ? 8 : 6);
-    }
-    return subscriptionAmounts[plan];
-  }
+function getCryptoAmount(amountUsd, method) {
   const price = getCryptoUsdRate(method).rate;
-  if (!Number.isFinite(price) || price <= 0) return null;
-  return (Number(amountUsd) / price).toFixed(method === 'bitcoin' ? 8 : 6);
+  const usdAmount = Number(amountUsd);
+  const decimals = method === 'bitcoin' ? 8 : 6;
+  if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(usdAmount) || usdAmount <= 0) return null;
+  const amount = floorToDecimals(usdAmount / price, decimals);
+  return amount > 0 ? amount.toFixed(decimals) : null;
 }
 
 function buildSubscriptionCheckoutPayload({ plan = 'starter', method = 'bitcoin', name, email, reference } = {}) {
@@ -378,6 +365,7 @@ app.post('/api/email/inbound', asyncHandler(async (req, res) => {
 app.get('/api/payments/options', (req, res) => {
   res.json(buildPaymentOptions({
     wallets: config.wallets,
+    pricingUsd: PRICING.usd,
     paypalEnabled: config.payment.paypal.enabled,
     mpesaEnabled: config.payment.mpesa.enabled,
   }));

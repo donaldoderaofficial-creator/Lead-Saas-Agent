@@ -99,24 +99,38 @@ test('does not attempt unconfigured PayPal checkout', () => {
   assert.match(response.body.error, /not configured/i);
 });
 
-test('uses the required bitcoin amounts for starter and growth subscription packages', () => {
+test('converts starter and growth USD prices into live bitcoin amounts', () => {
   const { buildSubscriptionCheckoutPayload } = require('../server');
 
   const starter = buildSubscriptionCheckoutPayload({ plan: 'starter', method: 'bitcoin' });
   const growth = buildSubscriptionCheckoutPayload({ plan: 'growth', method: 'bitcoin' });
 
-  assert.equal(starter.amountCrypto, '0.0010327');
-  assert.equal(growth.amountCrypto, '0.00325');
+  assert.equal(starter.amountCrypto, '0.00112857');
+  assert.equal(growth.amountCrypto, '0.00355714');
 });
 
-test('uses the required ethereum amounts for starter and growth subscription packages', () => {
+test('converts starter and growth USD prices into live ethereum amounts', () => {
   const { buildSubscriptionCheckoutPayload } = require('../server');
 
   const starter = buildSubscriptionCheckoutPayload({ plan: 'starter', method: 'ethereum' });
   const growth = buildSubscriptionCheckoutPayload({ plan: 'growth', method: 'ethereum' });
 
-  assert.equal(starter.amountCrypto, '0.03238');
-  assert.equal(growth.amountCrypto, '0.10206');
+  assert.equal(starter.amountCrypto, '0.022571');
+  assert.equal(growth.amountCrypto, '0.071142');
+});
+
+test('exposes starter, growth, and custom live crypto quote equivalents in payment options', () => {
+  const app = require('../server');
+  const optionsRoute = app._router.stack.find((layer) => layer.route?.path === '/api/payments/options');
+  const options = optionsRoute.route.stack.at(-1).handle;
+  const response = { body: null, json(body) { this.body = body; return this; } };
+
+  options({}, response);
+
+  assert.equal(response.body.quotes.starter.bitcoin.amount, '0.00112857');
+  assert.equal(response.body.quotes.growth.ethereum.amount, '0.071142');
+  assert.equal(response.body.quotes.custom.usdMinimum, 10001);
+  assert.match(response.body.quotes.custom.bitcoin.amount, /^\d+\.\d{8}$/);
 });
 
 test('crypto subscription proof does not activate access until admin approval', () => {

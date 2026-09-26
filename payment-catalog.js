@@ -32,11 +32,58 @@ const DEFAULT_EBOOK = {
   subtitle: 'A practical guide to turning coding skills into income, systems, and leverage.',
   priceUsd: 9.99,
 };
+const DEFAULT_CUSTOM_PACKAGE_MIN_USD = 10001;
 
 const SETTLEMENT_NOTE = 'Direct Bitcoin and Ethereum wallet transfers are accepted manually and require transaction confirmation before a report is released.';
 
 function trimmed(value) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function toPositiveNumber(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
+function floorToDecimals(value, decimals) {
+  const factor = 10 ** decimals;
+  return Math.floor((value + Number.EPSILON) * factor) / factor;
+}
+
+function formatCryptoAmountFromUsd(amountUsd, method) {
+  const usd = toPositiveNumber(amountUsd);
+  const rateSnapshot = getCryptoUsdRate(method);
+  const rate = toPositiveNumber(rateSnapshot?.rate);
+  const decimals = method === 'bitcoin' ? 8 : 6;
+  if (!usd || !rate) return null;
+  const cryptoAmount = floorToDecimals(usd / rate, decimals);
+  return cryptoAmount > 0 ? cryptoAmount.toFixed(decimals) : null;
+}
+
+function buildPackageCryptoQuotes({
+  pricingUsd = DEFAULT_PRICING_USD,
+  customMinUsd = Math.max(Number(process.env.CUSTOM_PACKAGE_MIN_USD || DEFAULT_CUSTOM_PACKAGE_MIN_USD), DEFAULT_CUSTOM_PACKAGE_MIN_USD),
+} = {}) {
+  const starterUsd = toPositiveNumber(pricingUsd?.starter?.price);
+  const growthUsd = toPositiveNumber(pricingUsd?.growth?.price);
+  const customUsd = toPositiveNumber(customMinUsd) || DEFAULT_CUSTOM_PACKAGE_MIN_USD;
+  return {
+    starter: {
+      usd: starterUsd,
+      bitcoin: { amount: formatCryptoAmountFromUsd(starterUsd, 'bitcoin'), currency: 'BTC' },
+      ethereum: { amount: formatCryptoAmountFromUsd(starterUsd, 'ethereum'), currency: 'ETH' },
+    },
+    growth: {
+      usd: growthUsd,
+      bitcoin: { amount: formatCryptoAmountFromUsd(growthUsd, 'bitcoin'), currency: 'BTC' },
+      ethereum: { amount: formatCryptoAmountFromUsd(growthUsd, 'ethereum'), currency: 'ETH' },
+    },
+    custom: {
+      usdMinimum: customUsd,
+      bitcoin: { amount: formatCryptoAmountFromUsd(customUsd, 'bitcoin'), currency: 'BTC' },
+      ethereum: { amount: formatCryptoAmountFromUsd(customUsd, 'ethereum'), currency: 'ETH' },
+    },
+  };
 }
 
 /**
@@ -66,6 +113,7 @@ function resolveWallets(env = process.env) {
 function buildPaymentOptions({
   env = process.env,
   wallets = resolveWallets(env),
+  pricingUsd = DEFAULT_PRICING_USD,
   paypalEnabled = true,
   mpesaEnabled = true,
 } = {}) {
@@ -105,6 +153,10 @@ function buildPaymentOptions({
       },
     },
     supportedCurrencies,
+    quotes: buildPackageCryptoQuotes({
+      pricingUsd,
+      customMinUsd: Math.max(Number(env.CUSTOM_PACKAGE_MIN_USD || DEFAULT_CUSTOM_PACKAGE_MIN_USD), DEFAULT_CUSTOM_PACKAGE_MIN_USD),
+    }),
     settlement: SETTLEMENT_NOTE,
   };
 }
@@ -160,6 +212,8 @@ module.exports = {
   DEFAULT_EBOOK,
   SETTLEMENT_NOTE,
   resolveWallets,
+  buildPackageCryptoQuotes,
+  formatCryptoAmountFromUsd,
   buildPaymentOptions,
   buildPublicConfig,
 };

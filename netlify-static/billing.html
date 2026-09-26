@@ -64,6 +64,7 @@
         </div>
       </div>
 
+      <p id="quoteHint" class="muted" style="margin:10px 0 0;font-size:12px;">Loading live plan-to-crypto quote…</p>
       <button id="order" type="button">Create wallet payment</button>
       <div id="wallet" class="box"></div>
       <label id="txHashLabel" for="txHash" hidden>Transaction hash</label>
@@ -81,6 +82,7 @@
     const orderButton = document.getElementById('order');
     const confirmButton = document.getElementById('confirm');
     const txHashInput = document.getElementById('txHash');
+    let liveQuotes = null;
     if (plan === 'growth') planField.value = 'growth';
     let checkout = null;
 
@@ -94,6 +96,7 @@
       try {
         const response = await window.DispatchAPI.fetchWithRetry('/api/payments/options', { cache: 'no-store' });
         const data = await response.json();
+        liveQuotes = data.quotes || null;
         const wallets = [data.providers.bitcoin, data.providers.ethereum]
           .filter((provider) => provider?.enabled && provider.address);
         const list = document.getElementById('walletList');
@@ -117,6 +120,30 @@
       } catch {
         setStatus('Payment options are temporarily unavailable. Please try again later.', true);
       }
+      updateQuoteHint();
+    }
+
+    function updateQuoteHint() {
+      const selectedPlan = document.getElementById('plan').value;
+      const method = document.getElementById('method').value;
+      const methodLabel = method === 'bitcoin' ? 'BTC' : 'ETH';
+      const quote = liveQuotes?.[selectedPlan]?.[method];
+      const custom = liveQuotes?.custom?.[method];
+      const customUsd = Number(liveQuotes?.custom?.usdMinimum || 10001).toFixed(2);
+      const hint = document.getElementById('quoteHint');
+      hint.textContent = quote?.amount
+        ? `${selectedPlan === 'growth' ? 'Growth' : 'Starter'} is currently ~${quote.amount} ${methodLabel}. Custom starts from $${customUsd} (~${custom?.amount || '—'} ${methodLabel}).`
+        : 'Live quote unavailable. Create payment to lock an exact BTC/ETH amount.';
+    }
+
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(url, { ...options, signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
+      }
     }
 
     loadWalletAddresses();
@@ -131,7 +158,7 @@
       setStatus('Creating wallet payment...');
 
       try {
-        const response = await fetch(window.DispatchAPI.url('/api/billing/crypto/order'), {
+        const response = await fetchWithTimeout(window.DispatchAPI.url('/api/billing/crypto/order'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, plan: selectedPlan, method }),
@@ -176,7 +203,7 @@
       setStatus('Submitting payment for review...');
 
       try {
-        const response = await fetch(window.DispatchAPI.url('/api/billing/crypto/confirm'), {
+        const response = await fetchWithTimeout(window.DispatchAPI.url('/api/billing/crypto/confirm'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -197,6 +224,8 @@
         confirmButton.disabled = false;
       }
     });
+    document.getElementById('plan').addEventListener('change', updateQuoteHint);
+    document.getElementById('method').addEventListener('change', updateQuoteHint);
   </script>
 </body>
 </html>

@@ -18,6 +18,7 @@
       <div><label for="plan">Plan</label><select id="plan"><option value="starter">Starter</option><option value="growth">Growth</option></select></div>
       <div><label for="method">Payment method</label><select id="method"><option value="bitcoin">Bitcoin (BTC)</option><option value="ethereum">Ethereum (ETH)</option></select></div>
     </div>
+    <p id="quoteHint" class="hint">Loading live plan-to-crypto quote…</p>
     <button id="order">Create payment</button>
     <div id="wallet" class="wallet" hidden></div>
     <label id="hashLabel" for="hash" hidden>Transaction hash</label>
@@ -42,11 +43,12 @@
     let offlineOrder = false;
     const referral = new URLSearchParams(window.location.search).get('ref') || '';
     const PAYMENT_PROOF_EMAIL = 'Donaldoderaofficial@gmail.com';
-    // Mirrors server.js defaults so crypto checkout works while the API is asleep or down.
+    // Mirrors server.js defaults so wallet addresses still render if API options are unavailable.
     const wallets = {
-      bitcoin: { currency: 'BTC', address: '3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k', amounts: { starter: '0.0010327', growth: '0.00325' } },
-      ethereum: { currency: 'ETH', address: '0xFFc40b1EcE21ce8A3b5e33caf95aA64bd8081330', amounts: { starter: '0.03238', growth: '0.10206' } },
+      bitcoin: { currency: 'BTC', address: '3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k' },
+      ethereum: { currency: 'ETH', address: '0xFFc40b1EcE21ce8A3b5e33caf95aA64bd8081330' },
     };
+    let liveQuotes = null;
     function status(message, isError = false) {
       $('status').textContent = message;
       $('status').style.color = isError ? '#ff7373' : '#9aa1b1';
@@ -93,8 +95,7 @@
         return row;
       }));
     }
-    // Long enough for a sleeping Render instance to wake before falling back to offline checkout.
-    async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
@@ -102,6 +103,19 @@
       } finally {
         clearTimeout(timer);
       }
+    }
+    function updateQuoteHint() {
+      const plan = $('plan').value;
+      const method = $('method').value;
+      const methodLabel = method === 'bitcoin' ? 'BTC' : 'ETH';
+      const selected = liveQuotes?.[plan]?.[method];
+      const custom = liveQuotes?.custom?.[method];
+      const customUsd = Number(liveQuotes?.custom?.usdMinimum || 10001).toFixed(2);
+      if (selected?.amount) {
+        $('quoteHint').textContent = `${plan === 'growth' ? 'Growth' : 'Starter'} is currently ~${selected.amount} ${methodLabel}. Custom starts from $${customUsd} (~${custom?.amount || '—'} ${methodLabel}). Amount locks when you create payment.`;
+        return;
+      }
+      $('quoteHint').textContent = 'Live quote unavailable. Create payment to lock an exact BTC/ETH amount.';
     }
     async function loadPaymentOptions() {
       renderWallets();
@@ -112,8 +126,11 @@
           const address = data.providers?.[key]?.address;
           if (data.providers?.[key]?.enabled && typeof address === 'string' && address) wallets[key].address = address;
         }
+        liveQuotes = data.quotes || null;
         renderWallets();
+        updateQuoteHint();
       } catch {}
+      updateQuoteHint();
     }
     function showOrder({ amountCrypto: amount, currency, walletAddress, reference: ref }) {
       reference = ref;
@@ -171,19 +188,34 @@
     $('order').onclick = async () => {
       const method = $('method').value;
       const plan = $('plan').value;
+      $('order').disabled = true;
       status('Creating wallet payment...');
       try {
-        const response = await fetchWithTimeout(window.DispatchAPI.url('/api/billing/crypto/order'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('name').value, email: $('email').value, plan, method, referral }) });
-        const data = await response.json();
-        if (response.ok) {
-          offlineOrder = false;
-          return showOrder(data);
+        try {
+          const response = await fetchWithTimeout(window.DispatchAPI.url('/api/billing/crypto/order'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('name').value, email: $('email').value, plan, method, referral }) });
+          const data = await response.json();
+          if (response.ok) {
+            offlineOrder = false;
+            showOrder(data);
+            return;
+          }
+          if (response.status < 500) {
+            status(data.error || 'Could not create payment.', true);
+            return;
+          }
+        } catch {}
+        const fallbackAmount = liveQuotes?.[plan]?.[method]?.amount;
+        if (!fallbackAmount) {
+          status('Could not create payment right now. Please retry to lock a fresh quote.', true);
+          return;
         }
-        if (response.status < 500) return status(data.error || 'Could not create payment.', true);
-      } catch {}
-      offlineOrder = true;
-      const wallet = wallets[method];
-      showOrder({ amountCrypto: wallet.amounts[plan], currency: wallet.currency, walletAddress: wallet.address, reference: crypto.randomUUID() });
+        offlineOrder = true;
+        const wallet = wallets[method];
+        showOrder({ amountCrypto: fallbackAmount, currency: wallet.currency, walletAddress: wallet.address, reference: crypto.randomUUID() });
+        status('Using live fallback quote. Send payment, then email your transaction hash if API confirmation is unavailable.');
+      } finally {
+        $('order').disabled = false;
+      }
     };
     $('confirm').onclick = async () => {
       const txHash = $('hash').value.trim();
@@ -200,6 +232,8 @@
 
     const requestedPlan = new URLSearchParams(window.location.search).get('plan');
     if (requestedPlan === 'growth') $('plan').value = 'growth';
+    $('plan').addEventListener('change', updateQuoteHint);
+    $('method').addEventListener('change', updateQuoteHint);
     loadPaymentOptions();
     loadCardCheckout();
   </script>
