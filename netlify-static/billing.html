@@ -82,6 +82,10 @@
     const orderButton = document.getElementById('order');
     const confirmButton = document.getElementById('confirm');
     const txHashInput = document.getElementById('txHash');
+    const fallbackWallets = {
+      bitcoin: { currency: 'BTC', address: '3EiZ7FZ5r8LB9rdKWmhei5MsErPj58dK3k' },
+      ethereum: { currency: 'ETH', address: '0xFFc40b1EcE21ce8A3b5e33caf95aA64bd8081330' },
+    };
     let liveQuotes = null;
     if (plan === 'growth') planField.value = 'growth';
     let checkout = null;
@@ -97,6 +101,8 @@
         const response = await window.DispatchAPI.fetchWithRetry('/api/payments/options', { cache: 'no-store' });
         const data = await response.json();
         liveQuotes = data.quotes || null;
+        if (data.providers?.bitcoin?.address) fallbackWallets.bitcoin.address = data.providers.bitcoin.address;
+        if (data.providers?.ethereum?.address) fallbackWallets.ethereum.address = data.providers.ethereum.address;
         const wallets = [data.providers.bitcoin, data.providers.ethereum]
           .filter((provider) => provider?.enabled && provider.address);
         const list = document.getElementById('walletList');
@@ -191,7 +197,44 @@
         });
         setStatus('Send the amount, then submit the transaction hash for review.');
       } catch (error) {
-        setStatus(error.message || 'Unable to create wallet payment.', true);
+        const fallbackAmount = liveQuotes?.[selectedPlan]?.[method]?.amount;
+        const wallet = fallbackWallets[method];
+        if (fallbackAmount && wallet?.address) {
+          checkout = {
+            reference: `fallback-${Date.now()}`,
+            amountCrypto: fallbackAmount,
+            currency: wallet.currency,
+            walletAddress: wallet.address,
+            method,
+            plan: selectedPlan,
+            pendingOffline: true,
+          };
+          walletBox.innerHTML = `
+            Send exactly <strong>${checkout.amountCrypto} ${checkout.currency}</strong> to:<br>
+            <code id="walletAddr" style="user-select:all;word-break:break-all;"></code>
+            <button type="button" id="copyAddr" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">Copy</button><br>
+            Reference: <strong></strong>
+          `;
+          document.getElementById('walletAddr').textContent = checkout.walletAddress;
+          walletBox.querySelector('strong:last-child').textContent = checkout.reference;
+          walletBox.style.display = 'block';
+          document.getElementById('txHashLabel').hidden = false;
+          txHashInput.hidden = false;
+          confirmButton.hidden = false;
+          document.getElementById('copyAddr').addEventListener('click', async () => {
+            const button = document.getElementById('copyAddr');
+            try {
+              await navigator.clipboard.writeText(checkout.walletAddress);
+              button.textContent = 'Copied!';
+            } catch {
+              button.textContent = 'Copy failed';
+            }
+            setTimeout(() => { button.textContent = 'Copy'; }, 2000);
+          });
+          setStatus('Using live fallback quote. If API confirmation stays down, email your transaction hash and reference to support.');
+        } else {
+          setStatus(error.message || 'Unable to create wallet payment.', true);
+        }
       } finally {
         orderButton.disabled = false;
       }
@@ -199,6 +242,10 @@
 
     confirmButton.addEventListener('click', async () => {
       if (!checkout) return;
+      if (checkout.pendingOffline) {
+        setStatus('Copy your reference and email your transaction hash to support for manual verification.', false);
+        return;
+      }
       confirmButton.disabled = true;
       setStatus('Submitting payment for review...');
 

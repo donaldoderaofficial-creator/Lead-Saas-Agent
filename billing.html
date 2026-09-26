@@ -30,8 +30,8 @@
     <h2>Pay by card</h2>
     <p>Use the hosted PayPal checkout to pay by debit or credit card on a recurring monthly plan. Dispatch Pro never stores card details.</p>
     <div class="card-plan">
-      <div><h2>Starter</h2><p>$79/month</p><div class="paypal-button" id="paypal-starter"></div></div>
-      <div><h2>Growth</h2><p>$249/month</p><div class="paypal-button" id="paypal-growth"></div></div>
+      <div><h2>Starter</h2><p id="starterCardPrice">$79/month</p><div class="paypal-button" id="paypal-starter"></div></div>
+      <div><h2>Growth</h2><p id="growthCardPrice">$249/month</p><div class="paypal-button" id="paypal-growth"></div></div>
     </div>
   </section>
   <script src="/runtime-config.js"></script>
@@ -164,6 +164,8 @@
       try {
         const response = await window.DispatchAPI.fetch('/api/config');
         const data = await response.json();
+        if (data.plans?.starter?.priceMonthly) $('starterCardPrice').textContent = `$${data.plans.starter.priceMonthly}/month`;
+        if (data.plans?.growth?.priceMonthly) $('growthCardPrice').textContent = `$${data.plans.growth.priceMonthly}/month`;
         const starterId = data.plans?.starter?.paypalPlanId;
         const growthId = data.plans?.growth?.paypalPlanId;
         if (!data.paypalClientId || !starterId || !growthId) return;

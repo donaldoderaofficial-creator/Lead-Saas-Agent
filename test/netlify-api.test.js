@@ -102,4 +102,8 @@ test('the billing pages resolve API URLs through the shared client', () => {
   assert.match(staticBilling, /src="api-base\.js"/);
   assert.match(staticBilling, /DispatchAPI\.fetchWithRetry\('\/api\/payments\/options'/);
   assert.ok(!staticBilling.includes('API_BASE_URL'), 'static billing page must not hardcode an API origin');
+  assert.match(billing, /liveQuotes\?\.\[plan\]\?\.\[method\]\?\.amount/);
+  assert.match(billing, /Using live fallback quote/);
+  assert.match(staticBilling, /liveQuotes\?\.\[selectedPlan\]\?\.\[method\]\?\.amount/);
+  assert.match(staticBilling, /pendingOffline/);
 });
