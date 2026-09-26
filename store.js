@@ -174,6 +174,20 @@ db.exec(`
     UNIQUE(provider, transaction_id)
   );
 
+  CREATE TABLE IF NOT EXISTS stk_ingest_triage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    reference TEXT NOT NULL,
+    tx_hash TEXT NOT NULL,
+    payment_method TEXT NOT NULL,
+    amount REAL,
+    currency TEXT,
+    client_name TEXT,
+    client_email TEXT,
+    status TEXT NOT NULL DEFAULT 'queued',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(reference, tx_hash)
+  );
+
   CREATE TABLE IF NOT EXISTS edrms_records (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -290,6 +304,44 @@ const payments = {
   },
   updateStatus(id, status) {
     db.prepare('UPDATE payment_transactions SET status = ? WHERE id = ?').run(status, id);
+  },
+};
+
+const stkIngestTriage = {
+  enqueue({ reference, txHash, paymentMethod, amount = null, currency = null, clientName = null, clientEmail = null }) {
+    const result = db.prepare(`
+      INSERT OR IGNORE INTO stk_ingest_triage
+        (reference, tx_hash, payment_method, amount, currency, client_name, client_email)
+      VALUES (@reference, @txHash, @paymentMethod, @amount, @currency, @clientName, @clientEmail)
+    `).run({
+      reference,
+      txHash,
+      paymentMethod,
+      amount: amount === null ? null : Number(amount),
+      currency,
+      clientName,
+      clientEmail,
+    });
+    return result.changes === 1;
+  },
+  listQueued() {
+    return db.prepare(`
+      SELECT id, reference, tx_hash, payment_method, amount, currency, client_name, client_email, status, created_at
+      FROM stk_ingest_triage
+      WHERE status = 'queued'
+      ORDER BY id DESC
+    `).all().map((row) => ({
+      id: row.id,
+      reference: row.reference,
+      txHash: row.tx_hash,
+      paymentMethod: row.payment_method,
+      amount: row.amount,
+      currency: row.currency,
+      clientName: row.client_name,
+      clientEmail: row.client_email,
+      status: row.status,
+      createdAt: row.created_at,
+    }));
   },
 };
 
@@ -748,6 +800,7 @@ module.exports = {
   pendingLeads,
   completedReports,
   payments,
+  stkIngestTriage,
   leads,
   records,
   safetyIncidents,

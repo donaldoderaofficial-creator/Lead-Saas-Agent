@@ -233,7 +233,12 @@ wallet address, estimated exact display amount, and a unique reference.
 #### `POST /api/billing/crypto/confirm`
 Submit the order `reference`, `txHash`, `method`, and `plan` after sending the
 funds. Returns `202 Accepted` with `status: "pending_review"`. This endpoint
-never activates service access.
+never activates service access. Each hash-confirmed request is queued in the
+STK control-room ingest triage queue for manual handling.
+
+#### `GET /api/stk/control-room/ingest-triage`
+Owner/admin-only queue for hash-confirmed payment requests awaiting manual
+triage in the STK control room.
 
 #### `POST /api/billing/crypto/review/:reference`
 Owner/admin only. Submit `{ "approved": true }` after independently checking

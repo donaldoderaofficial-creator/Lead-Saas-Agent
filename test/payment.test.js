@@ -15,7 +15,7 @@ process.env.BITCOIN_WALLET_ADDRESS = 'bc1qwalletbitcoinaddress';
 process.env.ETHEREUM_WALLET_ADDRESS = '0x1234567890abcdef1234567890abcdef12345678';
 
 const { config } = require('../config');
-const { payments, pendingLeads, subscription } = require('../store');
+const { payments, pendingLeads, subscription, stkIngestTriage } = require('../store');
 const { hasActiveSubscription } = require('../subscription-policy');
 
 test('requires an active paid package before service access', () => {
@@ -141,6 +141,33 @@ test('crypto subscription proof does not activate access until admin approval', 
   assert.equal(approvedResponse.body.status, 'confirmed');
   assert.equal(subscription.get().billingType, 'crypto');
   assert.equal(hasActiveSubscription(subscription.get()), true);
+});
+
+test('queues hash-confirmed requests in STK ingest triage', () => {
+  const app = require('../server');
+  const reference = 'wallet-triage-test';
+  pendingLeads.set(reference, { name: 'Queue User', email: 'queue@example.com', paymentMethod: 'bitcoin' });
+
+  const confirmRoute = app._router.stack.find((layer) => layer.route?.path === '/api/payments/wallet/confirm');
+  const confirm = confirmRoute.route.stack.at(-1).handle;
+  const response = { statusCode: 200, body: null, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
+  confirm({ body: { reference, txHash: '0xqueueproof', method: 'bitcoin', amount: 0.001 } }, response);
+
+  assert.equal(response.statusCode, 202);
+  const queued = stkIngestTriage.listQueued().find((item) => item.reference === reference);
+  assert.equal(queued?.txHash, '0xqueueproof');
+  assert.equal(queued?.paymentMethod, 'bitcoin');
+});
+
+test('exposes STK control-room ingest triage queue', () => {
+  const app = require('../server');
+  const route = app._router.stack.find((layer) => layer.route?.path === '/api/stk/control-room/ingest-triage');
+  const handler = route.route.stack.at(-1).handle;
+  const response = { body: null, json(body) { this.body = body; return this; } };
+
+  handler({}, response);
+
+  assert.equal(Array.isArray(response.body.queue), true);
 });
 
 test('allows repeated ebook report writes without finalized statement errors', () => {

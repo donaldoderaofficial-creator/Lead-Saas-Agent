@@ -33,7 +33,7 @@ const { client, checkoutNodeJssdk, verifyWebhookSignature } = require('./paypal-
 const { initiateSTKPush, normalizePhoneNumber } = require('./mpesa-client');
 const { processLead } = require('./lead-pipeline');
 const { trainFromLeads, learningStatus } = require('./adaptive-learning');
-const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, users, subscription, emailThreads, checkDatabase, businessMetrics, createSessionStore } = require('./store');
+const { pendingLeads, completedReports, payments, stkIngestTriage, leads, records, safetyIncidents, users, subscription, emailThreads, checkDatabase, businessMetrics, createSessionStore } = require('./store');
 const { hasActiveSubscription } = require('./subscription-policy');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateEmailOtp, hashEmailOtp } = require('./auth');
 const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = require('./explorium-client');
@@ -447,6 +447,15 @@ app.post('/api/billing/crypto/confirm', (req, res) => {
       amountCrypto: order.amountCrypto,
       referralSource: order.referralSource || null,
     },
+  });
+  stkIngestTriage.enqueue({
+    reference,
+    txHash,
+    paymentMethod: order.paymentMethod,
+    amount: submittedAmount,
+    currency: config.wallets[walletType].currency,
+    clientName: order.name || null,
+    clientEmail: order.email || null,
   });
   res.status(202).json({ status: 'pending_review', reference, message: 'Payment proof received. Service access will be enabled after payment verification.' });
 });
@@ -911,7 +920,20 @@ app.post('/api/payments/wallet/confirm', async (req, res) => {
     status: 'pending_review',
     raw: { txHash, method, amount: Number(amount) || Number(PRICING.usd.starter.price) },
   });
+  stkIngestTriage.enqueue({
+    reference,
+    txHash,
+    paymentMethod: method,
+    amount: Number(amount) || Number(PRICING.usd.starter.price),
+    currency: config.wallets[method].currency,
+    clientName: lead.name || null,
+    clientEmail: lead.email || null,
+  });
   res.status(202).json({ status: 'pending_review', method, reference, txHash });
+});
+
+app.get('/api/stk/control-room/ingest-triage', requireAuth, requireAdmin, (req, res) => {
+  res.json({ queue: stkIngestTriage.listQueued() });
 });
 
 // ---- Step 2: fetch the report once payment has been confirmed ----
