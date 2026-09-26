@@ -257,7 +257,12 @@
     confirmButton.addEventListener('click', async () => {
       if (!checkout) return;
       if (checkout.pendingOffline) {
-        setStatus('Copy your reference and email your transaction hash to support for manual verification.', false);
+        const txHash = txHashInput.value.trim();
+        if (!txHash) {
+          setStatus('Paste your transaction hash so you can share it with your reference for manual verification.', true);
+          return;
+        }
+        setStatus(`Manual verification details: Reference ${checkout.reference}, TxHash ${txHash}. Email both to support for approval.`, false);
         return;
       }
       confirmButton.disabled = true;
