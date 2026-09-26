@@ -62,7 +62,7 @@ function formatCryptoAmountFromUsd(amountUsd, method) {
 
 function buildPackageCryptoQuotes({
   pricingUsd = DEFAULT_PRICING_USD,
-  customMinUsd = Math.max(Number(process.env.CUSTOM_PACKAGE_MIN_USD || DEFAULT_CUSTOM_PACKAGE_MIN_USD), DEFAULT_CUSTOM_PACKAGE_MIN_USD),
+  customMinUsd = DEFAULT_CUSTOM_PACKAGE_MIN_USD,
 } = {}) {
   const starterUsd = toPositiveNumber(pricingUsd?.starter?.price);
   const growthUsd = toPositiveNumber(pricingUsd?.growth?.price);

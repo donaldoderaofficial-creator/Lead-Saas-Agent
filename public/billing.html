@@ -214,7 +214,7 @@
             return;
           }
           if (!response.ok) {
-            status('Payment service is temporarily unavailable. Falling back to the latest live quote.', true);
+            status('Payment service is temporarily unavailable. Falling back to the latest live quote.');
           }
         }
         const fallbackAmount = liveQuotes?.[plan]?.[method]?.amount;
