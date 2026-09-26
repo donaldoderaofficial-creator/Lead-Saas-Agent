@@ -722,6 +722,7 @@ app.post('/api/lead', requireActiveSubscription, async (req, res) => {
       }
       return res.json({
         status: 'rendered',
+        processingState: 'completed',
         method: 'included-with-subscription',
         reference: leadRef,
         report,
@@ -754,7 +755,13 @@ app.post('/api/lead', requireActiveSubscription, async (req, res) => {
       pendingLeads.set(leadRef, { name, email }); // webhook may only have leadRef
 
       const approveUrl = order.result.links?.find((l) => l.rel === 'approve')?.href;
-      return res.json({ status: 'created', method: 'paypal', orderId: order.result.id, approveUrl });
+      return res.json({
+        status: 'created',
+        processingState: 'awaiting_payment_approval',
+        method: 'paypal',
+        orderId: order.result.id,
+        approveUrl,
+      });
     }
 
     if (method === 'mpesa') {
@@ -774,6 +781,7 @@ app.post('/api/lead', requireActiveSubscription, async (req, res) => {
       pendingLeads.set(stk.CheckoutRequestID, { name, email, phone: normalizedPhone });
       return res.json({
         status: 'pending',
+        processingState: 'awaiting_payment_confirmation',
         method: 'mpesa',
         checkoutRequestId: stk.CheckoutRequestID,
         customerMessage: stk.CustomerMessage,
@@ -790,6 +798,7 @@ app.post('/api/lead', requireActiveSubscription, async (req, res) => {
       pendingLeads.set(leadRef, { name, email, phone, paymentMethod: method });
       return res.json({
         status: 'pending',
+        processingState: 'awaiting_payment_confirmation',
         method,
         reference: leadRef,
         walletAddress,

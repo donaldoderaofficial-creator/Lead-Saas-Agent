@@ -287,6 +287,7 @@ lead immediately (no per-lead checkout required).
 ```json
 {
   "status": "rendered",
+  "processingState": "completed",
   "method": "included-with-subscription",
   "reference": "lead_xyz789",
   "report": { "result": { "email": "john@example.com" } }
@@ -297,6 +298,7 @@ or (PayPal checkout):
 ```json
 {
   "status": "created",
+  "processingState": "awaiting_payment_approval",
   "method": "paypal",
   "orderId": "3GD50328LB959043W",
   "approveUrl": "https://www.sandbox.paypal.com/..."
@@ -307,6 +309,7 @@ or (M-Pesa STK Push):
 ```json
 {
   "status": "pending",
+  "processingState": "awaiting_payment_confirmation",
   "method": "mpesa",
   "checkoutRequestId": "ws_CO_12345678",
   "customerMessage": "Enter your M-Pesa PIN on your phone"

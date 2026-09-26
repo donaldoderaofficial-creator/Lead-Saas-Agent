@@ -117,6 +117,7 @@ test('renders a completed lead report immediately for paid clients without per-l
 
     assert.equal(response.statusCode, 200);
     assert.equal(response.body.status, 'rendered');
+    assert.equal(response.body.processingState, 'completed');
     assert.equal(response.body.method, 'included-with-subscription');
     assert.ok(response.body.reference);
     assert.equal(response.body.report.result.email, 'paid@example.com');
