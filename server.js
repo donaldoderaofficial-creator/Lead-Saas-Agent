@@ -44,6 +44,9 @@ const { buildCustomReply, buildMiaReply, improveReplyWithAI, verifyWebhookSignat
 
 const app = express();
 const DISPATCH_PRO = config.company;
+const PUBLIC_HTML_CACHE_CONTROL = 'public, max-age=0, must-revalidate';
+const PUBLIC_STATIC_CACHE_CONTROL = 'public, max-age=300, stale-while-revalidate=86400';
+const PUBLIC_CONFIG_CACHE_CONTROL = 'public, max-age=300, stale-while-revalidate=900';
 
 function matchesAllowedOrigin(origin, allowedOrigins) {
   if (!origin) return true;
@@ -92,8 +95,22 @@ app.set('trust proxy', config.isProd ? 1 : false);
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 
+function sendPublicHtml(res, fileName) {
+  res.setHeader('Cache-Control', PUBLIC_HTML_CACHE_CONTROL);
+  res.sendFile(path.join(__dirname, 'public', fileName));
+}
+
+function setPublicStaticCacheHeaders(res, filePath) {
+  if (path.extname(filePath).toLowerCase() === '.html') {
+    res.setHeader('Cache-Control', PUBLIC_HTML_CACHE_CONTROL);
+    return;
+  }
+
+  res.setHeader('Cache-Control', PUBLIC_STATIC_CACHE_CONTROL);
+}
+
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  sendPublicHtml(res, 'index.html');
 });
 
 app.use((req, res, next) => {
@@ -104,10 +121,12 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: setPublicStaticCacheHeaders,
+}));
 
 app.get('/init', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  sendPublicHtml(res, 'index.html');
 });
 
 app.use((req, res, next) => {
@@ -130,6 +149,36 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
+});
+
+app.post('/api/assistant/mia', (req, res) => {
+  const { question } = req.body || {};
+  if (typeof question !== 'string' || question.length > 2000) {
+    return res.status(400).json({ error: 'question must be a string of 2,000 characters or fewer' });
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ assistant: 'Mia', answer: buildMiaReply(question) });
+});
+
+// ---- Global payment capabilities ----
+app.get('/api/payments/options', (req, res) => {
+  res.setHeader('Cache-Control', PUBLIC_CONFIG_CACHE_CONTROL);
+  res.json(buildPaymentOptions({
+    wallets: config.wallets,
+    paypalEnabled: config.payment.paypal.enabled,
+    mpesaEnabled: config.payment.mpesa.enabled,
+  }));
+});
+
+app.get('/api/config', (req, res) => {
+  res.setHeader('Cache-Control', PUBLIC_CONFIG_CACHE_CONTROL);
+  res.json(buildPublicConfig({
+    wallets: config.wallets,
+    pricingUsd: PRICING.usd,
+    ebook: config.ebook,
+    paypalEnabled: config.payment.paypal.enabled,
+    mpesaEnabled: config.payment.mpesa.enabled,
+  }));
 });
 
 // ---- Session Configuration ----
@@ -328,14 +377,6 @@ app.get('/api/email/status', (req, res) => {
   });
 });
 
-app.post('/api/assistant/mia', (req, res) => {
-  const { question } = req.body || {};
-  if (typeof question !== 'string' || question.length > 2000) {
-    return res.status(400).json({ error: 'question must be a string of 2,000 characters or fewer' });
-  }
-  res.json({ assistant: 'Mia', answer: buildMiaReply(question) });
-});
-
 app.post('/api/email/inbound', asyncHandler(async (req, res) => {
   const signature = req.get('x-email-signature');
   const rawBody = JSON.stringify(req.body || {});
@@ -374,24 +415,7 @@ app.post('/api/email/inbound', asyncHandler(async (req, res) => {
   res.status(202).json({ status: delivery.sent ? 'sent' : 'draft', id, quote: draft.quote, delivery, ownerNotification });
 }));
 
-// ---- Global payment capabilities ----
-app.get('/api/payments/options', (req, res) => {
-  res.json(buildPaymentOptions({
-    wallets: config.wallets,
-    paypalEnabled: config.payment.paypal.enabled,
-    mpesaEnabled: config.payment.mpesa.enabled,
-  }));
-});
 
-app.get('/api/config', (req, res) => {
-  res.json(buildPublicConfig({
-    wallets: config.wallets,
-    pricingUsd: PRICING.usd,
-    ebook: config.ebook,
-    paypalEnabled: config.payment.paypal.enabled,
-    mpesaEnabled: config.payment.mpesa.enabled,
-  }));
-});
 
 app.get('/api/billing/status', (req, res) => {
   res.json(subscription.get());
@@ -536,7 +560,7 @@ const ebookReadLimiter = new RateLimiter({
 });
 
 app.get('/ebook/preview', ebookReadLimiter.middleware(), (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'ebook-preview.html'));
+  sendPublicHtml(res, 'ebook-preview.html');
 });
 
 app.get('/ebook/success', ebookReadLimiter.middleware(), (req, res) => {
@@ -546,7 +570,7 @@ app.get('/ebook/success', ebookReadLimiter.middleware(), (req, res) => {
     return res.status(404).send('This ebook purchase is not recognized or has not been confirmed yet.');
   }
 
-  res.sendFile(path.join(__dirname, 'public', 'ebook-success.html'));
+  sendPublicHtml(res, 'ebook-success.html');
 });
 
 app.get('/ebook/access', ebookReadLimiter.middleware(), (req, res) => {
@@ -556,7 +580,7 @@ app.get('/ebook/access', ebookReadLimiter.middleware(), (req, res) => {
     return res.status(401).send('This page is only available to confirmed ebook buyers.');
   }
 
-  res.sendFile(path.join(__dirname, 'public', 'ebook-reader.html'));
+  sendPublicHtml(res, 'ebook-reader.html');
 });
 
 app.get('/ebook/read', ebookReadLimiter.middleware(), (req, res) => {
@@ -566,7 +590,7 @@ app.get('/ebook/read', ebookReadLimiter.middleware(), (req, res) => {
     return res.status(401).send('This page is only available to confirmed ebook buyers.');
   }
 
-  res.sendFile(path.join(__dirname, 'public', 'ebook-reader.html'));
+  sendPublicHtml(res, 'ebook-reader.html');
 });
 
 function buildEbookPdf() {
