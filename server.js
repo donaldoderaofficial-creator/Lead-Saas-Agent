@@ -34,7 +34,8 @@ const mpesaClient = require('./mpesa-client');
 const { initiateSTKPush, normalizePhoneNumber } = mpesaClient;
 const { processLead } = require('./lead-pipeline');
 const { trainFromLeads, learningStatus } = require('./adaptive-learning');
-const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, users, subscription, emailThreads, checkDatabase, businessMetrics, createSessionStore } = require('./store');
+const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, workItems, users, subscription, emailThreads, checkDatabase, businessMetrics, createSessionStore } = require('./store');
+const { DEPARTMENTS, PRIORITY_SLA_HOURS, transitionsFor, isBillable, validateItem, buildOverview } = require('./operations');
 const { hasActiveSubscription, paidThrough } = require('./subscription-policy');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateEmailOtp, hashEmailOtp } = require('./auth');
 const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = require('./explorium-client');
@@ -1254,6 +1255,65 @@ app.patch('/api/records/:id/status', requireAuth, requireAdmin, (req, res) => {
     return res.status(result.reason === 'not-found' ? 404 : 409).json({ error: result.reason });
   }
   res.json(result.record);
+});
+
+// ---- Department operations: HR, Marketing & Sales, Manufacturing, IT, Service ----
+function presentWorkItem(item) {
+  return {
+    ...item,
+    billable: isBillable(item.department, item.type),
+    nextStatuses: transitionsFor(item.department)[item.status] || [],
+  };
+}
+
+app.get('/api/operations/departments', requireAuth, requireAdmin, (req, res) => {
+  res.json({ departments: DEPARTMENTS, priorities: PRIORITY_SLA_HOURS });
+});
+
+app.get('/api/operations/overview', requireAuth, requireAdmin, (req, res) => {
+  const overview = buildOverview(workItems.list(), leads.listAll());
+  res.json({ ...overview, overdueItems: overview.overdueItems.map(presentWorkItem) });
+});
+
+app.post('/api/operations/items', requireAuth, requireAdmin, (req, res) => {
+  let item;
+  try {
+    item = validateItem(req.body || {});
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+  res.status(201).json(presentWorkItem(workItems.create({ id: crypto.randomUUID(), ...item }, req.session.userId)));
+});
+
+app.get('/api/operations/items', requireAuth, requireAdmin, (req, res) => {
+  const { department, status } = req.query;
+  if (department && !DEPARTMENTS[department]) {
+    return res.status(400).json({ error: `department must be one of ${Object.keys(DEPARTMENTS).join(', ')}` });
+  }
+  if (status && typeof status !== 'string') return res.status(400).json({ error: 'status must be a string' });
+  res.json({ items: workItems.list({ department, status }).map(presentWorkItem) });
+});
+
+app.get('/api/operations/items/:id/audit', requireAuth, requireAdmin, (req, res) => {
+  if (!workItems.get(req.params.id)) return res.status(404).json({ error: 'Item not found' });
+  res.json({ audit: workItems.listAudit(req.params.id) });
+});
+
+app.patch('/api/operations/items/:id/status', requireAuth, requireAdmin, (req, res) => {
+  const { status, paymentReference } = req.body || {};
+  if (!status || typeof status !== 'string') return res.status(400).json({ error: 'status is required' });
+  if (paymentReference !== undefined && (typeof paymentReference !== 'string' || paymentReference.length > 200)) {
+    return res.status(400).json({ error: 'paymentReference must be 200 characters or fewer' });
+  }
+  const result = workItems.transition(req.params.id, status, req.session.userId, { paymentReference });
+  if (!result.ok) {
+    if (result.reason === 'not-found') return res.status(404).json({ error: 'Item not found' });
+    if (result.reason === 'payment-required') {
+      return res.status(HTTP_STATUS.PAYMENT_REQUIRED).json({ error: 'Billable work cannot start until full payment is confirmed.', code: 'payment_required' });
+    }
+    return res.status(409).json({ error: result.reason, status: result.status, allowed: result.allowed });
+  }
+  res.json(presentWorkItem(result.item));
 });
 
 app.post('/api/ebook/review/:reference', requireAuth, requireAdmin, (req, res) => {

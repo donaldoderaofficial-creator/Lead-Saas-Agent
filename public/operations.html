@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dispatch Pro — Operations</title>
+<style>
+:root{--bg:#080b12;--panel:#111621;--panel2:#171d2a;--border:#252d3d;--text:#eef2f8;--muted:#8f9bad;--accent:#718cff;--bad:#ff6b6b;--ok:#3ecf8e}
+*{box-sizing:border-box}body{margin:0;font:14px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--text)}
+header{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid var(--border)}
+header a{color:var(--accent)}main{padding:24px;max-width:1200px;margin:auto}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer}
+.card.active{border-color:var(--accent)}.card h3{margin:0 0 6px;font-size:15px}.muted{color:var(--muted)}.bad{color:var(--bad)}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:24px}
+input,select,textarea,button{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px;font:inherit}
+button{cursor:pointer;background:var(--accent);border:none;color:#fff}button.secondary{background:var(--panel2);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}th{color:var(--muted);font-weight:500}
+td button{margin:2px;padding:4px 8px;font-size:12px}#msg{min-height:20px;margin-bottom:12px}h2{font-size:16px}
+</style>
+</head>
+<body>
+<header><strong>Dispatch Pro — Operations</strong><a href="/dashboard-v2.html">Back to dashboard</a></header>
+<main>
+  <div id="msg"></div>
+  <div class="cards" id="cards"></div>
+  <h2 id="followupsTitle"></h2>
+  <table id="followups" hidden><thead><tr><th>Lead</th><th>Company</th><th>Score</th><th>Follow-up</th><th>Created</th></tr></thead><tbody></tbody></table>
+  <h2>New work item</h2>
+  <form id="create">
+    <select name="department" id="department" required></select>
+    <select name="type" id="type" required></select>
+    <input name="title" placeholder="Title" maxlength="200" required>
+    <input name="owner" placeholder="Owner" maxlength="200">
+    <input name="customer" placeholder="Customer" maxlength="200">
+    <select name="priority" id="priority"></select>
+    <input name="dueAt" type="datetime-local" title="Due (defaults to priority SLA)">
+    <input name="paymentReference" placeholder="Payment reference (billable work)" maxlength="200">
+    <textarea name="description" placeholder="Description" maxlength="2000"></textarea>
+    <button type="submit">Create</button>
+  </form>
+  <h2 id="listTitle">Work items</h2>
+  <table id="items"><thead><tr><th>Title</th><th>Type</th><th>Priority</th><th>Status</th><th>Due</th><th>Owner</th><th>Actions</th></tr></thead><tbody></tbody></table>
+</main>
+<script>
+let meta = null;
+let selected = 'hr';
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, credentials: 'include', headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) } });
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 401) throw Error('Please log in on the dashboard first.');
+  if (!r.ok) throw Error(d.error || 'Request failed');
+  return d;
+}
+
+function el(tag, text, cls) {
+  const node = document.createElement(tag);
+  if (text !== undefined && text !== null) node.textContent = text;
+  if (cls) node.className = cls;
+  return node;
+}
+
+function show(text, bad) {
+  const msg = document.getElementById('msg');
+  msg.textContent = text || '';
+  msg.className = bad ? 'bad' : 'muted';
+}
+
+function fmt(iso) { return iso ? new Date(iso).toLocaleString() : ''; }
+
+function fillSelect(select, values, labels = {}) {
+  select.replaceChildren(...values.map((v) => { const o = el('option', labels[v] || v.replace(/_/g, ' ')); o.value = v; return o; }));
+}
+
+async function loadOverview() {
+  const overview = await api('/api/operations/overview');
+  const cards = document.getElementById('cards');
+  cards.replaceChildren(...Object.entries(overview.departments).map(([key, d]) => {
+    const card = el('div', null, `card${key === selected ? ' active' : ''}`);
+    card.append(el('h3', d.label), el('div', `${d.open} open · ${d.total} total`, 'muted'));
+    if (d.overdue) card.append(el('div', `${d.overdue} overdue`, 'bad'));
+    if (d.overdueFollowups) card.append(el('div', `${d.overdueFollowups} lead follow-ups overdue`, 'bad'));
+    card.onclick = () => { selected = key; document.getElementById('department').value = key; syncTypes(); refresh(); };
+    return card;
+  }));
+  const table = document.getElementById('followups');
+  const rows = overview.overdueFollowups;
+  document.getElementById('followupsTitle').textContent = rows.length ? `Overdue sales follow-ups (${rows.length})` : '';
+  table.hidden = !rows.length;
+  table.tBodies[0].replaceChildren(...rows.map((l) => {
+    const tr = el('tr');
+    tr.append(el('td', l.name), el('td', l.company), el('td', l.score), el('td', l.followupStatus), el('td', fmt(l.createdAt)));
+    return tr;
+  }));
+}
+
+async function loadItems() {
+  const { items } = await api(`/api/operations/items?department=${encodeURIComponent(selected)}`);
+  document.getElementById('listTitle').textContent = `${meta.departments[selected].label} work items`;
+  const now = Date.now();
+  document.getElementById('items').tBodies[0].replaceChildren(...items.map((item) => {
+    const tr = el('tr');
+    const overdue = !['done', 'cancelled'].includes(item.status) && Date.parse(item.dueAt) < now;
+    const title = el('td', item.title);
+    if (item.billable) title.append(el('div', item.paymentReference ? `Paid ref: ${item.paymentReference}` : 'Billable — payment required to start', 'muted'));
+    const actions = el('td');
+    for (const next of item.nextStatuses) {
+      const b = el('button', next.replace(/_/g, ' '), next === 'cancelled' ? 'secondary' : '');
+      b.onclick = () => move(item, next);
+      actions.append(b);
+    }
+    tr.append(title, el('td', item.type.replace(/_/g, ' ')), el('td', item.priority), el('td', item.status.replace(/_/g, ' ')), el('td', fmt(item.dueAt), overdue ? 'bad' : ''), el('td', item.owner), actions);
+    return tr;
+  }));
+}
+
+async function move(item, status) {
+  const body = { status };
+  if (item.billable && item.status === 'open' && status === 'in_progress' && !item.paymentReference) {
+    const ref = prompt('Confirmed payment reference for this job:');
+    if (!ref) return;
+    body.paymentReference = ref;
+  }
+  try {
+    await api(`/api/operations/items/${encodeURIComponent(item.id)}/status`, { method: 'PATCH', body: JSON.stringify(body) });
+    show(`Moved "${item.title}" to ${status.replace(/_/g, ' ')}.`);
+    await refresh();
+  } catch (e) { show(e.message, true); }
+}
+
+function syncTypes() {
+  fillSelect(document.getElementById('type'), meta.departments[document.getElementById('department').value].types);
+}
+
+async function refresh() {
+  try { await loadOverview(); await loadItems(); } catch (e) { show(e.message, true); }
+}
+
+document.getElementById('create').onsubmit = async (event) => {
+  event.preventDefault();
+  const data = Object.fromEntries(new FormData(event.target));
+  if (data.dueAt) data.dueAt = new Date(data.dueAt).toISOString();
+  try {
+    const item = await api('/api/operations/items', { method: 'POST', body: JSON.stringify(data) });
+    selected = item.department;
+    event.target.reset();
+    document.getElementById('department').value = selected;
+    syncTypes();
+    show(`Created "${item.title}".`);
+    await refresh();
+  } catch (e) { show(e.message, true); }
+};
+
+(async () => {
+  try {
+    meta = await api('/api/operations/departments');
+    const labels = Object.fromEntries(Object.entries(meta.departments).map(([k, d]) => [k, d.label]));
+    fillSelect(document.getElementById('department'), Object.keys(meta.departments), labels);
+    fillSelect(document.getElementById('priority'), Object.keys(meta.priorities));
+    document.getElementById('priority').value = 'normal';
+    document.getElementById('department').onchange = syncTypes;
+    syncTypes();
+    await refresh();
+  } catch (e) { show(e.message, true); }
+})();
+</script>
+</body>
+</html>
