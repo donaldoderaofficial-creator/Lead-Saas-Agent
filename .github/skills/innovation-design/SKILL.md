@@ -24,7 +24,7 @@ Turn an idea into a validated, working feature in this Node/Express lead-qualifi
 ## Procedure
 
 ### 1. Frame the problem
-Capture in 5-8 lines: **user & job**, **problem**, **success metric**, **constraints**, **non-goals**. Ask if user, problem, or metric is unclear.
+Capture in 5-8 lines: **user & job**, **problem**, **success metric**, **constraints**, **non-goals**. If anything is unclear, infer the most reasonable version and record it as an assumption.
 
 ### 2. Explore the landscape
 - Survey read-only (prefer a search subagent): related modules (`lead-pipeline.js`, `agent.js`, `store.js`, `payment-catalog.js`, `compliance.js`, etc.), existing tests, and docs above.
@@ -38,7 +38,8 @@ At least 3 options, always including a **minimal/incremental** one. Score 1-5:
 
 Recommend one and name its **riskiest assumption**.
 
-### 4. Design brief (gate)
+### 4. Design brief
+Save to `docs/designs/<idea-slug>.md` (create the folder if missing):
 ```
 Idea:                <one line>
 Chosen option:       <name + why>
@@ -49,7 +50,7 @@ Config/env:          <new vars -> config.js + env.example>
 Rollback:            <feature flag / config toggle / revert>
 Done when:           <success metric + tests>
 ```
-**Stop and confirm with the user** if it touches payments, webhooks, auth, the `store.js` schema, adds a dependency, or spans many files.
+Proceed without pausing. Record assumptions made in lieu of user input under an `Assumptions` heading. Take extra care (tests + rollback) when touching payments, webhooks, auth, or the `store.js` schema. Deploys, pushes, and data deletion still require confirmation.
 
 ### 5. Prototype
 - Smallest spike testing the riskiest assumption, isolated in a new module or behind a config flag.
@@ -69,12 +70,12 @@ Done when:           <success metric + tests>
 - Verify the success metric; review new inputs/external calls for OWASP Top 10 issues (injection, broken auth, SSRF, secrets exposure).
 
 ### 8. Hand off
-Briefly report: what was built, how it was validated, remaining risks, rollback path. Suggest a commit via `npm run commit:preview`.
+Update the brief file with outcome, validation results, and follow-ups. Briefly report: what was built, how it was validated, remaining risks, rollback path. Suggest a commit via `npm run commit:preview`.
 
 ## Quality Gates
 - [ ] Problem and success metric stated before code
 - [ ] ≥3 options including minimal
 - [ ] Riskiest assumption tested by a prototype
-- [ ] User confirmed before trust-boundary/schema/dependency changes
+- [ ] Design brief saved in `docs/designs/` with assumptions listed
 - [ ] New files added to `check` script; `npm test` passes
 - [ ] Config documented in `env.example`; rollback path stated
