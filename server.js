@@ -30,11 +30,12 @@ const { RateLimiter } = require('./rate-limiter');
 
 // Core modules
 const { client, checkoutNodeJssdk, verifyWebhookSignature } = require('./paypal-client');
-const { initiateSTKPush, normalizePhoneNumber } = require('./mpesa-client');
+const mpesaClient = require('./mpesa-client');
+const { initiateSTKPush, normalizePhoneNumber } = mpesaClient;
 const { processLead } = require('./lead-pipeline');
 const { trainFromLeads, learningStatus } = require('./adaptive-learning');
 const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, users, subscription, emailThreads, checkDatabase, businessMetrics, createSessionStore } = require('./store');
-const { hasActiveSubscription } = require('./subscription-policy');
+const { hasActiveSubscription, paidThrough } = require('./subscription-policy');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateEmailOtp, hashEmailOtp } = require('./auth');
 const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = require('./explorium-client');
 const { parseDataset, validateObservation } = require('./geospatial-safety');
@@ -668,10 +669,21 @@ app.get('/metrics', requireAuth, (req, res) => {
   });
 });
 
+function requiredLeadAmount(currency) {
+  if (currency === 'KES') return Number(PRICING.kes.starter.price);
+  if (currency === 'USD') return Number(PRICING.usd.starter.price);
+  return Infinity;
+}
+
 async function finalizeLead(ref, payment) {
   const lead = pendingLeads.get(ref);
   if (!lead || completedReports.has(ref)) return; // unknown ref, or already processed
-  if (payment) payments.record({ ...payment, reference: ref });
+  if (!(Number(payment.amount) >= requiredLeadAmount(payment.currency))) {
+    payments.record({ ...payment, reference: ref, status: 'underpaid' });
+    logger.warn('Report withheld: payment below full price', { ref, amount: payment.amount, currency: payment.currency });
+    return;
+  }
+  payments.record({ ...payment, reference: ref });
   const outcome = await processLead(lead);
   completedReports.set(ref, {
     ...outcome,
@@ -831,19 +843,48 @@ app.post('/payments/paypal/webhook', async (req, res) => {
       ? 'growth'
       : planId === process.env.PAYPAL_PLAN_STARTER_MONTHLY ? 'starter' : null;
     if (plan) {
+      const subscriptionId = event.resource.id;
+      const lastPayment = event.resource.billing_info?.last_payment;
+      const paid = Number(lastPayment?.amount?.value) > 0
+        || payments.findByReference(subscriptionId, 'paypal-subscription')?.status === 'confirmed';
       subscription.set({
         plan,
         billingType: 'monthly',
-        paypalSubscriptionId: event.resource.id,
-        status: 'active',
-        currentPeriodEnd: event.resource.billing_info?.next_billing_time || null,
+        paypalSubscriptionId: subscriptionId,
+        status: paid ? 'active' : 'pending_payment',
+        currentPeriodEnd: paid
+          ? (event.resource.billing_info?.next_billing_time || paidThrough(null, Date.parse(lastPayment?.time) || Date.now()))
+          : null,
       });
     }
   }
-  if (['BILLING.SUBSCRIPTION.CANCELLED', 'BILLING.SUBSCRIPTION.SUSPENDED'].includes(event.event_type)) {
+  if (event.event_type === 'PAYMENT.SALE.COMPLETED' && event.resource?.billing_agreement_id) {
+    const subscriptionId = event.resource.billing_agreement_id;
+    payments.record({
+      provider: 'paypal-subscription',
+      transactionId: event.resource.id || subscriptionId,
+      reference: subscriptionId,
+      amount: event.resource.amount?.total || 0,
+      currency: event.resource.amount?.currency || 'USD',
+      raw: event,
+    });
+    const current = subscription.get();
+    if (current.paypalSubscriptionId === subscriptionId) {
+      // Anchor to the sale time so duplicate or out-of-order events never add unpaid months.
+      const paidAt = Date.parse(event.resource.create_time) || Date.now();
+      subscription.set({ ...current, status: 'active', currentPeriodEnd: paidThrough(current.currentPeriodEnd, paidAt) });
+    }
+  }
+  const endedStatus = {
+    'BILLING.SUBSCRIPTION.CANCELLED': 'cancelled',
+    'BILLING.SUBSCRIPTION.SUSPENDED': 'suspended',
+    'BILLING.SUBSCRIPTION.EXPIRED': 'expired',
+    'BILLING.SUBSCRIPTION.PAYMENT.FAILED': 'past_due',
+  }[event.event_type];
+  if (endedStatus) {
     const current = subscription.get();
     if (current.paypalSubscriptionId === event.resource?.id) {
-      subscription.set({ ...current, status: event.event_type.endsWith('SUSPENDED') ? 'suspended' : 'cancelled' });
+      subscription.set({ ...current, status: endedStatus });
     }
   }
   res.json({ received: true });
@@ -853,23 +894,40 @@ app.post('/payments/paypal/webhook', async (req, res) => {
 // Set MPESA_CALLBACK_URL to a public URL that routes here (e.g. via ngrok in dev).
 app.post('/payments/mpesa/callback', async (req, res) => {
   const stkCallback = req.body?.Body?.stkCallback;
-  if (stkCallback?.ResultCode === 0) {
-    const metadata = stkCallback.CallbackMetadata?.Item || [];
-    const value = (name) => metadata.find((item) => item.Name === name)?.Value;
-    await finalizeLead(stkCallback.CheckoutRequestID, {
-      provider: 'mpesa-stk',
-      transactionId: value('MpesaReceiptNumber') || stkCallback.CheckoutRequestID,
-      amount: value('Amount') || 0,
-      currency: 'KES',
-      raw: req.body,
-    });
+  if (stkCallback?.ResultCode === 0 && pendingLeads.has(stkCallback.CheckoutRequestID)) {
+    try {
+      const status = await mpesaClient.querySTKPush(stkCallback.CheckoutRequestID);
+      if (String(status.ResultCode) === '0') {
+        const metadata = stkCallback.CallbackMetadata?.Item || [];
+        const value = (name) => metadata.find((item) => item.Name === name)?.Value;
+        await finalizeLead(stkCallback.CheckoutRequestID, {
+          provider: 'mpesa-stk',
+          transactionId: value('MpesaReceiptNumber') || stkCallback.CheckoutRequestID,
+          amount: value('Amount') || 0,
+          currency: 'KES',
+          raw: req.body,
+        });
+      } else {
+        logger.warn('M-Pesa callback not confirmed by STK query', { checkoutRequestId: stkCallback.CheckoutRequestID, resultCode: status.ResultCode });
+      }
+    } catch (err) {
+      logger.warn('M-Pesa STK verification failed', { checkoutRequestId: stkCallback.CheckoutRequestID, error: err.message });
+    }
   }
   // Safaricom just needs a 200 acknowledging receipt — no payload required.
   res.json({ ResultCode: 0, ResultDesc: 'Received' });
 });
 
 // ---- M-Pesa: C2B merchant payment confirmation ----
+// Reject before the customer is charged when the reference is unknown or the amount is short.
 app.post('/payments/mpesa/c2b/validation', (req, res) => {
+  const { BillRefNumber, TransAmount } = req.body || {};
+  if (!BillRefNumber || !pendingLeads.has(BillRefNumber)) {
+    return res.json({ ResultCode: 'C2B00012', ResultDesc: 'Rejected' });
+  }
+  if (!(Number(TransAmount) >= requiredLeadAmount('KES'))) {
+    return res.json({ ResultCode: 'C2B00013', ResultDesc: 'Rejected' });
+  }
   res.json({ ResultCode: 0, ResultDesc: 'Accepted' });
 });
 
@@ -1261,13 +1319,15 @@ app.post('/api/billing/crypto/review/:reference', requireAuth, requireAdmin, (re
   payments.updateStatus(payment.id, approved ? 'confirmed' : 'rejected');
   if (!approved) return res.json({ status: 'rejected', reference: req.params.reference });
   const details = payment.raw || {};
+  const current = subscription.get();
+  const renewFrom = hasActiveSubscription(current) ? Date.parse(current.currentPeriodEnd) : Date.now();
   subscription.set({
     plan: details.plan || 'starter',
     billingType: 'crypto',
     cryptoPaymentReference: req.params.reference,
     cryptoTransactionId: details.txHash,
     status: 'active',
-    currentPeriodEnd: null,
+    currentPeriodEnd: paidThrough(null, renewFrom),
   });
   pendingLeads.delete(req.params.reference);
   res.json({ status: 'confirmed', reference: req.params.reference, plan: details.plan || 'starter' });

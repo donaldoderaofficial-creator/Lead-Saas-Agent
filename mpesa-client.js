@@ -119,4 +119,32 @@ async function initiateSTKPush({ phone, amount, accountReference, description })
   return data; // includes CheckoutRequestID
 }
 
-module.exports = { initiateSTKPush, normalizePhoneNumber };
+// Ask Safaricom directly whether an STK push was paid; callbacks are unauthenticated.
+async function querySTKPush(checkoutRequestId) {
+  const shortcode = process.env.MPESA_SHORT_CODE || process.env.MPESA_SHORTCODE;
+  if (!shortcode) throw new Error('Missing MPESA_SHORT_CODE. Set it in your .env file.');
+  const passkey = requireEnv('MPESA_PASSKEY');
+  const ts = timestamp();
+  const password = Buffer.from(`${shortcode}${passkey}${ts}`).toString('base64');
+  const token = await getAccessToken();
+
+  const res = await fetch(`${baseUrl()}/mpesa/stkpushquery/v1/query`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      BusinessShortCode: shortcode,
+      Password: password,
+      Timestamp: ts,
+      CheckoutRequestID: checkoutRequestId,
+    }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(`STK query failed: ${JSON.stringify(data)}`);
+  return data;
+}
+
+module.exports = { initiateSTKPush, querySTKPush, normalizePhoneNumber };

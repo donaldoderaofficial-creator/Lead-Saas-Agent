@@ -13,15 +13,105 @@ process.env.DB_PATH = dbPath;
 process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-only-session-secret';
 process.env.BITCOIN_WALLET_ADDRESS = 'bc1qwalletbitcoinaddress';
 process.env.ETHEREUM_WALLET_ADDRESS = '0x1234567890abcdef1234567890abcdef12345678';
+process.env.MPESA_SHORT_CODE = process.env.MPESA_SHORT_CODE || '174379';
 
 const { config } = require('../config');
 const { payments, pendingLeads, subscription } = require('../store');
-const { hasActiveSubscription } = require('../subscription-policy');
+const { hasActiveSubscription, paidThrough } = require('../subscription-policy');
+
+function mockResponse() {
+  return { statusCode: 200, body: null, status(code) { this.statusCode = code; return this; }, json(body) { this.body = body; return this; } };
+}
+
+function routeHandler(app, routePath) {
+  return app._router.stack.find((layer) => layer.route?.path === routePath).route.stack.at(-1).handle;
+}
 
 test('requires an active paid package before service access', () => {
+  const future = new Date(Date.now() + 86400000).toISOString();
   assert.equal(hasActiveSubscription({ plan: 'none', status: 'inactive' }), false);
-  assert.equal(hasActiveSubscription({ plan: 'starter', status: 'cancelled' }), false);
-  assert.equal(hasActiveSubscription({ plan: 'starter', status: 'active' }), true);
+  assert.equal(hasActiveSubscription({ plan: 'starter', status: 'cancelled', currentPeriodEnd: future }), false);
+  assert.equal(hasActiveSubscription({ plan: 'starter', status: 'active', currentPeriodEnd: future }), true);
+});
+
+test('never grants service on credit: no trials, approvals, open-ended, or lapsed periods', () => {
+  const future = new Date(Date.now() + 86400000).toISOString();
+  const past = new Date(Date.now() - 1000).toISOString();
+  assert.equal(hasActiveSubscription({ plan: 'starter', status: 'trialing', currentPeriodEnd: future }), false);
+  assert.equal(hasActiveSubscription({ plan: 'starter', status: 'approved', currentPeriodEnd: future }), false);
+  assert.equal(hasActiveSubscription({ plan: 'starter', status: 'pending_payment', currentPeriodEnd: future }), false);
+  assert.equal(hasActiveSubscription({ plan: 'starter', status: 'past_due', currentPeriodEnd: future }), false);
+  assert.equal(hasActiveSubscription({ plan: 'starter', status: 'active', currentPeriodEnd: null }), false);
+  assert.equal(hasActiveSubscription({ plan: 'starter', status: 'active', currentPeriodEnd: past }), false);
+});
+
+test('paid period covers one month per payment and ignores duplicate payment events', () => {
+  const paidAt = Date.parse('2026-01-15T00:00:00Z');
+  const first = paidThrough(null, paidAt);
+  assert.equal(first, '2026-02-15T00:00:00.000Z');
+  assert.equal(paidThrough(first, paidAt), first);
+  assert.equal(paidThrough(first, Date.parse(first)), '2026-03-15T00:00:00.000Z');
+});
+
+test('withholds lead reports when the payment is below the full price', async () => {
+  const app = require('../server');
+  const { completedReports } = require('../store');
+  const reference = 'c2b-underpaid-test';
+  pendingLeads.set(reference, { name: 'Short Payer', email: 'short@example.com' });
+  const confirm = routeHandler(app, '/payments/mpesa/c2b/confirmation');
+
+  await confirm({ body: {
+    BusinessShortCode: config.payment.mpesa.shortCode,
+    TransID: 'UNDERPAY-1',
+    BillRefNumber: reference,
+    TransAmount: Number(config.pricing.kes.starter.price) - 1,
+  } }, mockResponse());
+
+  assert.equal(payments.findByReference(reference, 'mpesa-c2b').status, 'underpaid');
+  assert.equal(completedReports.has(reference), false);
+  assert.equal(pendingLeads.has(reference), true);
+});
+
+test('rejects M-Pesa C2B payments for unknown references or short amounts before charging', () => {
+  const app = require('../server');
+  const validate = routeHandler(app, '/payments/mpesa/c2b/validation');
+  const reference = 'c2b-validation-test';
+  pendingLeads.set(reference, { name: 'Payer', email: 'payer@example.com' });
+  const price = Number(config.pricing.kes.starter.price);
+
+  const unknown = mockResponse();
+  validate({ body: { BillRefNumber: 'nope', TransAmount: price } }, unknown);
+  assert.equal(unknown.body.ResultCode, 'C2B00012');
+
+  const short = mockResponse();
+  validate({ body: { BillRefNumber: reference, TransAmount: price - 1 } }, short);
+  assert.equal(short.body.ResultCode, 'C2B00013');
+
+  const full = mockResponse();
+  validate({ body: { BillRefNumber: reference, TransAmount: price } }, full);
+  assert.equal(full.body.ResultCode, 0);
+});
+
+test('ignores M-Pesa STK callbacks that Safaricom does not confirm', async () => {
+  const app = require('../server');
+  const mpesaClient = require('../mpesa-client');
+  const { completedReports } = require('../store');
+  const reference = 'ws_CO_forged_callback';
+  pendingLeads.set(reference, { name: 'Forger', email: 'forger@example.com' });
+  const original = mpesaClient.querySTKPush;
+  mpesaClient.querySTKPush = async () => ({ ResultCode: '1032', ResultDesc: 'Request cancelled by user' });
+  try {
+    const callback = routeHandler(app, '/payments/mpesa/callback');
+    await callback({ body: { Body: { stkCallback: {
+      ResultCode: 0,
+      CheckoutRequestID: reference,
+      CallbackMetadata: { Item: [{ Name: 'Amount', Value: Number(config.pricing.kes.starter.price) }, { Name: 'MpesaReceiptNumber', Value: 'FORGED1' }] },
+    } } } }, mockResponse());
+  } finally {
+    mpesaClient.querySTKPush = original;
+  }
+
+  assert.equal(completedReports.has(reference), false);
 });
 
 test('records each provider payment once', () => {
@@ -141,6 +231,8 @@ test('crypto subscription proof does not activate access until admin approval', 
   assert.equal(approvedResponse.body.status, 'confirmed');
   assert.equal(subscription.get().billingType, 'crypto');
   assert.equal(hasActiveSubscription(subscription.get()), true);
+  const paidUntil = Date.parse(subscription.get().currentPeriodEnd);
+  assert.ok(paidUntil > Date.now() + 27 * 86400000 && paidUntil < Date.now() + 32 * 86400000);
 });
 
 test('allows repeated ebook report writes without finalized statement errors', () => {

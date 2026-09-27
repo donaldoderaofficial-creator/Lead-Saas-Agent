@@ -660,3 +660,15 @@
 {"timestamp":"2026-09-23T12:09:57.076Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-23T12:09:57.083Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-23T12:09:57.086Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-27T07:42:46.644Z","level":"warn","message":"Report withheld: payment below full price","ref":"c2b-underpaid-test","amount":10199,"currency":"KES"}
+{"timestamp":"2026-09-27T07:42:46.701Z","level":"warn","message":"M-Pesa callback not confirmed by STK query","checkoutRequestId":"ws_CO_forged_callback","resultCode":"1032"}
+{"timestamp":"2026-09-27T07:42:47.503Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"12ms"}
+{"timestamp":"2026-09-27T07:42:47.543Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-27T07:42:47.552Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-09-27T07:42:47.565Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-27T07:43:10.569Z","level":"warn","message":"Report withheld: payment below full price","ref":"c2b-underpaid-test","amount":10199,"currency":"KES"}
+{"timestamp":"2026-09-27T07:43:10.583Z","level":"warn","message":"M-Pesa callback not confirmed by STK query","checkoutRequestId":"ws_CO_forged_callback","resultCode":"1032"}
+{"timestamp":"2026-09-27T07:43:10.818Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"3ms"}
+{"timestamp":"2026-09-27T07:43:10.831Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-27T07:43:10.835Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-27T07:43:10.837Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
