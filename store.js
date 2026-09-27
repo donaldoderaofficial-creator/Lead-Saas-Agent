@@ -5,6 +5,8 @@
  * restarts and are cheaply queryable from the dashboard and admin APIs.
  */
 
+const { checkTransition } = require('./operations');
+
 function loadDatabaseClass() {
   try {
     const { DatabaseSync } = require('node:sqlite');
@@ -201,6 +203,35 @@ db.exec(`
     FOREIGN KEY (record_id) REFERENCES edrms_records(id),
     FOREIGN KEY (actor_id) REFERENCES users(id)
   );
+
+  CREATE TABLE IF NOT EXISTS ops_items (
+    id TEXT PRIMARY KEY,
+    department TEXT NOT NULL,
+    type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    owner TEXT,
+    customer TEXT,
+    payment_reference TEXT,
+    priority TEXT NOT NULL DEFAULT 'normal',
+    status TEXT NOT NULL DEFAULT 'open',
+    due_at TEXT NOT NULL,
+    created_by INTEGER,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_ops_items_department_status ON ops_items(department, status);
+
+  CREATE TABLE IF NOT EXISTS ops_audit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    actor_id INTEGER,
+    details TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (item_id) REFERENCES ops_items(id)
+  );
 `);
 
 for (const column of [
@@ -290,6 +321,10 @@ const payments = {
   },
   updateStatus(id, status) {
     db.prepare('UPDATE payment_transactions SET status = ? WHERE id = ?').run(status, id);
+  },
+  isConfirmed(reference) {
+    if (!reference) return false;
+    return Boolean(db.prepare("SELECT 1 FROM payment_transactions WHERE reference = ? AND status = 'confirmed' LIMIT 1").get(reference));
   },
 };
 
@@ -744,6 +779,65 @@ const emailThreads = {
   },
 };
 
+const workItems = {
+  create(item, createdBy) {
+    const now = new Date().toISOString();
+    db.prepare(`
+      INSERT INTO ops_items
+        (id, department, type, title, description, owner, customer, payment_reference, priority, status, due_at, created_by, created_at, updated_at)
+      VALUES (@id, @department, @type, @title, @description, @owner, @customer, @paymentReference, @priority, 'open', @dueAt, @createdBy, @now, @now)
+    `).run({ ...item, createdBy: createdBy || null, now });
+    this.audit(item.id, 'created', createdBy, { department: item.department, type: item.type, priority: item.priority });
+    return this.get(item.id);
+  },
+  get(id) {
+    const row = db.prepare('SELECT * FROM ops_items WHERE id = ?').get(id);
+    if (!row) return undefined;
+    return {
+      id: row.id,
+      department: row.department,
+      type: row.type,
+      title: row.title,
+      description: row.description,
+      owner: row.owner,
+      customer: row.customer,
+      paymentReference: row.payment_reference,
+      priority: row.priority,
+      status: row.status,
+      dueAt: row.due_at,
+      createdBy: row.created_by,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  },
+  list({ department, status } = {}) {
+    const conditions = [];
+    const values = [];
+    if (department) { conditions.push('department = ?'); values.push(department); }
+    if (status) { conditions.push('status = ?'); values.push(status); }
+    const where = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : '';
+    return db.prepare(`SELECT id FROM ops_items${where} ORDER BY due_at ASC`).all(...values).map(({ id }) => this.get(id));
+  },
+  transition(id, nextStatus, actorId, { paymentReference } = {}) {
+    const item = this.get(id);
+    if (!item) return { ok: false, reason: 'not-found' };
+    const reference = paymentReference || item.paymentReference;
+    const check = checkTransition(item, nextStatus, { paymentConfirmed: payments.isConfirmed(reference) });
+    if (!check.ok) return check;
+    db.prepare('UPDATE ops_items SET status = ?, payment_reference = ?, updated_at = ? WHERE id = ?')
+      .run(nextStatus, reference || null, new Date().toISOString(), id);
+    this.audit(id, `status-${nextStatus}`, actorId, { from: item.status, to: nextStatus, ...(reference ? { paymentReference: reference } : {}) });
+    return { ok: true, item: this.get(id) };
+  },
+  audit(itemId, action, actorId, details = {}) {
+    db.prepare('INSERT INTO ops_audit (item_id, action, actor_id, details) VALUES (?, ?, ?, ?)')
+      .run(itemId, action, actorId || null, JSON.stringify(details));
+  },
+  listAudit(itemId) {
+    return db.prepare('SELECT * FROM ops_audit WHERE item_id = ? ORDER BY id DESC').all(itemId);
+  },
+};
+
 module.exports = {
   pendingLeads,
   completedReports,
@@ -751,6 +845,7 @@ module.exports = {
   leads,
   records,
   safetyIncidents,
+  workItems,
   users,
   subscription,
   compliance,
