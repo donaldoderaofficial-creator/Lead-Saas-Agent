@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard.html
+Disallow: /dashboard-v2.html
+Disallow: /operations.html
+Disallow: /paypal-payment.html
+Disallow: /api/
+Disallow: /auth/
+
+Sitemap: https://lead-saas-agent.netlify.app/sitemap.xml
