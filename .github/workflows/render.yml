@@ -1,0 +1,52 @@
+name: Render deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: render-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions: {}
+    env:
+      HEALTH_URL: https://lead-agent-saas.onrender.com/health
+      EXPECTED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+    steps:
+      - name: Check Render deploy hook secret
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          case "$RENDER_DEPLOY_HOOK_URL" in
+            https://*) echo "::notice::RENDER_DEPLOY_HOOK_URL secret is set" ;;
+            "") echo "::error::RENDER_DEPLOY_HOOK_URL secret is not set. Copy it from Render > lead-agent-saas > Settings > Deploy Hook, then add it under Settings > Secrets and variables > Actions."; exit 1 ;;
+            *) echo "::error::RENDER_DEPLOY_HOOK_URL must start with https://"; exit 1 ;;
+          esac
+
+      - name: Trigger Render deploy
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: curl --fail --show-error --silent --max-redirs 0 --retry 3 --retry-all-errors -X POST "$RENDER_DEPLOY_HOOK_URL" > /dev/null
+
+      - name: Wait for the new build to go live
+        run: |
+          for attempt in $(seq 1 40); do
+            build=$(curl --silent --max-time 60 "$HEALTH_URL" | sed -n 's/.*"build":"\([^"]*\)".*/\1/p')
+            if [ "$build" = "$EXPECTED_SHA" ]; then
+              echo "::notice::Render is serving $build"
+              exit 0
+            fi
+            echo "Attempt $attempt: live build is '${build:-unreachable}', waiting for $EXPECTED_SHA"
+            sleep 30
+          done
+          echo "::error::Render did not serve $EXPECTED_SHA within 20 minutes. Check the deploy log in the Render dashboard."
+          exit 1

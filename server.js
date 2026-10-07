@@ -267,7 +267,7 @@ app.get('/health', (req, res) => {
     status: 'ok',
     release: {
       version: require('./package.json').version,
-      build: process.env.BUILD_SHA || 'local',
+      build: process.env.BUILD_SHA || process.env.RENDER_GIT_COMMIT || 'local',
       attribution: DISPATCH_PRO.releaseAttribution,
     },
     timestamp: new Date().toISOString(),

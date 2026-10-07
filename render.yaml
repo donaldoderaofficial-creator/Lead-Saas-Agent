@@ -57,3 +57,15 @@ services:
         sync: false
       - key: COMPLIANCE_ETHEREUM_ADDRESS
         sync: false
+      - key: NEWSLETTER_ENABLED
+        value: "true"
+      - key: NEWSLETTER_SEND_DAY
+        value: "1"
+      - key: NEWSLETTER_SEND_HOUR_UTC
+        value: "8"
+      - key: EMAIL_FROM
+        value: Dispatch Pro <hello@dispatchpro.ai>
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_AUTOREPLY_ENABLED
+        sync: false
