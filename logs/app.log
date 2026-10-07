@@ -672,3 +672,27 @@
 {"timestamp":"2026-09-27T07:43:10.831Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-27T07:43:10.835Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
 {"timestamp":"2026-09-27T07:43:10.837Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-27T23:33:40.712Z","level":"warn","message":"Report withheld: payment below full price","ref":"c2b-underpaid-test","amount":10199,"currency":"KES"}
+{"timestamp":"2026-09-27T23:33:40.735Z","level":"warn","message":"M-Pesa callback not confirmed by STK query","checkoutRequestId":"ws_CO_forged_callback","resultCode":"1032"}
+{"timestamp":"2026-09-27T23:33:41.164Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"4ms"}
+{"timestamp":"2026-09-27T23:33:41.178Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-27T23:33:41.183Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-09-27T23:33:41.189Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-10-04T13:50:38.806Z","level":"warn","message":"Report withheld: payment below full price","ref":"c2b-underpaid-test","amount":10199,"currency":"KES"}
+{"timestamp":"2026-10-04T13:50:38.824Z","level":"warn","message":"M-Pesa callback not confirmed by STK query","checkoutRequestId":"ws_CO_forged_callback","resultCode":"1032"}
+{"timestamp":"2026-10-04T13:50:39.058Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"4ms"}
+{"timestamp":"2026-10-04T13:50:39.071Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-10-04T13:50:39.076Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-10-04T13:50:39.079Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-10-07T13:28:13.844Z","level":"warn","message":"Report withheld: payment below full price","ref":"c2b-underpaid-test","amount":10199,"currency":"KES"}
+{"timestamp":"2026-10-07T13:28:13.860Z","level":"warn","message":"M-Pesa callback not confirmed by STK query","checkoutRequestId":"ws_CO_forged_callback","resultCode":"1032"}
+{"timestamp":"2026-10-07T13:28:14.203Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"8ms"}
+{"timestamp":"2026-10-07T13:28:14.225Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-10-07T13:28:14.230Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-10-07T13:28:14.246Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-10-07T13:28:28.250Z","level":"warn","message":"Report withheld: payment below full price","ref":"c2b-underpaid-test","amount":10199,"currency":"KES"}
+{"timestamp":"2026-10-07T13:28:28.265Z","level":"warn","message":"M-Pesa callback not confirmed by STK query","checkoutRequestId":"ws_CO_forged_callback","resultCode":"1032"}
+{"timestamp":"2026-10-07T13:28:28.523Z","level":"info","message":"GET /ebook-success.html","statusCode":302,"duration":"5ms"}
+{"timestamp":"2026-10-07T13:28:28.537Z","level":"info","message":"GET /ebook-reader.html","statusCode":302,"duration":"0ms"}
+{"timestamp":"2026-10-07T13:28:28.540Z","level":"info","message":"GET /ebook/access","statusCode":302,"duration":"1ms"}
+{"timestamp":"2026-10-07T13:28:28.543Z","level":"info","message":"GET /ebook/download.pdf","statusCode":302,"duration":"0ms"}

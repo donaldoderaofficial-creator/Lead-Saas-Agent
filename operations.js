@@ -138,9 +138,61 @@ function buildOverview(items, leads, now = Date.now()) {
   };
 }
 
+function buildStrategyBrief(items, leads, now = Date.now()) {
+  const activeLeads = leads.filter((lead) => ['new', 'contacted'].includes(lead.followupStatus));
+  const strongFitLeads = activeLeads.filter((lead) => Number(lead.score) >= 75);
+  const topOpportunities = activeLeads
+    .filter((lead) => Number(lead.score) >= 85)
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 5);
+  const departmentLoad = new Map();
+
+  for (const item of items) {
+    if (CLOSED_STATUSES.has(item.status) || !DEPARTMENTS[item.department]) continue;
+    departmentLoad.set(item.department, (departmentLoad.get(item.department) || 0) + 1);
+  }
+
+  const overdueSales = overdueFollowups(leads, now);
+  const overdueWork = items.filter((item) => isOverdue(item, now));
+
+  return {
+    strengths: strongFitLeads.length ? [{
+      count: strongFitLeads.length,
+      recommendation: 'Prioritize follow-up on active leads scoring 75 or higher.',
+    }] : [],
+    opportunities: topOpportunities.map((lead) => ({
+      leadRef: lead.ref,
+      name: lead.name,
+      score: lead.score,
+      recommendation: 'Contact this high-fit lead while intent is active.',
+    })),
+    weaknesses: [...departmentLoad.entries()]
+      .filter(([, open]) => open >= 3)
+      .map(([department, open]) => ({
+        department,
+        label: DEPARTMENTS[department].label,
+        open,
+        recommendation: 'Consider delegating or outsourcing suitable low-risk work after access and vendor checks.',
+      })),
+    threats: [
+      ...(overdueSales.length ? [{
+        type: 'sales-followups',
+        count: overdueSales.length,
+        recommendation: 'Review overdue sales follow-ups to reduce the risk of losing active demand.',
+      }] : []),
+      ...(overdueWork.length ? [{
+        type: 'overdue-work',
+        count: overdueWork.length,
+        recommendation: 'Triage overdue work and assign an owner or revised due date.',
+      }] : []),
+    ],
+  };
+}
+
 module.exports = {
   DEPARTMENTS,
   PRIORITY_SLA_HOURS,
+  parseTime,
   transitionsFor,
   isBillable,
   validateItem,
@@ -148,4 +200,5 @@ module.exports = {
   isOverdue,
   overdueFollowups,
   buildOverview,
+  buildStrategyBrief,
 };

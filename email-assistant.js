@@ -146,7 +146,7 @@ function verifyWebhookSignature(rawBody, signature, secret) {
   return expected.length === signature.length && crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 }
 
-async function sendReply({ to, subject, text, replyTo, prefixSubject = true }) {
+async function sendReply({ to, subject, text, replyTo, prefixSubject = true, headers }) {
   if (process.env.EMAIL_AUTOREPLY_ENABLED !== 'true') return { sent: false, reason: 'EMAIL_AUTOREPLY_ENABLED is not true' };
   if (!process.env.RESEND_API_KEY) throw new Error('RESEND_API_KEY is required when email auto-replies are enabled');
   const message = {
@@ -156,6 +156,7 @@ async function sendReply({ to, subject, text, replyTo, prefixSubject = true }) {
     text,
   };
   if (replyTo) message.reply_to = replyTo;
+  if (headers) message.headers = headers;
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'content-type': 'application/json' },

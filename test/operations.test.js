@@ -11,7 +11,7 @@ for (const suffix of ['', '-wal', '-shm']) {
 process.env.DB_PATH = dbPath;
 process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-only-session-secret';
 
-const { validateItem, checkTransition, overdueFollowups, buildOverview } = require('../operations');
+const { validateItem, checkTransition, overdueFollowups, buildOverview, buildStrategyBrief } = require('../operations');
 const { workItems, payments, users } = require('../store');
 
 const actorId = users.create('ops-owner', 'hash', 'totp-secret', 'owner');
@@ -86,6 +86,35 @@ test('overview counts open and overdue work per department', () => {
   assert.equal(overview.departments.marketing_sales.overdueFollowups, 0);
 });
 
+test('strategy brief highlights strong-fit leads, capacity strain, and overdue threats', () => {
+  const now = Date.parse('2026-09-28T12:00:00Z');
+  const leads = [
+    { ref: 'lead-high', name: 'High fit', score: 91, followupStatus: 'new', createdAt: '2026-09-28 10:00:00' },
+    { ref: 'lead-mid', name: 'Good fit', score: 79, followupStatus: 'contacted', createdAt: '2026-09-28 10:00:00' },
+    { ref: 'lead-overdue', name: 'At risk', score: 68, followupStatus: 'new', createdAt: '2026-09-27 10:00:00' },
+  ];
+  const items = [
+    { department: 'service', status: 'open', dueAt: new Date(now + HOUR).toISOString() },
+    { department: 'service', status: 'in_progress', dueAt: new Date(now + HOUR).toISOString() },
+    { department: 'service', status: 'blocked', dueAt: new Date(now + HOUR).toISOString() },
+    { department: 'it', status: 'open', dueAt: new Date(now - HOUR).toISOString() },
+  ];
+
+  const brief = buildStrategyBrief(items, leads, now);
+  assert.deepEqual(brief.strengths.map((action) => action.count), [2]);
+  assert.deepEqual(brief.opportunities.map((action) => action.leadRef), ['lead-high']);
+  assert.deepEqual(brief.weaknesses.map((action) => action.department), ['service']);
+  assert.match(brief.weaknesses[0].recommendation, /outsourc|delegat/i);
+  assert.equal(brief.threats.length, 2);
+  assert.equal(brief.threats[0].count, 1);
+  assert.equal(brief.threats[1].count, 1);
+});
+
+test('strategy brief stays empty when there are no actionable signals', () => {
+  const brief = buildStrategyBrief([], [], Date.parse('2026-09-28T12:00:00Z'));
+  assert.deepEqual(brief, { strengths: [], opportunities: [], weaknesses: [], threats: [] });
+});
+
 test('operations API returns 402 when billable service work starts unpaid', () => {
   const app = require('../server');
   const handler = (routePath, method) => app._router.stack
@@ -104,4 +133,8 @@ test('operations API returns 402 when billable service work starts unpaid', () =
   const invalid = mockResponse();
   handler('/api/operations/items', 'post')({ body: { department: 'service', type: 'work_order', title: 'x' }, session: { userId: actorId } }, invalid);
   assert.equal(invalid.statusCode, 400);
+
+  const overview = mockResponse();
+  handler('/api/operations/overview', 'get')({ session: { userId: actorId } }, overview);
+  assert.deepEqual(Object.keys(overview.body.strategy), ['strengths', 'opportunities', 'weaknesses', 'threats']);
 });

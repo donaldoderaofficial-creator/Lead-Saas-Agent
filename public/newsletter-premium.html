@@ -1,0 +1,111 @@
+<!-- Initialize the page -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Dispatch Pro — Premium Newsletter</title>
+<style>
+:root{--bg:#080b12;--panel:#111621;--panel2:#171d2a;--border:#252d3d;--text:#eef2f8;--muted:#8f9bad;--accent:#718cff;--bad:#ff6b6b;--ok:#3ecf8e}
+*{box-sizing:border-box}body{margin:0;font:15px/1.6 system-ui,sans-serif;background:var(--bg);color:var(--text)}
+header{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid var(--border)}header a{color:var(--accent)}
+main{max-width:640px;margin:auto;padding:28px 20px}h1{font-size:26px;margin:0 0 6px}.muted{color:var(--muted)}.bad{color:var(--bad)}.ok{color:var(--ok)}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;margin:18px 0}
+ul{padding-left:20px;margin:8px 0}.price{font-size:22px;font-weight:700}
+label{display:block;margin:12px 0 4px;color:var(--muted);font-size:13px}
+input,select,button{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:10px;font:inherit}
+button{cursor:pointer;background:var(--accent);border:none;color:#fff;font-weight:600;margin-top:14px}button:disabled{opacity:.6;cursor:wait}
+code{display:block;word-break:break-all;background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:10px;margin-top:4px}
+</style>
+<script src="/runtime-config.js"></script>
+<script src="/api-base.js"></script>
+</head>
+<body>
+<header><strong>Dispatch Pro — Premium Newsletter</strong><a href="/dashboard-v2.html">Dashboard</a></header>
+<main>
+  <h1>Turn your weekly update into a ready-made sales plan</h1>
+  <p class="muted">The free edition tells you what your agent did. Premium hands you the work, already done.</p>
+  <div class="panel">
+    <div class="price">$20 / month <span class="muted" style="font-size:14px;font-weight:400">paid in BTC or ETH at the live rate</span></div>
+    <ul>
+      <li>Ready-to-send reply drafts for every strong-fit lead</li>
+      <li>Rescue messages for leads that went quiet after first contact</li>
+      <li>Week-over-week trends for leads, strong fits, wins and average score</li>
+      <li>Everything in the free edition</li>
+    </ul>
+    <p class="muted">Prepaid monthly. No auto-renewal; renew whenever you like and unused time carries forward.</p>
+  </div>
+  <div id="status" class="muted">Loading...</div>
+  <div class="panel" id="checkout" hidden>
+    <label for="method">Pay with</label>
+    <select id="method"></select>
+    <button id="order" type="button">Get payment details</button>
+    <div id="payment" hidden>
+      <label>Send exactly</label><code id="amount"></code>
+      <label>To this address</label><code id="address"></code>
+      <label for="txHash">Transaction hash</label>
+      <input id="txHash" maxlength="66" autocomplete="off" placeholder="Paste the transaction hash after sending">
+      <button id="confirm" type="button">I've sent the payment</button>
+    </div>
+  </div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let order = null;
+
+function status(text, cls = 'muted') { $('status').textContent = text; $('status').className = cls; }
+
+async function api(path, body) {
+  const response = await fetch(window.DispatchAPI.url(path), {
+    method: body ? 'POST' : 'GET',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (response.status === 401) throw new Error('Please log in on the dashboard first, then come back to this page.');
+  if (!response.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+$('order').onclick = async () => {
+  $('order').disabled = true;
+  try {
+    order = await api('/api/newsletter/premium/order', { method: $('method').value });
+    $('amount').textContent = `${order.amountCrypto} ${order.currency}`;
+    $('address').textContent = order.walletAddress;
+    $('payment').hidden = false;
+    status('Send the exact amount, then paste the transaction hash below.');
+  } catch (e) { status(e.message, 'bad'); }
+  $('order').disabled = false;
+};
+
+$('confirm').onclick = async () => {
+  if (!order) return;
+  $('confirm').disabled = true;
+  try {
+    const result = await api('/api/newsletter/premium/confirm', { reference: order.reference, txHash: $('txHash').value.trim(), amount: order.amountCrypto });
+    $('checkout').hidden = true;
+    status(result.message, 'ok');
+  } catch (e) { status(e.message, 'bad'); $('confirm').disabled = false; }
+};
+
+(async () => {
+  try {
+    const info = await api('/api/newsletter/premium');
+    if (info.active) status(`Premium is active until ${new Date(info.premiumUntil).toLocaleDateString()}. You can renew early; the time is added on.`, 'ok');
+    else status('Choose a currency to upgrade.');
+    if (!info.methods.length) return status('Crypto payments are not configured yet.', 'bad');
+    $('method').replaceChildren(...info.methods.map((m) => {
+      const option = document.createElement('option');
+      option.value = m.method;
+      option.textContent = `${m.currency} (about ${m.amountCrypto} ${m.currency})`;
+      return option;
+    }));
+    $('checkout').hidden = false;
+  } catch (e) { status(e.message, 'bad'); }
+})();
+</script>
+</body>
+</html>

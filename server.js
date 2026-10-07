@@ -35,7 +35,7 @@ const { initiateSTKPush, normalizePhoneNumber } = mpesaClient;
 const { processLead } = require('./lead-pipeline');
 const { trainFromLeads, learningStatus } = require('./adaptive-learning');
 const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, workItems, users, subscription, emailThreads, checkDatabase, businessMetrics, createSessionStore } = require('./store');
-const { DEPARTMENTS, PRIORITY_SLA_HOURS, transitionsFor, isBillable, validateItem, buildOverview } = require('./operations');
+const { DEPARTMENTS, PRIORITY_SLA_HOURS, transitionsFor, isBillable, validateItem, buildOverview, buildStrategyBrief } = require('./operations');
 const { hasActiveSubscription, paidThrough } = require('./subscription-policy');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateEmailOtp, hashEmailOtp } = require('./auth');
 const { fetchBusinesses, findPersonContact, fetchProspectsAtCompanies } = require('./explorium-client');
@@ -43,6 +43,7 @@ const { parseDataset, validateObservation } = require('./geospatial-safety');
 const { getBtcUsdRate, getCryptoUsdRate, startBtcUsdSync } = require('./crypto-rates');
 const { buildPaymentOptions, buildPublicConfig } = require('./payment-catalog');
 const { buildCustomReply, buildMiaReply, improveReplyWithAI, verifyWebhookSignature: verifyEmailWebhookSignature, sendReply } = require('./email-assistant');
+const newsletter = require('./newsletter');
 
 const app = express();
 const DISPATCH_PRO = config.company;
@@ -1257,6 +1258,176 @@ app.patch('/api/records/:id/status', requireAuth, requireAdmin, (req, res) => {
   res.json(result.record);
 });
 
+// ---- Weekly subscriber newsletter ----
+function newsletterBaseUrl() {
+  return (config.publicAppUrl || `http://localhost:${config.port}`).replace(/\/+$/, '');
+}
+
+function sendNewsletterEmail({ to, subject, text, unsubscribeUrl }) {
+  return sendReply({
+    to,
+    subject,
+    text,
+    prefixSubject: false,
+    headers: { 'List-Unsubscribe': `<${unsubscribeUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+  });
+}
+
+function runNewsletters(now = Date.now(), send = sendNewsletterEmail) {
+  return newsletter.runWeeklyNewsletters({
+    users,
+    leads,
+    isSubscribed: () => hasActiveSubscription(subscription.get(), now),
+    send,
+    now,
+    baseUrl: newsletterBaseUrl(),
+    secret: config.sessionSecret,
+    sendDay: config.newsletter.sendDay,
+    sendHour: config.newsletter.sendHour,
+  });
+}
+
+function unsubscribeTarget(req) {
+  const userId = Number(req.query.u);
+  if (!Number.isInteger(userId) || userId < 1) return null;
+  return newsletter.verifyUnsubscribeToken(userId, req.query.t, config.sessionSecret) ? userId : null;
+}
+
+app.get('/api/newsletter/preview', requireAuth, (req, res) => {
+  const user = users.findById(req.session.userId);
+  if (!user) return res.status(401).json({ error: 'Not logged in' });
+  const now = Date.now();
+  const baseUrl = newsletterBaseUrl();
+  const allLeads = leads.listAll();
+  res.json(newsletter.buildNewsletter({
+    email: user.username,
+    activity: newsletter.weeklyActivity(allLeads, now),
+    previous: newsletter.weeklyActivity(allLeads, now - 7 * 24 * 3600000),
+    premium: newsletter.isPremium(user.newsletter_premium_until, now),
+    weekKey: newsletter.isoWeekKey(now),
+    dashboardUrl: `${baseUrl}/dashboard-v2.html`,
+    upgradeUrl: `${baseUrl}/newsletter-premium.html`,
+    unsubscribeUrl: `${baseUrl}/api/newsletter/unsubscribe?u=${user.id}&t=${newsletter.unsubscribeToken(user.id, config.sessionSecret)}`,
+  }));
+});
+
+const NEWSLETTER_PROVIDERS = ['bitcoin-newsletter', 'ethereum-newsletter'];
+
+function premiumCryptoAmount(method) {
+  return getCryptoAmount(newsletter.PREMIUM_PRICE_USD, method, 'newsletter-premium');
+}
+
+app.get('/api/newsletter/premium', requireAuth, (req, res) => {
+  const user = users.findById(req.session.userId);
+  if (!user) return res.status(401).json({ error: 'Not logged in' });
+  res.json({
+    priceUsd: newsletter.PREMIUM_PRICE_USD,
+    active: newsletter.isPremium(user.newsletter_premium_until),
+    premiumUntil: user.newsletter_premium_until || null,
+    methods: ['bitcoin', 'ethereum'].filter((method) => config.wallets[method].address).map((method) => ({
+      method,
+      currency: config.wallets[method].currency,
+      amountCrypto: premiumCryptoAmount(method),
+    })),
+  });
+});
+
+app.post('/api/newsletter/premium/order', requireAuth, (req, res) => {
+  const user = users.findById(req.session.userId);
+  if (!user) return res.status(401).json({ error: 'Not logged in' });
+  const { method } = req.body || {};
+  if (!['bitcoin', 'ethereum'].includes(method)) return res.status(400).json({ error: 'method must be bitcoin or ethereum' });
+  const wallet = config.wallets[method];
+  if (!wallet.address) return res.status(400).json({ error: `${wallet.label} payments are not configured.` });
+  const amountCrypto = premiumCryptoAmount(method);
+  if (!amountCrypto) return res.status(503).json({ error: 'Live exchange rate is unavailable. Please try again shortly.' });
+  const reference = crypto.randomUUID();
+  pendingLeads.set(reference, {
+    name: user.username,
+    email: user.username,
+    product: 'newsletter-premium',
+    paymentMethod: method,
+    plan: 'newsletter-premium',
+    amountCrypto,
+  });
+  res.json({
+    status: 'pending',
+    reference,
+    method,
+    amountUsd: newsletter.PREMIUM_PRICE_USD,
+    amountCrypto,
+    currency: wallet.currency,
+    walletAddress: wallet.address,
+    instructions: `Send exactly ${amountCrypto} ${wallet.currency} (about $${newsletter.PREMIUM_PRICE_USD} USD) to ${wallet.address}, then paste the transaction hash to activate one month of premium newsletters.`,
+  });
+});
+
+app.post('/api/newsletter/premium/confirm', requireAuth, (req, res) => {
+  const user = users.findById(req.session.userId);
+  if (!user) return res.status(401).json({ error: 'Not logged in' });
+  const { reference, txHash, amount } = req.body || {};
+  const order = typeof reference === 'string' ? pendingLeads.get(reference) : undefined;
+  if (!order || order.product !== 'newsletter-premium' || order.email !== user.username) {
+    return res.status(404).json({ error: 'Unknown premium newsletter payment reference' });
+  }
+  if (typeof txHash !== 'string' || !/^(0x)?[0-9a-fA-F]{64}$/.test(txHash.trim())) {
+    return res.status(400).json({ error: 'txHash must be a 64-character transaction hash' });
+  }
+  const submittedAmount = Number(amount);
+  const expectedAmount = Number(order.amountCrypto);
+  if (!Number.isFinite(submittedAmount) || Math.abs(submittedAmount - expectedAmount) / expectedAmount > 0.01) {
+    return res.status(400).json({ error: `amount must be approximately ${order.amountCrypto} ${config.wallets[order.paymentMethod].currency}` });
+  }
+  const recorded = payments.record({
+    provider: `${order.paymentMethod}-newsletter`,
+    transactionId: txHash.trim(),
+    reference,
+    amount: submittedAmount,
+    currency: config.wallets[order.paymentMethod].currency,
+    status: 'pending_review',
+    raw: { userId: user.id, email: user.username, txHash: txHash.trim(), method: order.paymentMethod, amountCrypto: order.amountCrypto },
+  });
+  if (!recorded) return res.status(409).json({ error: 'This transaction has already been submitted' });
+  res.status(202).json({ status: 'pending_review', reference, message: 'Payment proof received. Premium starts as soon as the payment is verified.' });
+});
+
+app.get('/api/newsletter/premium/pending', requireAuth, requireAdmin, (req, res) => {
+  res.json({ payments: payments.listByStatus(NEWSLETTER_PROVIDERS, 'pending_review') });
+});
+
+app.post('/api/newsletter/premium/review/:reference', requireAuth, requireAdmin, (req, res) => {
+  const { approved } = req.body || {};
+  if (typeof approved !== 'boolean') return res.status(400).json({ error: 'approved must be a boolean' });
+  const payment = NEWSLETTER_PROVIDERS.map((provider) => payments.findByReference(req.params.reference, provider)).find(Boolean);
+  if (!payment || payment.status !== 'pending_review') return res.status(404).json({ error: 'No pending premium newsletter payment found' });
+  const subscriber = users.findById(payment.raw?.userId);
+  if (!subscriber) return res.status(404).json({ error: 'Subscriber account no longer exists' });
+  payments.updateStatus(payment.id, approved ? 'confirmed' : 'rejected');
+  pendingLeads.delete(req.params.reference);
+  if (!approved) return res.json({ status: 'rejected', reference: req.params.reference });
+  const current = subscriber.newsletter_premium_until;
+  const renewFrom = newsletter.isPremium(current) ? Date.parse(current) : Date.now();
+  const premiumUntil = paidThrough(null, renewFrom);
+  users.setNewsletterPremiumUntil(subscriber.id, premiumUntil);
+  res.json({ status: 'confirmed', reference: req.params.reference, email: subscriber.username, premiumUntil });
+});
+
+// GET only confirms, so link scanners that prefetch URLs can't unsubscribe people.
+app.get('/api/newsletter/unsubscribe', (req, res) => {
+  const userId = unsubscribeTarget(req);
+  if (!userId) return res.status(400).type('text/plain').send('This unsubscribe link is invalid.');
+  const action = `/api/newsletter/unsubscribe?u=${userId}&t=${req.query.t}`;
+  res.type('html').send(`<!doctype html><meta charset="utf-8"><title>Unsubscribe</title><p>Stop receiving the weekly Dispatch Pro update?</p><form method="post" action="${action}"><button type="submit">Unsubscribe</button></form>`);
+});
+
+app.post('/api/newsletter/unsubscribe', (req, res) => {
+  const userId = unsubscribeTarget(req);
+  if (!userId || !users.setNewsletterOptOut(userId, true)) {
+    return res.status(400).type('text/plain').send('This unsubscribe link is invalid.');
+  }
+  res.type('text/plain').send('You have been unsubscribed from the weekly Dispatch Pro update.');
+});
+
 // ---- Department operations: HR, Marketing & Sales, Manufacturing, IT, Service ----
 function presentWorkItem(item) {
   return {
@@ -1271,8 +1442,14 @@ app.get('/api/operations/departments', requireAuth, requireAdmin, (req, res) => 
 });
 
 app.get('/api/operations/overview', requireAuth, requireAdmin, (req, res) => {
-  const overview = buildOverview(workItems.list(), leads.listAll());
-  res.json({ ...overview, overdueItems: overview.overdueItems.map(presentWorkItem) });
+  const items = workItems.list();
+  const allLeads = leads.listAll();
+  const overview = buildOverview(items, allLeads);
+  res.json({
+    ...overview,
+    strategy: buildStrategyBrief(items, allLeads),
+    overdueItems: overview.overdueItems.map(presentWorkItem),
+  });
 });
 
 app.post('/api/operations/items', requireAuth, requireAdmin, (req, res) => {
@@ -1442,6 +1619,7 @@ const HOST = config.host;
 function startServer() {
   initializeSafetyDataset();
   startBtcUsdSync();
+  startNewsletterScheduler();
   const server = app.listen(PORT, HOST, () => {
     logger.info(`Dispatch Pro API listening on ${HOST}:${PORT}`, {
       env: config.env,
@@ -1480,6 +1658,17 @@ function startServer() {
   return server;
 }
 
+function startNewsletterScheduler() {
+  if (!config.newsletter.enabled) return;
+  const tick = () => runNewsletters()
+    .then((result) => {
+      if (result.sent || result.failed) logger.info('Weekly newsletters processed', result);
+    })
+    .catch((err) => logger.error('Weekly newsletter run failed', { error: err.message }));
+  tick();
+  setInterval(tick, 60 * 60 * 1000).unref();
+}
+
 function initializeSafetyDataset() {
   const observations = parseDataset(config.geospatial.dataset);
   observations.forEach((rawObservation, index) => {
@@ -1495,3 +1684,4 @@ if (require.main === module) {
 }
 
 module.exports = app;
+module.exports.runNewsletters = runNewsletters;

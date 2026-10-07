@@ -18,6 +18,7 @@ button{cursor:pointer;background:var(--accent);border:none;color:#fff}button.sec
 table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden}
 th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}th{color:var(--muted);font-weight:500}
 td button{margin:2px;padding:4px 8px;font-size:12px}#msg{min-height:20px;margin-bottom:12px}h2{font-size:16px}
+.strategy{margin:20px 0 24px}.strategy-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}.strategy-head h2{margin-bottom:10px}.strategy-head p{color:var(--muted);font-size:12px;margin:0}.strategy-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--border);background:var(--panel)}.strategy-column{min-width:0;padding:12px;border-right:1px solid var(--border)}.strategy-column:last-child{border-right:0}.strategy-column h3{font-size:13px;margin:0 0 8px}.strategy-item{padding:8px 0;border-top:1px solid var(--border)}.strategy-item strong{font-size:12px}.strategy-item p,.strategy-empty{font-size:12px;color:var(--muted);margin:4px 0 0}@media(max-width:760px){.strategy-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.strategy-column:nth-child(2){border-right:0}.strategy-column:nth-child(n+3){border-top:1px solid var(--border)}}@media(max-width:480px){main{padding:16px}.strategy-head{align-items:flex-start;flex-direction:column}.strategy-grid{grid-template-columns:1fr}.strategy-column{border-right:0;border-top:1px solid var(--border)}.strategy-column:first-child{border-top:0}}
 </style>
 </head>
 <body>
@@ -25,8 +26,14 @@ td button{margin:2px;padding:4px 8px;font-size:12px}#msg{min-height:20px;margin-
 <main>
   <div id="msg"></div>
   <div class="cards" id="cards"></div>
+  <section class="strategy" aria-labelledby="strategyTitle">
+    <div class="strategy-head"><h2 id="strategyTitle">Strategic watch</h2><p>Refreshes every 5 minutes while this page is open.</p></div>
+    <div class="strategy-grid" id="strategy" aria-live="polite"></div>
+  </section>
   <h2 id="followupsTitle"></h2>
   <table id="followups" hidden><thead><tr><th>Lead</th><th>Company</th><th>Score</th><th>Follow-up</th><th>Created</th></tr></thead><tbody></tbody></table>
+  <h2 id="premiumTitle"></h2>
+  <table id="premium" hidden><thead><tr><th>Subscriber</th><th>Amount</th><th>Transaction</th><th>Submitted</th><th>Actions</th></tr></thead><tbody></tbody></table>
   <h2>New work item</h2>
   <form id="create">
     <select name="department" id="department" required></select>
@@ -68,6 +75,28 @@ function show(text, bad) {
   msg.className = bad ? 'bad' : 'muted';
 }
 
+function renderStrategy(brief) {
+  const groups = [
+    ['strengths', 'Maximize strengths', (item) => `${item.count} strong-fit active leads`],
+    ['opportunities', 'Capture opportunities', (item) => `${item.name || 'High-fit lead'} · score ${item.score}`],
+    ['weaknesses', 'Outsource weaknesses', (item) => `${item.label} · ${item.open} open tasks`],
+    ['threats', 'Neutralize threats', (item) => `${item.count} ${item.type.replace(/-/g, ' ')}`],
+  ];
+  const columns = groups.map(([key, title, summary]) => {
+    const column = el('section', null, 'strategy-column');
+    column.append(el('h3', title));
+    const items = brief[key] || [];
+    if (!items.length) column.append(el('p', 'No current signals.', 'strategy-empty'));
+    for (const item of items) {
+      const entry = el('div', null, 'strategy-item');
+      entry.append(el('strong', summary(item)), el('p', item.recommendation));
+      column.append(entry);
+    }
+    return column;
+  });
+  document.getElementById('strategy').replaceChildren(...columns);
+}
+
 function fmt(iso) { return iso ? new Date(iso).toLocaleString() : ''; }
 
 function fillSelect(select, values, labels = {}) {
@@ -76,6 +105,7 @@ function fillSelect(select, values, labels = {}) {
 
 async function loadOverview() {
   const overview = await api('/api/operations/overview');
+  renderStrategy(overview.strategy || {});
   const cards = document.getElementById('cards');
   cards.replaceChildren(...Object.entries(overview.departments).map(([key, d]) => {
     const card = el('div', null, `card${key === selected ? ' active' : ''}`);
@@ -134,8 +164,32 @@ function syncTypes() {
   fillSelect(document.getElementById('type'), meta.departments[document.getElementById('department').value].types);
 }
 
+async function loadPremiumPayments() {
+  const { payments } = await api('/api/newsletter/premium/pending');
+  document.getElementById('premiumTitle').textContent = payments.length ? `Premium newsletter payments to verify (${payments.length})` : '';
+  const table = document.getElementById('premium');
+  table.hidden = !payments.length;
+  table.tBodies[0].replaceChildren(...payments.map((p) => {
+    const tr = el('tr');
+    const actions = el('td');
+    for (const [label, approved] of [['approve', true], ['reject', false]]) {
+      const b = el('button', label, approved ? '' : 'secondary');
+      b.onclick = async () => {
+        try {
+          await api(`/api/newsletter/premium/review/${encodeURIComponent(p.reference)}`, { method: 'POST', body: JSON.stringify({ approved }) });
+          show(`Premium payment from ${p.raw?.email || 'subscriber'} ${approved ? 'approved' : 'rejected'}.`);
+          await loadPremiumPayments();
+        } catch (e) { show(e.message, true); }
+      };
+      actions.append(b);
+    }
+    tr.append(el('td', p.raw?.email), el('td', `${p.amount} ${p.currency}`), el('td', p.transactionId), el('td', fmt(p.createdAt)), actions);
+    return tr;
+  }));
+}
+
 async function refresh() {
-  try { await loadOverview(); await loadItems(); } catch (e) { show(e.message, true); }
+  try { await loadOverview(); await loadItems(); await loadPremiumPayments(); } catch (e) { show(e.message, true); }
 }
 
 document.getElementById('create').onsubmit = async (event) => {
@@ -165,6 +219,8 @@ document.getElementById('create').onsubmit = async (event) => {
     await refresh();
   } catch (e) { show(e.message, true); }
 })();
+
+setInterval(() => { if (!document.hidden) refresh(); }, 5 * 60 * 1000);
 </script>
 </body>
 </html>

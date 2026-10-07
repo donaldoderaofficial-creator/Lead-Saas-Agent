@@ -239,6 +239,9 @@ for (const column of [
   'email_otp_hash TEXT',
   'email_otp_expires_at TEXT',
   'email_otp_attempts INTEGER NOT NULL DEFAULT 0',
+  'newsletter_opt_out INTEGER NOT NULL DEFAULT 0',
+  'newsletter_last_week TEXT',
+  'newsletter_premium_until TEXT',
 ]) {
   try { db.exec(`ALTER TABLE users ADD COLUMN ${column}`); } catch (_) {}
 }
@@ -321,6 +324,21 @@ const payments = {
   },
   updateStatus(id, status) {
     db.prepare('UPDATE payment_transactions SET status = ? WHERE id = ?').run(status, id);
+  },
+  listByStatus(providers, status) {
+    const placeholders = providers.map(() => '?').join(', ');
+    return db.prepare(`SELECT id, provider, transaction_id, reference, amount, currency, raw_json, created_at FROM payment_transactions WHERE status = ? AND provider IN (${placeholders}) ORDER BY id`)
+      .all(status, ...providers)
+      .map((row) => ({
+        id: row.id,
+        provider: row.provider,
+        transactionId: row.transaction_id,
+        reference: row.reference,
+        amount: row.amount,
+        currency: row.currency,
+        raw: row.raw_json ? JSON.parse(row.raw_json) : null,
+        createdAt: row.created_at,
+      }));
   },
   isConfirmed(reference) {
     if (!reference) return false;
@@ -517,6 +535,23 @@ const users = {
   },
   setRole(id, role) {
     db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id);
+  },
+  listNewsletterRecipients() {
+    return db.prepare("SELECT id, username, newsletter_premium_until AS premiumUntil FROM users WHERE totp_enabled = 1 AND newsletter_opt_out = 0 AND username LIKE '%_@_%' ORDER BY id").all();
+  },
+  setNewsletterPremiumUntil(id, until) {
+    db.prepare('UPDATE users SET newsletter_premium_until = ? WHERE id = ?').run(until, id);
+  },
+  // Atomic so overlapping runs or multiple instances never send twice in one week.
+  claimNewsletterWeek(id, week) {
+    const info = db.prepare('UPDATE users SET newsletter_last_week = ? WHERE id = ? AND (newsletter_last_week IS NULL OR newsletter_last_week <> ?)').run(week, id, week);
+    return Number(info.changes) === 1;
+  },
+  releaseNewsletterWeek(id, week) {
+    db.prepare('UPDATE users SET newsletter_last_week = NULL WHERE id = ? AND newsletter_last_week = ?').run(id, week);
+  },
+  setNewsletterOptOut(id, optOut) {
+    return Number(db.prepare('UPDATE users SET newsletter_opt_out = ? WHERE id = ?').run(optOut ? 1 : 0, id).changes) === 1;
   },
 };
 

@@ -24,6 +24,12 @@ function parsePort(value) {
   return port;
 }
 
+function intInRange(value, min, max, fallback) {
+  if (value === undefined || String(value).trim() === '') return fallback;
+  const number = Number(value);
+  return Number.isInteger(number) && number >= min && number <= max ? number : fallback;
+}
+
 function parseCorsOrigins(value) {
   return value
     .split(',')
@@ -144,6 +150,13 @@ const config = {
   sessionSecret: process.env.SESSION_SECRET,
   publicAppUrl: process.env.PUBLIC_APP_URL || null,
   emailWebhookSecret: process.env.EMAIL_WEBHOOK_SECRET || null,
+
+  // Weekly subscriber newsletter (UTC, ISO weekday 1=Mon..7=Sun)
+  newsletter: {
+    enabled: process.env.NEWSLETTER_ENABLED !== 'false',
+    sendDay: intInRange(process.env.NEWSLETTER_SEND_DAY, 1, 7, 1),
+    sendHour: intInRange(process.env.NEWSLETTER_SEND_HOUR_UTC, 0, 23, 8),
+  },
 
   // Database
   database: {
