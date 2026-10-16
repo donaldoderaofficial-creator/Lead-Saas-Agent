@@ -31,16 +31,6 @@ is confirmed via PayPal or M-Pesa, and every completed lead lands in a
 private dashboard for follow-up tracking — status, notes, and search across
 your whole lead history.
 
-The dashboard's **Your next small step** panel turns existing lead recommendations
-into a flexible action plan. Choose new conversations, existing conversations, or
-all opportunities, and see one suggestion or up to three. Won and lost leads are
-excluded. Try another suggestion without changing the lead, or open its existing
-follow-up editor to save a status and next-step note. Successful saves count once
-per lead for this visit; they do not mean a message was sent or a sale was won.
-Focus, skips, and progress reset when the page reloads; saved statuses and notes
-persist through the existing follow-up API. The full pipeline remains available,
-and unsaved notes survive filtering and switching between suggestions.
-
 Dispatch Pro enables **scalable, profitable SaaS operations** with:
 - Multi-tier subscription pricing (Starter, Growth, Scale)
 - Real-time rate limiting and quota enforcement
