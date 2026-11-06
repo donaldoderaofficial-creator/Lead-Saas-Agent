@@ -46,6 +46,7 @@ jobs:
             if curl --fail --silent http://127.0.0.1:8000/api/deploy/smoke | grep -q '"status":"ready"'; then
               curl --fail --silent http://127.0.0.1:8000/ready | grep -q '"status":"ready"'
               curl --fail --silent -X POST http://127.0.0.1:8000/api/assistant/mia \
+                -H 'Origin: http://127.0.0.1:8000' \
                 -H 'content-type: application/json' \
                 -d '{"question":"Hello Mia"}' | grep -q '"assistant":"Mia"'
               exit 0
