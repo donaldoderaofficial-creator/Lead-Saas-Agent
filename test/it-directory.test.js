@@ -117,7 +117,7 @@ test('supports group filters, presence filters, pagination bounds, and directory
   });
   assert.ok(presence.results.some((entry) => entry.id === group.id));
 
-  const escaped = service.search({ filter: `(name=${specialName.name.replace('*', '\\2a')})` });
+  const escaped = service.search({ filter: `(name=${specialName.name.replaceAll('*', '\\2a')})` });
   assert.deepEqual(escaped.results.map((entry) => entry.id), [specialName.id]);
 
   const updated = service.updateObject(group.id, { location: 'Head office' }, actorId);
