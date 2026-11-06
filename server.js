@@ -157,6 +157,36 @@ app.use(session({
   },
 }));
 
+const csrfSafeMethods = new Set(['GET', 'HEAD', 'OPTIONS']);
+const csrfExemptPaths = new Set([
+  '/api/email/inbound',
+  '/payments/paypal/webhook',
+  '/payments/mpesa/callback',
+  '/payments/mpesa/c2b/validation',
+  '/payments/mpesa/c2b/confirmation',
+]);
+
+app.use((req, res, next) => {
+  if (csrfSafeMethods.has(req.method) || csrfExemptPaths.has(req.path)) return next();
+
+  const source = req.get('origin') || req.get('referer');
+  if (!source) return res.status(403).json({ error: 'Origin or Referer required' });
+
+  let sourceOrigin;
+  try {
+    sourceOrigin = new URL(source).origin;
+  } catch (_) {
+    return res.status(403).json({ error: 'Origin is not allowed' });
+  }
+
+  const requestOrigin = `${req.protocol}://${req.get('host')}`;
+  if (sourceOrigin !== requestOrigin && !app.isOriginAllowed(sourceOrigin, req.path)) {
+    return res.status(403).json({ error: 'Origin is not allowed' });
+  }
+
+  next();
+});
+
 // ---- Rate Limiting: Profitability & Security ----
 const rateLimiter = new RateLimiter();
 const serviceAccessLimiter = new RateLimiter({

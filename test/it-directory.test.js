@@ -204,3 +204,43 @@ test('IT directory endpoints require authentication and administrator authorizat
     assert.equal((await guide.json()).osiLayers.length, 7);
   });
 });
+
+test('session-backed writes require a same-origin or configured browser source', async () => {
+  const app = require('../server');
+  const server = http.createServer(app);
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+
+  try {
+    const baseUrl = `http://127.0.0.1:${server.address().port}`;
+    const missingSource = await fetch(`${baseUrl}/api/it/directory`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    assert.equal(missingSource.status, 403);
+
+    const sameOrigin = await fetch(`${baseUrl}/api/it/directory`, {
+      method: 'POST',
+      headers: {
+        origin: baseUrl,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    });
+    assert.equal(sameOrigin.status, 401);
+
+    const referer = await fetch(`${baseUrl}/api/it/directory`, {
+      method: 'POST',
+      headers: {
+        referer: `${baseUrl}/admin.html`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    });
+    assert.equal(referer.status, 401);
+  } finally {
+    await new Promise((resolve, reject) => {
+      server.close((error) => error ? reject(error) : resolve());
+    });
+  }
+});

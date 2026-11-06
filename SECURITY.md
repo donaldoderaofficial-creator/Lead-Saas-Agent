@@ -5,6 +5,8 @@ The# Security Policy
 - Passwords are hashed with bcrypt and account setup/login requires TOTP 2FA.
 - Sessions use an SQLite-backed store and production cookies are `httpOnly`,
 	`secure`, and `sameSite=lax`.
+- Unsafe requests require a same-origin or configured `Origin`/`Referer`;
+  provider callbacks and inbound email webhooks use their own verification.
 - Login attempts and authenticated service usage are rate-limited.
 - HTTP security headers are provided by Helmet and request bodies are size-limited.
 - Payment webhooks verify provider signatures where supported; wallet payments
