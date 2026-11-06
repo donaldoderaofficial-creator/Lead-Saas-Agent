@@ -50,12 +50,13 @@ td button{margin:2px;padding:4px 8px;font-size:12px}#msg{min-height:20px;margin-
   <h2 id="listTitle">Work items</h2>
   <table id="items"><thead><tr><th>Title</th><th>Type</th><th>Priority</th><th>Status</th><th>Due</th><th>Owner</th><th>Actions</th></tr></thead><tbody></tbody></table>
 </main>
+<script src="/runtime-config.js"></script><script src="/api-base.js"></script>
 <script>
 let meta = null;
 let selected = 'hr';
 
 async function api(path, opts = {}) {
-  const r = await fetch(path, { ...opts, credentials: 'include', headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) } });
+  const r = await window.DispatchAPI.fetch(path, { ...opts, credentials: 'include', headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) } });
   const d = await r.json().catch(() => ({}));
   if (r.status === 401) throw Error('Please log in on the dashboard first.');
   if (!r.ok) throw Error(d.error || 'Request failed');

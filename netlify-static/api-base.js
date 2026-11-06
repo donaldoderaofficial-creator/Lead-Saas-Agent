@@ -38,10 +38,30 @@
     const fallback = FUNCTION_FALLBACKS[path];
     if (fallback) candidates.push(url(fallback));
 
+    const method = String(options.method || 'GET').toUpperCase();
+    const requestOptions = {
+      ...options,
+      credentials: ['GET', 'HEAD', 'OPTIONS'].includes(method) ? options.credentials : 'include',
+    };
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+      const tokenResponse = await fetch(url('/api/csrf-token'), {
+        credentials: requestOptions.credentials,
+        cache: 'no-store',
+      });
+      if (!tokenResponse.ok) {
+        throw new Error(`Unable to retrieve CSRF token (HTTP ${tokenResponse.status})`);
+      }
+      const { csrfToken } = await tokenResponse.json();
+      if (!csrfToken) throw new Error('CSRF token was not returned by the API');
+      const headers = new Headers(options.headers || {});
+      headers.set('X-CSRF-Token', csrfToken);
+      requestOptions.headers = headers;
+    }
+
     let lastError = null;
     for (const candidate of candidates) {
       try {
-        const response = await fetch(candidate, options);
+        const response = await fetch(candidate, requestOptions);
         if (response.ok) return response;
         lastError = new Error(`Request to ${candidate} failed with HTTP ${response.status}`);
       } catch (error) {

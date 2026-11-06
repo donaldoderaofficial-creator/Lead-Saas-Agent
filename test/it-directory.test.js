@@ -205,39 +205,48 @@ test('IT directory endpoints require authentication and administrator authorizat
   });
 });
 
-test('session-backed writes require a same-origin or configured browser source', async () => {
+test('session-backed writes require a valid session CSRF token', async () => {
   const app = require('../server');
   const server = http.createServer(app);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
 
   try {
     const baseUrl = `http://127.0.0.1:${server.address().port}`;
-    const missingSource = await fetch(`${baseUrl}/api/it/directory`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({}),
+    const tokenResponse = await fetch(`${baseUrl}/api/csrf-token`, {
+      headers: { origin: baseUrl },
     });
-    assert.equal(missingSource.status, 403);
+    assert.equal(tokenResponse.status, 200);
+    assert.equal(tokenResponse.headers.get('cache-control'), 'no-store');
+    assert.match(tokenResponse.headers.get('access-control-allow-headers'), /X-CSRF-Token/i);
+    const { csrfToken } = await tokenResponse.json();
+    assert.ok(csrfToken);
+    const sessionCookie = tokenResponse.headers.get('set-cookie')?.split(';', 1)[0];
+    assert.ok(sessionCookie);
 
-    const sameOrigin = await fetch(`${baseUrl}/api/it/directory`, {
+    const missingToken = await fetch(`${baseUrl}/api/it/directory`, {
       method: 'POST',
       headers: {
+        cookie: sessionCookie,
         origin: baseUrl,
         'content-type': 'application/json',
       },
       body: JSON.stringify({}),
     });
-    assert.equal(sameOrigin.status, 401);
+    assert.equal(missingToken.status, 403);
+    assert.match((await missingToken.json()).error, /CSRF token missing/);
 
-    const referer = await fetch(`${baseUrl}/api/it/directory`, {
+    const validToken = await fetch(`${baseUrl}/api/it/directory`, {
       method: 'POST',
       headers: {
-        referer: `${baseUrl}/admin.html`,
+        cookie: sessionCookie,
+        origin: baseUrl,
+        'x-csrf-token': csrfToken,
         'content-type': 'application/json',
       },
       body: JSON.stringify({}),
     });
-    assert.equal(referer.status, 401);
+    assert.equal(validToken.status, 401);
+    assert.equal((await validToken.json()).error, 'Not logged in');
   } finally {
     await new Promise((resolve, reject) => {
       server.close((error) => error ? reject(error) : resolve());

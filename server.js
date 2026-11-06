@@ -17,6 +17,7 @@ const crypto = require('crypto');
 const path = require('node:path');
 const express = require('express');
 const session = require('express-session');
+const lusca = require('lusca');
 const compression = require('compression');
 const helmet = require('helmet');
 
@@ -73,9 +74,10 @@ function isOriginAllowed(origin, path = '') {
     const isLocalDevelopmentHost = ['localhost', '127.0.0.1', '::1'].includes(hostname) || hostname.endsWith('.localhost');
     if (isLocalDevelopmentHost) return true;
     const isHostedPaymentPath = path === '/api/payments/options'
+      || path === '/api/csrf-token'
       || path.startsWith('/api/billing/crypto/');
     if (isHostedPaymentPath && hostname === 'lead-saas-agent.netlify.app') return true;
-    if (path.startsWith('/api/ebook/') || path.startsWith('/ebook/')) {
+    if (path === '/api/csrf-token' || path.startsWith('/api/ebook/') || path.startsWith('/ebook/')) {
       return hostname.endsWith('.netlify.app') || hostname.endsWith('.vercel.app') || hostname.endsWith('.pages.dev');
     }
   } catch (_) {
@@ -133,7 +135,7 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', requestOrigin);
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-CSRF-Token');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
@@ -152,12 +154,11 @@ app.use(session({
   cookie: {
     httpOnly: true,
     secure: config.isProd,
-    sameSite: 'lax',
+    sameSite: config.isProd ? 'none' : 'lax',
     maxAge: config.security.tokenExpiry,
   },
 }));
 
-const csrfSafeMethods = new Set(['GET', 'HEAD', 'OPTIONS']);
 const csrfExemptPaths = new Set([
   '/api/email/inbound',
   '/payments/paypal/webhook',
@@ -166,25 +167,19 @@ const csrfExemptPaths = new Set([
   '/payments/mpesa/c2b/confirmation',
 ]);
 
-app.use((req, res, next) => {
-  if (csrfSafeMethods.has(req.method) || csrfExemptPaths.has(req.path)) return next();
-
-  const source = req.get('origin') || req.get('referer');
-  if (!source) return res.status(403).json({ error: 'Origin or Referer required' });
-
-  let sourceOrigin;
-  try {
-    sourceOrigin = new URL(source).origin;
-  } catch (_) {
-    return res.status(403).json({ error: 'Origin is not allowed' });
+app.use(lusca.csrf({
+  blocklist: [...csrfExemptPaths].map((path) => ({ path, type: 'exact' })),
+}));
+app.use((err, req, res, next) => {
+  if (err.message?.startsWith('CSRF token ')) {
+    return res.status(403).json({ error: err.message, requestId: req.id || 'unknown' });
   }
+  next(err);
+});
 
-  const requestOrigin = `${req.protocol}://${req.get('host')}`;
-  if (sourceOrigin !== requestOrigin && !app.isOriginAllowed(sourceOrigin, req.path)) {
-    return res.status(403).json({ error: 'Origin is not allowed' });
-  }
-
-  next();
+app.get('/api/csrf-token', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ csrfToken: req.csrfToken() });
 });
 
 // ---- Rate Limiting: Profitability & Security ----

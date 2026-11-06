@@ -268,6 +268,7 @@ test('allows ebook payment origins for buyer checkout', () => {
 
   assert.equal(app.isOriginAllowed('http://localhost:5173', '/api/ebook/order'), true);
   assert.equal(app.isOriginAllowed('http://localhost:3000', '/api/ebook/confirm'), true);
+  assert.equal(app.isOriginAllowed('https://preview-123.netlify.app', '/api/csrf-token'), true);
   assert.equal(app.isOriginAllowed('https://evil.example', '/api/ebook/order'), false);
 });
 
@@ -275,6 +276,7 @@ test('allows the deployed billing page to load wallet payment options', () => {
   const app = require('../server');
 
   assert.equal(app.isOriginAllowed('https://lead-saas-agent.netlify.app', '/api/payments/options'), true);
+  assert.equal(app.isOriginAllowed('https://lead-saas-agent.netlify.app', '/api/csrf-token'), true);
   assert.equal(app.isOriginAllowed('https://lead-saas-agent.netlify.app', '/api/billing/crypto/order'), true);
 });
 

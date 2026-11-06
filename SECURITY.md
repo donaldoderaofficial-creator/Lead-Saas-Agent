@@ -4,9 +4,11 @@ The# Security Policy
 
 - Passwords are hashed with bcrypt and account setup/login requires TOTP 2FA.
 - Sessions use an SQLite-backed store and production cookies are `httpOnly`,
-	`secure`, and `sameSite=lax`.
-- Unsafe requests require a same-origin or configured `Origin`/`Referer`;
-  provider callbacks and inbound email webhooks use their own verification.
+  `secure`, and `SameSite=None` for configured cross-origin app clients.
+- Browser writes are restricted by configured origins and use a session-bound
+  Lusca CSRF token from `/api/csrf-token` in the `X-CSRF-Token` header.
+- Provider callbacks and inbound email webhooks are exempt from browser CSRF
+  tokens and use their provider-specific validation.
 - Login attempts and authenticated service usage are rate-limited.
 - HTTP security headers are provided by Helmet and request bodies are size-limited.
 - Payment webhooks verify provider signatures where supported; wallet payments
