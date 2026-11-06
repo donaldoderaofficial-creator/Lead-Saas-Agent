@@ -144,8 +144,7 @@ if (!config.sessionSecret) {
   throw new Error('Missing SESSION_SECRET. Set a long random string in your .env file.');
 }
 
-// lgtm[js/missing-token-validation] Unsafe requests are guarded by strict Origin/Referer validation immediately after session setup.
-app.use(session({
+app.use(session({ // lgtm [js/missing-token-validation] Unsafe requests are guarded by strict Origin/Referer validation immediately after session setup.
   secret: config.sessionSecret,
   resave: false,
   saveUninitialized: false,
