@@ -19,5 +19,5 @@ test('render deploy verifies the live backend serves the new commit', () => {
   assert.match(text, /RENDER_DEPLOY_HOOK_URL/);
   assert.match(text, /-X POST "\$RENDER_DEPLOY_HOOK_URL"/);
   assert.match(text, /"\$build" = "\$EXPECTED_SHA"/);
-  assert.match(fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8'), /process\.env\.RENDER_GIT_COMMIT/);
+  assert.match(fs.readFileSync(path.join(__dirname, '..', 'services', 'observability-service.js'), 'utf8'), /env\.BUILD_SHA \|\| env\.RENDER_GIT_COMMIT/);
 });

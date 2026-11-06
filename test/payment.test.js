@@ -152,7 +152,11 @@ test('permanently advertises all payment methods and currencies', () => {
 
 test('health response exposes a release build identifier', () => {
   const app = require('../server');
-  const healthRoute = app._router.stack.find((layer) => layer.route?.path === '/health');
+  const observabilityRouter = app._router.stack.find((layer) => (
+    layer.name === 'router'
+    && layer.handle.stack.some((nestedLayer) => nestedLayer.route?.path === '/health')
+  ));
+  const healthRoute = observabilityRouter.handle.stack.find((layer) => layer.route?.path === '/health');
   const health = healthRoute.route.stack.at(-1).handle;
   const response = { body: null, json(body) { this.body = body; return this; } };
 

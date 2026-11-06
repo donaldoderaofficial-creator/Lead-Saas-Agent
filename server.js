@@ -44,6 +44,8 @@ const { getBtcUsdRate, getCryptoUsdRate, startBtcUsdSync } = require('./crypto-r
 const { buildPaymentOptions, buildPublicConfig } = require('./payment-catalog');
 const { buildCustomReply, buildMiaReply, improveReplyWithAI, verifyWebhookSignature: verifyEmailWebhookSignature, sendReply } = require('./email-assistant');
 const newsletter = require('./newsletter');
+const { createObservabilityRouter } = require('./routes/observability');
+const { createObservabilityService } = require('./services/observability-service');
 
 const app = express();
 const DISPATCH_PRO = config.company;
@@ -261,60 +263,18 @@ function normalizeReferral(referral) {
 app.buildEbookCheckoutPayload = buildEbookCheckoutPayload;
 app.buildSubscriptionCheckoutPayload = buildSubscriptionCheckoutPayload;
 
-// ---- Health Check Endpoint ----
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    release: {
-      version: require('./package.json').version,
-      build: process.env.BUILD_SHA || process.env.RENDER_GIT_COMMIT || 'local',
-      attribution: DISPATCH_PRO.releaseAttribution,
-    },
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    prospecting: Boolean(process.env.EXPLORIUM_API_KEY),
-  });
+// ---- Observability Routes ----
+const observabilityService = createObservabilityService({
+  config,
+  releaseAttribution: DISPATCH_PRO.releaseAttribution,
+  checkDatabase,
+  buildProductionSmokeCheckStatus,
+  logger,
+  cache,
+  rateLimiter,
+  businessMetrics,
 });
-
-app.get('/ready', (req, res) => {
-  const database = checkDatabase();
-  const smokeCheck = buildProductionSmokeCheckStatus({
-    env: config.env,
-    sessionSecret: config.sessionSecret,
-    publicAppUrl: config.publicAppUrl,
-    corsOrigins: config.security.corsOrigins,
-    // Providers are always advertised; readiness only checks credentials for configured ones.
-    paypal: { ...config.payment.paypal, enabled: config.payment.paypal.configured },
-    mpesa: { ...config.payment.mpesa, enabled: config.payment.mpesa.configured, callbackUrl: process.env.MPESA_CALLBACK_URL },
-    wallets: config.wallets,
-  });
-  const ready = database.status === 'ok' && smokeCheck.status !== 'not_ready';
-  res.status(ready ? 200 : 503).json({
-    status: ready ? 'ready' : 'not_ready',
-    timestamp: new Date().toISOString(),
-    database,
-    deployment: smokeCheck,
-  });
-});
-
-app.get('/api/deploy/smoke', (req, res) => {
-  const smokeCheck = buildProductionSmokeCheckStatus({
-    env: config.env,
-    sessionSecret: config.sessionSecret,
-    publicAppUrl: config.publicAppUrl,
-    corsOrigins: config.security.corsOrigins,
-    paypal: { ...config.payment.paypal, enabled: config.payment.paypal.configured },
-    mpesa: { ...config.payment.mpesa, enabled: config.payment.mpesa.configured, callbackUrl: process.env.MPESA_CALLBACK_URL },
-    wallets: config.wallets,
-  });
-
-  res.status(smokeCheck.status === 'ready' ? 200 : 503).json({
-    status: smokeCheck.status,
-    timestamp: new Date().toISOString(),
-    missing: smokeCheck.missing,
-    checks: smokeCheck.checks,
-  });
-});
+app.use(createObservabilityRouter({ service: observabilityService, requireAuth }));
 
 app.get('/api/email/status', (req, res) => {
   const emailEnabled = process.env.EMAIL_AUTOREPLY_ENABLED === 'true';
@@ -659,16 +619,6 @@ app.get('/ebook/download.pdf', ebookReadLimiter.middleware(), (req, res) => {
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', 'attachment; filename="the-builders-blueprint.pdf"');
   res.send(pdf);
-});
-
-// ---- Metrics & Monitoring Endpoint (Admin Only) ----
-app.get('/metrics', requireAuth, (req, res) => {
-  res.json({
-    logger: logger.getMetrics(),
-    cache: cache.stats(),
-    rateLimiter: rateLimiter.userLimits.size,
-    business: businessMetrics(),
-  });
 });
 
 function requiredLeadAmount(currency) {
