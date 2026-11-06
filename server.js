@@ -34,7 +34,7 @@ const mpesaClient = require('./mpesa-client');
 const { initiateSTKPush, normalizePhoneNumber } = mpesaClient;
 const { processLead } = require('./lead-pipeline');
 const { trainFromLeads, learningStatus } = require('./adaptive-learning');
-const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, workItems, users, subscription, emailThreads, checkDatabase, businessMetrics, createSessionStore } = require('./store');
+const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, workItems, directory, users, subscription, emailThreads, checkDatabase, businessMetrics, createSessionStore } = require('./store');
 const { DEPARTMENTS, PRIORITY_SLA_HOURS, transitionsFor, isBillable, validateItem, buildOverview, buildStrategyBrief } = require('./operations');
 const { hasActiveSubscription, paidThrough } = require('./subscription-policy');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateEmailOtp, hashEmailOtp } = require('./auth');
@@ -46,6 +46,8 @@ const { buildCustomReply, buildMiaReply, improveReplyWithAI, verifyWebhookSignat
 const newsletter = require('./newsletter');
 const { createObservabilityRouter } = require('./routes/observability');
 const { createObservabilityService } = require('./services/observability-service');
+const { createItDirectoryRouter } = require('./routes/it-directory');
+const { createItDirectoryService } = require('./services/it-directory-service');
 
 const app = express();
 const DISPATCH_PRO = config.company;
@@ -960,6 +962,12 @@ function requireAdmin(req, res, next) {
   }
   next();
 }
+
+app.use('/api/it', createItDirectoryRouter({
+  service: createItDirectoryService({ directory }),
+  requireAuth,
+  requireAdmin,
+}));
 
 app.post('/api/safety/incidents', requireAuth, requireAdmin, (req, res) => {
   try {
