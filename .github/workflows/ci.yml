@@ -45,7 +45,14 @@ jobs:
           for i in {1..20}; do
             if curl --fail --silent http://127.0.0.1:8000/api/deploy/smoke | grep -q '"status":"ready"'; then
               curl --fail --silent http://127.0.0.1:8000/ready | grep -q '"status":"ready"'
+              curl --fail --silent --dump-header /tmp/lead-agent-csrf-headers.txt --output /tmp/lead-agent-csrf-body.json -H 'X-Forwarded-Proto: https' http://127.0.0.1:8000/api/csrf-token
+              SESSION_COOKIE=$(sed -n 's/^Set-Cookie: \([^;]*\).*/\1/ip' /tmp/lead-agent-csrf-headers.txt | tr -d '\r' | head -n 1)
+              CSRF_TOKEN=$(node -e 'let input=""; process.stdin.on("data", (chunk) => input += chunk).on("end", () => process.stdout.write(JSON.parse(input).csrfToken));' < /tmp/lead-agent-csrf-body.json)
               curl --fail --silent -X POST http://127.0.0.1:8000/api/assistant/mia \
+                --cookie "$SESSION_COOKIE" \
+                -H 'Origin: http://127.0.0.1:8000' \
+                -H 'X-Forwarded-Proto: https' \
+                -H "X-CSRF-Token: $CSRF_TOKEN" \
                 -H 'content-type: application/json' \
                 -d '{"question":"Hello Mia"}' | grep -q '"assistant":"Mia"'
               exit 0

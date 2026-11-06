@@ -162,6 +162,13 @@ Dispatch Pro is a **scalable, maintainable, and profitable SaaS platform** for l
 - **M-Pesa** (`mpesa-client.js`): Mobile money payments
 - **Flexibility**: Easy to add more payment providers
 
+### 11. **IT Directory Catalog** (`/api/it`)
+- Admin-only SQLite catalog for user, computer, group, and printer records, scoped by organizational-unit distinguished names.
+- Search supports a bounded LDAP-style subset: equality filters, presence filters, and nested `&`, `|`, and `!`; filter attributes are allow-listed and values are parameterized.
+- Object creation and updates are audited. Search results are limited to 100 and OU subtree lookups use indexed reversed distinguished names.
+- `/api/it/security-guide` returns OSI-layer control guidance, example endpoint policies, and safe policy-versus-Kerberos lockout triage.
+- This catalog is not an LDAP/Active Directory client or controller. It does not apply Group Policy, replicate identities, unlock accounts, or store password hashes, tickets, or `ntds.dit` data.
+
 ---
 
 ## API Design

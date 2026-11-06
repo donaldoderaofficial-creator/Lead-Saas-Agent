@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
+const vm = require('node:vm');
 
 const {
   DEFAULT_BITCOIN_WALLET_ADDRESS,
@@ -102,4 +103,41 @@ test('the billing pages resolve API URLs through the shared client', () => {
   assert.match(staticBilling, /src="api-base\.js"/);
   assert.match(staticBilling, /DispatchAPI\.fetchWithRetry\('\/api\/payments\/options'/);
   assert.ok(!staticBilling.includes('API_BASE_URL'), 'static billing page must not hardcode an API origin');
+});
+
+test('shared browser API client obtains a CSRF token before unsafe requests', async () => {
+  const apiBase = fs.readFileSync(path.join(repoRoot, 'public', 'api-base.js'), 'utf8');
+  const staticApiBase = fs.readFileSync(path.join(repoRoot, 'netlify-static', 'api-base.js'), 'utf8');
+  assert.equal(staticApiBase, apiBase);
+
+  const calls = [];
+  const window = {};
+  const context = {
+    window,
+    document: { querySelector: () => null },
+    Headers,
+    fetch: async (url, options) => {
+      calls.push({ url, options });
+      if (url === '/api/csrf-token') {
+        return { ok: true, json: async () => ({ csrfToken: 'session-token' }) };
+      }
+      return { ok: true, status: 200 };
+    },
+  };
+  vm.runInNewContext(apiBase, context);
+
+  await window.DispatchAPI.fetch('/api/records', {
+    method: 'POST',
+    credentials: 'omit',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+
+  assert.equal(calls[0].url, '/api/csrf-token');
+  assert.equal(calls[0].options.credentials, 'include');
+  assert.equal(calls[1].options.headers.get('X-CSRF-Token'), 'session-token');
+  assert.equal(calls[1].options.credentials, 'include');
+
+  await window.DispatchAPI.fetch('/api/records');
+  assert.equal(calls[2].options.credentials, undefined);
 });

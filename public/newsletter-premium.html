@@ -57,7 +57,7 @@ let order = null;
 function status(text, cls = 'muted') { $('status').textContent = text; $('status').className = cls; }
 
 async function api(path, body) {
-  const response = await fetch(window.DispatchAPI.url(path), {
+  const response = await window.DispatchAPI.fetch(path, {
     method: body ? 'POST' : 'GET',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },

@@ -436,6 +436,8 @@
     </div>
   </div>
 
+  <script src="/runtime-config.js"></script>
+  <script src="/api-base.js"></script>
   <script>
     const state = { reference: '', walletAddress: '', amountBtc: '' };
     const statusEl = document.getElementById('status');
@@ -469,7 +471,7 @@
       const email = document.getElementById('email').value.trim();
 
       setStatus('Preparing your wallet payment instructions…');
-      const response = await fetch('/api/ebook/order', {
+      const response = await window.DispatchAPI.fetch('/api/ebook/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email: email || undefined })
@@ -520,7 +522,7 @@
         return;
       }
 
-      const confirmResp = await fetch('/api/ebook/confirm', {
+      const confirmResp = await window.DispatchAPI.fetch('/api/ebook/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

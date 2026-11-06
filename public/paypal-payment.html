@@ -38,6 +38,7 @@
   </main>
 
   <script src="/runtime-config.js"></script>
+  <script src="/api-base.js"></script>
   <script>
     const nameEl = document.getElementById('name');
     const emailEl = document.getElementById('email');
@@ -56,7 +57,7 @@
       status.textContent = 'Creating secure PayPal checkout…';
       try {
         const apiBase = window.DISPATCH_API_URL || window.location.origin;
-        const response = await fetch(`${apiBase}/api/lead`, {
+        const response = await window.DispatchAPI.fetch(`${apiBase}/api/lead`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, method: 'paypal' })

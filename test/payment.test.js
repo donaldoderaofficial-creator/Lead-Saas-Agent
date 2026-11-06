@@ -152,7 +152,11 @@ test('permanently advertises all payment methods and currencies', () => {
 
 test('health response exposes a release build identifier', () => {
   const app = require('../server');
-  const healthRoute = app._router.stack.find((layer) => layer.route?.path === '/health');
+  const observabilityRouter = app._router.stack.find((layer) => (
+    layer.name === 'router'
+    && layer.handle.stack.some((nestedLayer) => nestedLayer.route?.path === '/health')
+  ));
+  const healthRoute = observabilityRouter.handle.stack.find((layer) => layer.route?.path === '/health');
   const health = healthRoute.route.stack.at(-1).handle;
   const response = { body: null, json(body) { this.body = body; return this; } };
 
@@ -264,6 +268,7 @@ test('allows ebook payment origins for buyer checkout', () => {
 
   assert.equal(app.isOriginAllowed('http://localhost:5173', '/api/ebook/order'), true);
   assert.equal(app.isOriginAllowed('http://localhost:3000', '/api/ebook/confirm'), true);
+  assert.equal(app.isOriginAllowed('https://preview-123.netlify.app', '/api/csrf-token'), true);
   assert.equal(app.isOriginAllowed('https://evil.example', '/api/ebook/order'), false);
 });
 
@@ -271,6 +276,7 @@ test('allows the deployed billing page to load wallet payment options', () => {
   const app = require('../server');
 
   assert.equal(app.isOriginAllowed('https://lead-saas-agent.netlify.app', '/api/payments/options'), true);
+  assert.equal(app.isOriginAllowed('https://lead-saas-agent.netlify.app', '/api/csrf-token'), true);
   assert.equal(app.isOriginAllowed('https://lead-saas-agent.netlify.app', '/api/billing/crypto/order'), true);
 });
 

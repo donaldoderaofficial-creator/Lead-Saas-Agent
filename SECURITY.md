@@ -4,11 +4,18 @@ The# Security Policy
 
 - Passwords are hashed with bcrypt and account setup/login requires TOTP 2FA.
 - Sessions use an SQLite-backed store and production cookies are `httpOnly`,
-	`secure`, and `sameSite=lax`.
+  `secure`, and `SameSite=None` for configured cross-origin app clients.
+- Browser writes are restricted by configured origins and use a session-bound
+  Lusca CSRF token from `/api/csrf-token` in the `X-CSRF-Token` header.
+- Provider callbacks and inbound email webhooks are exempt from browser CSRF
+  tokens and use their provider-specific validation.
 - Login attempts and authenticated service usage are rate-limited.
 - HTTP security headers are provided by Helmet and request bodies are size-limited.
 - Payment webhooks verify provider signatures where supported; wallet payments
 	remain pending until an administrator reviews the transaction proof.
+- The IT directory API is admin-only and stores catalog attributes only. It is
+  not an identity provider; password hashes, Kerberos tickets, and domain
+  controller databases must never be copied into it.
 - CodeQL, dependency auditing, syntax checks, and the Node test suite run in CI.
 
 ## Production Requirements

@@ -12,7 +12,7 @@
     "start": "node server.js",
     "start:prod": "NODE_ENV=production PORT=${PORT:-8000} SESSION_SECRET=${SESSION_SECRET:-change-me-in-production} node server.js",
     "dev": "nodemon server.js",
-    "check": "node --check server.js && node --check store.js && node --check operations.js && node --check newsletter.js && node --check compliance.js && node --check auth.js && node --check lead-pipeline.js && node --check lead-model.js && node --check paypal-client.js && node --check mpesa-client.js && node --check explorium-client.js && node --check payment-catalog.js && node --check netlify/functions/payments-options.js && node --check netlify/functions/public-config.js && node --check netlify/functions/_lib/respond.js && node --check public/api-base.js",
+    "check": "node --check server.js && node --check store.js && node --check operations.js && node --check newsletter.js && node --check compliance.js && node --check auth.js && node --check agent.js && node --check email-assistant.js && node --check lead-pipeline.js && node --check lead-model.js && node --check paypal-client.js && node --check mpesa-client.js && node --check explorium-client.js && node --check payment-catalog.js && node --check routes/observability.js && node --check services/observability-service.js && node --check routes/it-directory.js && node --check services/it-directory-service.js && node --check services/payment-finalization.js && node --check netlify/functions/payments-options.js && node --check netlify/functions/public-config.js && node --check netlify/functions/_lib/respond.js && node --check public/api-base.js",
     "test": "npm run check && node --test",
     "harness": "bash scripts/engineering-harness.sh",
     "deploy:netlify": "bash scripts/deploy-netlify.sh public",
@@ -30,6 +30,7 @@
     "express": "^4.19.2",
     "express-session": "^1.19.0",
     "helmet": "^8.3.0",
+    "lusca": "^1.7.0",
     "otplib": "^12.0.1",
     "qrcode": "^1.5.4"
   },

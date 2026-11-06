@@ -84,20 +84,20 @@ function processLead(lead) {
       if (!lead.email || typeof lead.email !== 'string' || !lead.email.includes('@')) {
         throw new Error('Lead needs a valid email');
       }
-      log.push(`Received lead: ${lead.name} <${lead.email}>`);
+      log.push('Input validated');
       return lead;
     })
     .then(l => {
       // Step 2: Enrich
       return enrichLead(l).then(enriched => {
-        log.push(`Enriched with company: ${enriched.company}, size: ${enriched.companySizeGuess}`);
+        log.push(`Enrichment: ${enriched.company}, ${enriched.companySizeGuess}`);
         return enriched;
       });
     })
     .then(l => {
       // Step 3: Score
       const score = modelScore(l);
-      log.push(`Scored: ${score}/100`);
+      log.push(`Score: ${score}/100`);
       return { ...l, score };
     })
     .then(l => {
@@ -105,14 +105,14 @@ function processLead(lead) {
       if (!validateLead(l)) {
         throw new Error('Lead failed validation checks');
       }
-      log.push('Validation passed');
+      log.push('Validation: passed');
       return l;
     })
     .then(l => {
       // Step 5: Decide
       const isHot = l.score >= LEAD_SCORE.HOT_THRESHOLD;
       const path = isHot ? 'priority-outreach' : 'nurture-sequence';
-      log.push(`Decision: ${isHot ? 'HOT lead for immediate outreach' : 'Add to nurture sequence'}`);
+      log.push(`Route: ${isHot ? 'priority outreach' : 'nurture sequence'}`);
       return { ...l, path };
     })
     .then(result => {

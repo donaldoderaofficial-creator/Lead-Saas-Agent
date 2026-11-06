@@ -69,39 +69,38 @@ function describePlan(planKey) {
   return `${label} covers up to ${plan.leads.toLocaleString()} leads/month at $${plan.price}/mo`;
 }
 
-// Every reply closes with a concrete next step — no fabricated urgency or guarantees, just a direct path to act.
 function closeWithNextStep(planKey) {
-  if (planKey) return `Ready to get started? You can begin on ${planKey === 'growth' ? 'Growth' : 'Starter'} right now at /billing.html?plan=${planKey}.`;
-  return 'Would you like me to point you to the right plan so you can get started today?';
+  if (planKey) return `Start on ${planKey === 'growth' ? 'Growth' : 'Starter'}: /billing.html?plan=${planKey}.`;
+  return 'Which plan should I quote?';
 }
 
 function buildMiaReply(question) {
   const text = String(question || '').trim();
   const lower = text.toLowerCase();
-  if (!text) return 'Hi, I am Mia from Dispatch Pro. I am happy to help. Ask me about plans, custom packages, lead workflows, or BTC and ETH payments.';
+  if (!text) return 'Mia, Dispatch Pro. Ask about plans, lead qualification, integrations, or BTC/ETH payment quotes.';
 
   if (/custom|enterprise|scale|10,?000|large package/.test(lower)) {
     const quote = quoteCustomPackage({ currency: inferCurrency(text), budgetUsd: inferBudget(text) });
-    return `That sounds like an exciting opportunity. The current custom-package starting estimate is ${formatCryptoAmount(quote)} total for a ${CUSTOM_TERM_MONTHS}-month engagement. ${formatWalletInstructions(quote)} Final scope is confirmed after discovery. Before payment, please share your users, monthly lead volume, integrations, timeline, and preferred currency so our team can confirm the proposal. You can also reach us at hello@dispatchpro.ai.`;
+    return `Custom package starts at ${formatCryptoAmount(quote)} for ${CUSTOM_TERM_MONTHS} months. ${formatWalletInstructions(quote)} For a scoped proposal, send user count, monthly lead volume, required integrations, timeline, and settlement currency.`;
   }
 
   if (/expensive|too much|can'?t afford|cheaper|discount|budget/.test(lower)) {
-    return `I hear you — let's put it in perspective. ${describePlan('starter')}, which for most teams is a small fraction of a single closed deal. ${closeWithNextStep('starter')} If it helps, start on Starter and move to Growth only once your volume actually needs it.`;
+    return `${describePlan('starter')}. Start on Starter, then move to Growth if volume exceeds its cap. ${closeWithNextStep('starter')}`;
   }
 
   if (/already (?:have|use|using)|current (?:tool|crm|system)|competitor|switching from|another (?:tool|platform|vendor)/.test(lower)) {
-    return `Totally fair to compare. The difference most teams notice is that Dispatch Pro qualifies and routes every inbound lead the moment it arrives — nothing sits unscored — and every decision stays visible on the dashboard instead of buried in a pipeline. What's the biggest gap in your current setup that you'd want solved first?`;
+    return `Dispatch Pro scores and routes inbound leads, with decisions visible on the dashboard. What is the biggest gap in your current setup?`;
   }
 
   if (/think about it|not (?:sure|ready)|later|maybe (?:next|another)|need time|talk to my team/.test(lower)) {
-    return `Of course — it's worth getting right. While you weigh it, every week without a qualification workflow is inbound demand going unrouted. Starter is billed monthly, so you can start small, see real results, and reassess anytime. ${closeWithNextStep('starter')} Is there a specific concern I can address right now?`;
+    return `Starter is billed monthly. ${closeWithNextStep('starter')} What concern should I address before you decide?`;
   }
 
   if (/secure|security|safe|trust|data privacy|gdpr/.test(lower)) {
-    return `Good question — security is built in: passwords are hashed, accounts require 2FA, production sessions use secure cookies, and access is rate-limited and audited. ${closeWithNextStep(null)}`;
+    return 'Current controls: hashed passwords, 2FA, secure production cookies, and rate-limited access. Which control should I explain?';
   }
 
-  if (/btc|bitcoin|eth|ethereum|crypto|pay/.test(lower)) return 'Absolutely. Dispatch Pro accepts BTC and ETH wallet payments. Starter and Growth quotes use live market rates, and payment proof is reviewed before access is enabled. Would you like a current Starter, Growth, or custom-package quote?';
+  if (/btc|bitcoin|eth|ethereum|crypto|pay/.test(lower)) return 'BTC and ETH wallet payments are accepted. Quotes use live rates; payment proof is reviewed before access. Which plan do you need quoted?';
 
   if (/starter|growth|plan|pricing|cost/.test(lower)) {
     const volume = extractLeadVolume(lower);
@@ -109,18 +108,18 @@ function buildMiaReply(question) {
     if (recommendation) {
       return `With about ${volume.toLocaleString()} leads a month, ${recommendation === 'growth' ? 'Growth' : 'Starter'} is the better fit — ${describePlan(recommendation)}${recommendation === 'growth' ? ', plus unlimited sources and priority support' : ''}. ${closeWithNextStep(recommendation)}`;
     }
-    return `I can help you compare them. ${describePlan('starter')}, and ${describePlan('growth')} with priority support and custom qualification logic. About how many leads do you get each month?`;
+    return `${describePlan('starter')}. ${describePlan('growth')} with priority support and custom qualification logic. How many leads do you receive monthly?`;
   }
 
-  if (/lead|qualif|dashboard|workflow|integration/.test(lower)) return `That is exactly the kind of workflow Dispatch Pro is built for. It captures inbound leads, qualifies them with structured business signals, and keeps follow-up work visible in one dashboard. Which sources or integrations do you need first?`;
-  if (/thank|thanks|appreciate/.test(lower)) return 'You are very welcome. I am glad to help. What would you like to explore next?';
-  if (/hello|hi|hey|good morning|good afternoon/.test(lower)) return 'Hello, it is lovely to meet you. I am Mia from Dispatch Pro. What would you like to accomplish?';
-  return `I want to make sure I point you in the right direction. I can help with plans, lead qualification, custom packages, and crypto payment quotes. What outcome matters most to your team? ${closeWithNextStep(null)}`;
+  if (/lead|qualif|dashboard|workflow|integration/.test(lower)) return 'Dispatch Pro captures, qualifies, and tracks inbound leads. Which source or integration do you need?';
+  if (/thank|thanks|appreciate/.test(lower)) return 'You are welcome. What is the next question?';
+  if (/hello|hi|hey|good morning|good afternoon/.test(lower)) return 'Mia, Dispatch Pro. What do you need help with?';
+  return 'I can help with plans, lead qualification, integrations, and BTC/ETH quotes. What outcome do you need?';
 }
 
 function buildCustomReply({ body = '', subject = '' } = {}) {
   const quote = quoteCustomPackage({ currency: inferCurrency(body), budgetUsd: inferBudget(body) });
-  const reply = `Hello,\n\nThank you for contacting Dispatch Pro about a custom package. Based on your message, our starting custom-package estimate is ${formatCryptoAmount(quote)} total for a ${CUSTOM_TERM_MONTHS}-month engagement. The final scope and commercial terms will be confirmed after a discovery call; this is an estimate, not a payment request or financial advice.\n\nPlease reply with your target users, monthly lead volume, required integrations, timeline, and preferred settlement currency: BTC or ETH. We will prepare a written proposal aligned with our mission and vision.\n\nBest regards,\nDispatch Pro\n${process.env.EMAIL_FROM || 'hello@dispatchpro.ai'}`;
+  const reply = `Hello,\n\nCustom package estimate: ${formatCryptoAmount(quote)} for ${CUSTOM_TERM_MONTHS} months. This is an estimate, not a payment request or financial advice; final scope and terms require discovery.\n\nReply with user count, monthly lead volume, integrations, timeline, and preferred currency (BTC or ETH) for a written proposal.\n\nDispatch Pro\n${process.env.EMAIL_FROM || 'hello@dispatchpro.ai'}`;
   return { reply, quote, subject: subject || 'Custom package enquiry' };
 }
 
@@ -130,13 +129,18 @@ async function improveReplyWithAI(draft) {
     method: 'POST',
     headers: { authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'content-type': 'application/json' },
     body: JSON.stringify({ model: process.env.OPENAI_MODEL || 'gpt-4o-mini', temperature: 0.2, messages: [
-      { role: 'system', content: 'You are Dispatch Pro customer support. Improve clarity and warmth only. Do not change prices, currencies, disclaimers, or promise outcomes. Do not provide financial advice. Return only the email body.' },
+      { role: 'system', content: 'You are Dispatch Pro customer support. Return only the concise, decision-relevant email body, with no more than 120 words. Remove filler, repeated context, greetings, and generic calls to action. Do not change prices, currencies, disclaimers, or promise outcomes. Do not provide financial advice.' },
       { role: 'user', content: draft.reply },
     ] }),
   });
   if (!response.ok) throw new Error(`AI provider returned HTTP ${response.status}`);
   const content = (await response.json()).choices?.[0]?.message?.content?.trim();
-  return content ? { ...draft, reply: content } : draft;
+  if (!content) return draft;
+  const wordCount = content.split(/\s+/).length;
+  if (wordCount > 120 || /\b(?:I hope this (?:email|message) finds you well|thank you for reaching out|please do not hesitate to reach out)\b/i.test(content)) {
+    throw new Error('AI response did not meet the concise reply requirements');
+  }
+  return { ...draft, reply: content };
 }
 
 function verifyWebhookSignature(rawBody, signature, secret) {
