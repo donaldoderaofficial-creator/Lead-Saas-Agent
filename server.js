@@ -49,6 +49,7 @@ const { createObservabilityRouter } = require('./routes/observability');
 const { createObservabilityService } = require('./services/observability-service');
 const { createItDirectoryRouter } = require('./routes/it-directory');
 const { createItDirectoryService } = require('./services/it-directory-service');
+const { createSingleFlight } = require('./services/payment-finalization');
 
 const app = express();
 const DISPATCH_PRO = config.company;
@@ -654,27 +655,31 @@ function requiredLeadAmount(currency) {
   return Infinity;
 }
 
+const runPaymentFinalization = createSingleFlight();
+
 async function finalizeLead(ref, payment) {
-  const lead = pendingLeads.get(ref);
-  if (!lead || completedReports.has(ref)) return; // unknown ref, or already processed
-  if (!(Number(payment.amount) >= requiredLeadAmount(payment.currency))) {
-    payments.record({ ...payment, reference: ref, status: 'underpaid' });
-    logger.warn('Report withheld: payment below full price', { ref, amount: payment.amount, currency: payment.currency });
-    return;
-  }
-  payments.record({ ...payment, reference: ref });
-  const outcome = await processLead(lead);
-  completedReports.set(ref, {
-    ...outcome,
-    premium: {
-      recommendedNextStep:
-        outcome.result.path === 'priority-outreach'
-          ? 'Call within 24 hours — enterprise-tier lead'
-          : 'Enroll in 5-email nurture sequence',
-      confidence: outcome.result.score >= 70 ? 'high' : 'moderate',
-    },
+  return runPaymentFinalization(ref, async () => {
+    const lead = pendingLeads.get(ref);
+    if (!lead || completedReports.has(ref)) return; // unknown ref, or already processed
+    if (!(Number(payment.amount) >= requiredLeadAmount(payment.currency))) {
+      payments.record({ ...payment, reference: ref, status: 'underpaid' });
+      logger.warn('Report withheld: payment below full price', { ref, amount: payment.amount, currency: payment.currency });
+      return;
+    }
+    payments.record({ ...payment, reference: ref });
+    const outcome = await processLead(lead);
+    completedReports.set(ref, {
+      ...outcome,
+      premium: {
+        recommendedNextStep:
+          outcome.result.path === 'priority-outreach'
+            ? 'Call within 24 hours — enterprise-tier lead'
+            : 'Enroll in 5-email nurture sequence',
+        confidence: outcome.result.score >= 70 ? 'high' : 'moderate',
+      },
+    });
+    pendingLeads.delete(ref);
   });
-  pendingLeads.delete(ref);
 }
 // ---- Step 1: submit a lead, get a payment reference back ----
 app.post('/api/lead', requireActiveSubscription, async (req, res) => {
