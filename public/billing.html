@@ -9,6 +9,7 @@
 <body>
   <main class="wrap"><div class="panel">
     <h1>Lead SaaS subscription</h1>
+    <p>Sales agent? <a href="/dashboard-v2.html" style="color:#b9c7ff">Create an account</a> and choose the sales-agent option to earn 20% on verified referred package payments for 12 months.</p>
     <p>Send BTC or ETH anytime to the permanent addresses below — no form required.</p>
     <div id="walletList" class="wallet-list" aria-live="polite"></div>
     <p class="hint">Want a tracked order reference instead? Fill this in and create a payment:</p>
@@ -158,7 +159,10 @@
           [['paypal-starter', starterId, 'Starter'], ['paypal-growth', growthId, 'Growth']].forEach(([id, planId, label]) => {
             window.paypal.Buttons({
               style: { layout: 'vertical', shape: 'rect', label: 'subscribe' },
-              createSubscription: (data, actions) => actions.subscription.create({ plan_id: planId }),
+              createSubscription: (data, actions) => actions.subscription.create({
+                plan_id: planId,
+                ...( /^[a-z0-9_-]{2,64}$/i.test(referral) ? { custom_id: referral.trim().toLowerCase() } : {}),
+              }),
               onApprove: () => status(`${label} subscription started. Access will activate after provider confirmation.`),
               onError: () => status('Card checkout is temporarily unavailable. Please try again or use a wallet payment.', true),
             }).render(`#${id}`);

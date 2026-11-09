@@ -37,6 +37,7 @@
     <div class="card">
       <h1>Plans & Billing</h1>
       <p class="muted">Send BTC or ETH anytime to the permanent addresses below, or create a tracked payment request and submit the transaction hash for review.</p>
+      <p class="muted">Are you a sales agent? <a href="https://lead-saas-agent.netlify.app/dashboard-v2.html" style="color:var(--signal)">Create a sales-agent account</a> to earn 20% on verified referred package payments for 12 months.</p>
       <div id="walletList" class="wallet-list" aria-live="polite"></div>
 
       <div class="grid">
@@ -77,6 +78,7 @@
   <script src="api-base.js"></script>
   <script>
     const plan = new URLSearchParams(window.location.search).get('plan');
+    const referral = new URLSearchParams(window.location.search).get('ref') || '';
     const planField = document.getElementById('plan');
     const orderButton = document.getElementById('order');
     const confirmButton = document.getElementById('confirm');
@@ -134,7 +136,7 @@
         const response = await fetch(window.DispatchAPI.url('/api/billing/crypto/order'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, plan: selectedPlan, method }),
+          body: JSON.stringify({ name, email, plan: selectedPlan, method, referral }),
         });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || 'Unable to create wallet payment.');

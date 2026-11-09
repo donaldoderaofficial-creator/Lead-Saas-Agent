@@ -6,6 +6,8 @@
  */
 
 const { checkTransition } = require('./operations');
+const crypto = require('node:crypto');
+const { calculateCommission } = require('./sales-commission');
 
 function loadDatabaseClass() {
   try {
@@ -91,6 +93,7 @@ db.exec(`
     email_otp_hash TEXT,
     email_otp_expires_at TEXT,
     email_otp_attempts INTEGER NOT NULL DEFAULT 0,
+    sales_agent_code TEXT UNIQUE,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -176,6 +179,42 @@ db.exec(`
     UNIQUE(provider, transaction_id)
   );
 
+  CREATE TABLE IF NOT EXISTS sales_agent_referrals (
+    customer_key TEXT PRIMARY KEY,
+    sales_agent_user_id INTEGER NOT NULL,
+    eligible_until TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (sales_agent_user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS sales_agent_paypal_subscriptions (
+    paypal_subscription_id TEXT PRIMARY KEY,
+    sales_agent_user_id INTEGER NOT NULL,
+    eligible_until TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (sales_agent_user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS sales_agent_commissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sales_agent_user_id INTEGER NOT NULL,
+    provider TEXT NOT NULL,
+    transaction_id TEXT NOT NULL,
+    reference TEXT NOT NULL,
+    amount REAL NOT NULL,
+    currency TEXT NOT NULL,
+    commission_rate REAL NOT NULL,
+    commission_amount REAL NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    payout_reference TEXT,
+    paid_by INTEGER,
+    paid_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(provider, transaction_id),
+    FOREIGN KEY (sales_agent_user_id) REFERENCES users(id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_sales_agent_commissions_agent ON sales_agent_commissions(sales_agent_user_id, created_at);
+
   CREATE TABLE IF NOT EXISTS edrms_records (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -242,9 +281,11 @@ for (const column of [
   'newsletter_opt_out INTEGER NOT NULL DEFAULT 0',
   'newsletter_last_week TEXT',
   'newsletter_premium_until TEXT',
+  'sales_agent_code TEXT',
 ]) {
   try { db.exec(`ALTER TABLE users ADD COLUMN ${column}`); } catch (_) {}
 }
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_sales_agent_code ON users(sales_agent_code)');
 
 for (const column of ['crypto_payment_reference', 'crypto_transaction_id']) {
   try { db.exec(`ALTER TABLE subscription ADD COLUMN ${column} TEXT`); } catch (_) {}
@@ -313,14 +354,21 @@ const payments = {
   },
   findByReference(reference, provider = 'bitcoin-ebook') {
     const row = db.prepare(`
-      SELECT id, status, raw_json
+      SELECT id, status, transaction_id, amount, currency, raw_json
       FROM payment_transactions
       WHERE provider = ? AND reference = ?
       ORDER BY id DESC
       LIMIT 1
     `).get(provider, reference);
     if (!row) return undefined;
-    return { id: row.id, status: row.status, raw: row.raw_json ? JSON.parse(row.raw_json) : null };
+    return {
+      id: row.id,
+      status: row.status,
+      transactionId: row.transaction_id,
+      amount: row.amount,
+      currency: row.currency,
+      raw: row.raw_json ? JSON.parse(row.raw_json) : null,
+    };
   },
   updateStatus(id, status) {
     db.prepare('UPDATE payment_transactions SET status = ? WHERE id = ?').run(status, id);
@@ -502,8 +550,9 @@ const safetyIncidents = {
 
 const users = {
   create(username, passwordHash, totpSecret, role = 'user') {
-    const info = db.prepare('INSERT INTO users (username, password_hash, totp_secret, role) VALUES (?, ?, ?, ?)')
-      .run(username, passwordHash, totpSecret, role);
+    const referralCode = role === 'sales_agent' ? `dp-${crypto.randomBytes(6).toString('hex')}` : null;
+    const info = db.prepare('INSERT INTO users (username, password_hash, totp_secret, role, sales_agent_code) VALUES (?, ?, ?, ?, ?)')
+      .run(username, passwordHash, totpSecret, role, referralCode);
     return Number(info.lastInsertRowid);
   },
   setEmailOtp(id, otpHash, expiresAt) {
@@ -534,7 +583,8 @@ const users = {
     db.prepare('UPDATE users SET totp_enabled = 1 WHERE id = ?').run(id);
   },
   setRole(id, role) {
-    db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id);
+    db.prepare("UPDATE users SET role = ?, sales_agent_code = CASE WHEN ? = 'sales_agent' THEN COALESCE(sales_agent_code, ?) ELSE NULL END WHERE id = ?")
+      .run(role, role, `dp-${crypto.randomBytes(6).toString('hex')}`, id);
   },
   listNewsletterRecipients() {
     return db.prepare("SELECT id, username, newsletter_premium_until AS premiumUntil FROM users WHERE totp_enabled = 1 AND newsletter_opt_out = 0 AND username LIKE '%_@_%' ORDER BY id").all();
@@ -552,6 +602,95 @@ const users = {
   },
   setNewsletterOptOut(id, optOut) {
     return Number(db.prepare('UPDATE users SET newsletter_opt_out = ? WHERE id = ?').run(optOut ? 1 : 0, id).changes) === 1;
+  },
+};
+
+const salesAgents = {
+  findByCode(code) {
+    if (!code) return undefined;
+    return db.prepare("SELECT id, username, sales_agent_code AS referralCode FROM users WHERE role = 'sales_agent' AND sales_agent_code = ?")
+      .get(code);
+  },
+  findById(id) {
+    return db.prepare("SELECT id, username, sales_agent_code AS referralCode FROM users WHERE role = 'sales_agent' AND id = ?")
+      .get(id);
+  },
+  list() {
+    return db.prepare("SELECT id, username, sales_agent_code AS referralCode, created_at AS createdAt FROM users WHERE role = 'sales_agent' ORDER BY id")
+      .all();
+  },
+  attributeCryptoCustomer(customerKey, salesAgentUserId, eligibleUntil) {
+    db.prepare('INSERT OR IGNORE INTO sales_agent_referrals (customer_key, sales_agent_user_id, eligible_until) VALUES (?, ?, ?)')
+      .run(customerKey, salesAgentUserId, eligibleUntil);
+    return this.findCryptoCustomer(customerKey);
+  },
+  findCryptoCustomer(customerKey) {
+    return db.prepare('SELECT sales_agent_user_id AS salesAgentUserId, eligible_until AS eligibleUntil FROM sales_agent_referrals WHERE customer_key = ?')
+      .get(customerKey);
+  },
+  attributePayPalSubscription(subscriptionId, salesAgentUserId, eligibleUntil) {
+    db.prepare('INSERT OR IGNORE INTO sales_agent_paypal_subscriptions (paypal_subscription_id, sales_agent_user_id, eligible_until) VALUES (?, ?, ?)')
+      .run(subscriptionId, salesAgentUserId, eligibleUntil);
+    return this.findPayPalSubscription(subscriptionId);
+  },
+  setPayPalCommissionTerm(subscriptionId, eligibleUntil) {
+    db.prepare('UPDATE sales_agent_paypal_subscriptions SET eligible_until = COALESCE(eligible_until, ?) WHERE paypal_subscription_id = ?')
+      .run(eligibleUntil, subscriptionId);
+    return this.findPayPalSubscription(subscriptionId);
+  },
+  findPayPalSubscription(subscriptionId) {
+    return db.prepare('SELECT sales_agent_user_id AS salesAgentUserId, eligible_until AS eligibleUntil FROM sales_agent_paypal_subscriptions WHERE paypal_subscription_id = ?')
+      .get(subscriptionId);
+  },
+  recordCommission({ salesAgentUserId, provider, transactionId, reference, amount, currency, rate }) {
+    const commissionAmount = calculateCommission(amount, currency, rate);
+    const result = db.prepare(`
+      INSERT OR IGNORE INTO sales_agent_commissions
+        (sales_agent_user_id, provider, transaction_id, reference, amount, currency, commission_rate, commission_amount)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(salesAgentUserId, provider, transactionId, reference, Number(amount), currency.toUpperCase(), rate, commissionAmount);
+    return Number(result.changes) === 1;
+  },
+  listCommissions(salesAgentUserId) {
+    return db.prepare(`
+      SELECT id, provider, transaction_id AS transactionId, reference, amount, currency,
+        commission_rate AS commissionRate, commission_amount AS commissionAmount,
+        status, payout_reference AS payoutReference, paid_at AS paidAt, created_at AS createdAt
+      FROM sales_agent_commissions
+      WHERE sales_agent_user_id = ?
+      ORDER BY id DESC
+    `).all(salesAgentUserId);
+  },
+  listAllCommissions() {
+    return db.prepare(`
+      SELECT c.id, c.sales_agent_user_id AS salesAgentUserId, u.username,
+        u.sales_agent_code AS referralCode, c.provider, c.transaction_id AS transactionId,
+        c.reference, c.amount, c.currency, c.commission_amount AS commissionAmount,
+        c.status, c.payout_reference AS payoutReference, c.created_at AS createdAt
+      FROM sales_agent_commissions c
+      JOIN users u ON u.id = c.sales_agent_user_id
+      ORDER BY c.id DESC
+    `).all();
+  },
+  markCommissionPaid(id, payoutReference, paidBy) {
+    const result = db.prepare(`
+      UPDATE sales_agent_commissions
+      SET status = 'paid', payout_reference = ?, paid_by = ?, paid_at = datetime('now')
+      WHERE id = ? AND status = 'pending'
+    `).run(payoutReference, paidBy, id);
+    return Number(result.changes) === 1;
+  },
+  listConfirmedPayPalPayments(subscriptionId) {
+    return db.prepare(`
+      SELECT transaction_id AS transactionId, reference, amount, currency,
+        raw_json AS rawJson, created_at AS createdAt
+      FROM payment_transactions
+      WHERE provider = 'paypal-subscription' AND reference = ? AND status = 'confirmed'
+      ORDER BY id
+    `).all(subscriptionId).map((payment) => ({
+      ...payment,
+      raw: payment.rawJson ? JSON.parse(payment.rawJson) : null,
+    }));
   },
 };
 
@@ -882,6 +1021,7 @@ module.exports = {
   safetyIncidents,
   workItems,
   users,
+  salesAgents,
   subscription,
   compliance,
   emailThreads,

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dispatch Pro sales-agent earnings</title>
+  <style>
+    body{margin:0;padding:32px 18px;background:#0b0d12;color:#e7e9ee;font:15px/1.5 sans-serif}
+    main{max-width:900px;margin:auto}.panel{background:#151822;border:1px solid #303747;border-radius:12px;padding:24px;margin-bottom:16px}
+    h1,h2{margin-top:0}p,.muted{color:#9aa1b1}a{color:#b9c7ff}button{padding:9px 13px;border:0;border-radius:8px;background:#6c8cff;color:#fff;cursor:pointer}
+    code{display:block;overflow-wrap:anywhere;padding:12px;background:#1c202c;border-radius:8px;color:#b9c7ff}
+    .totals{display:flex;flex-wrap:wrap;gap:12px}.total{flex:1;min-width:180px;padding:14px;background:#1c202c;border-radius:8px}
+    .total strong{display:block;font-size:20px}.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:650px}th,td{text-align:left;padding:10px;border-bottom:1px solid #303747}th{color:#9aa1b1}
+    #status{min-height:24px;color:#9aa1b1}
+  </style>
+</head>
+<body>
+  <main>
+    <section class="panel">
+      <h1>Sales-agent earnings</h1>
+      <p>Earn 20% of confirmed package payments referred through your link for the customer's first 12 months. Commissions are shown in the currency collected and paid manually by Dispatch Pro.</p>
+      <p id="status" role="status">Loading your sales-agent account…</p>
+      <div id="account" hidden>
+        <h2>Your referral link</h2>
+        <code id="referralUrl"></code>
+        <button id="copyLink" type="button">Copy link</button>
+        <p class="muted">Share this link with new customers. Their Starter or Growth subscription must be paid and verified before a commission is earned.</p>
+      </div>
+    </section>
+    <section class="panel" id="earnings" hidden>
+      <h2>Earnings</h2>
+      <div class="totals" id="totals"></div>
+    </section>
+    <section class="panel" id="history" hidden>
+      <h2>Commission history</h2>
+      <div class="scroll"><table>
+        <thead><tr><th>Date</th><th>Payment reference</th><th>Payment</th><th>Commission</th><th>Status</th></tr></thead>
+        <tbody id="commissions"></tbody>
+      </table></div>
+    </section>
+    <p><a href="/dashboard-v2.html">Dispatch Pro dashboard</a></p>
+  </main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    function addCell(row, value) {
+      const cell = document.createElement('td');
+      cell.textContent = value;
+      row.appendChild(cell);
+    }
+    function money(amount, currency) {
+      const digits = ['BTC', 'ETH'].includes(currency) ? 8 : 2;
+      return `${Number(amount).toFixed(digits)} ${currency}`;
+    }
+    async function loadEarnings() {
+      try {
+        const sessionResponse = await fetch('/auth/me', { credentials: 'include' });
+        if (!sessionResponse.ok) {
+          $('status').textContent = 'Log in or create a sales-agent account to view your earnings.';
+          return;
+        }
+        const session = await sessionResponse.json();
+        if (session.role !== 'sales_agent') {
+          $('status').textContent = 'This account is not registered as a sales agent.';
+          return;
+        }
+        const response = await fetch('/api/sales-agent/earnings', { credentials: 'include' });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Could not load sales-agent earnings.');
+        $('status').textContent = `Commission rate: ${data.commissionRate * 100}% for ${data.commissionTermMonths} months after the first verified referral payment.`;
+        $('account').hidden = false;
+        $('earnings').hidden = false;
+        $('history').hidden = false;
+        $('referralUrl').textContent = data.referralUrl;
+        $('copyLink').onclick = async () => {
+          try {
+            await navigator.clipboard.writeText(data.referralUrl);
+            $('copyLink').textContent = 'Copied';
+          } catch {
+            $('status').textContent = 'Copy failed. Select and copy the referral link above.';
+          }
+        };
+        for (const [currency, total] of Object.entries(data.totals)) {
+          const card = document.createElement('div');
+          card.className = 'total';
+          const title = document.createElement('strong');
+          title.textContent = currency;
+          const pending = document.createElement('span');
+          pending.textContent = `Pending: ${money(total.pending, currency)}`;
+          const paid = document.createElement('span');
+          paid.textContent = `Paid: ${money(total.paid, currency)}`;
+          card.append(title, pending, document.createElement('br'), paid);
+          $('totals').appendChild(card);
+        }
+        for (const commission of data.commissions) {
+          const row = document.createElement('tr');
+          addCell(row, new Date(commission.createdAt).toLocaleDateString());
+          addCell(row, commission.reference);
+          addCell(row, money(commission.amount, commission.currency));
+          addCell(row, money(commission.commissionAmount, commission.currency));
+          addCell(row, commission.status === 'paid' ? 'Paid' : 'Pending');
+          $('commissions').appendChild(row);
+        }
+      } catch (error) {
+        $('status').textContent = error.message;
+      }
+    }
+    loadEarnings();
+  </script>
+</body>
+</html>
