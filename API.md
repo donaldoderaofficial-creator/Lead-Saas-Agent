@@ -223,12 +223,41 @@ webhooks. Bitcoin and Ethereum subscriptions use the same manual-review model
 as the e-book: a transaction hash is held as `pending_review` until an
 authenticated owner or administrator verifies the wallet transfer.
 
+### Sales-agent commissions
+
+During account registration, set `accountType` to `sales_agent` to create a
+sales-agent account. After email verification and login, use
+`/sales-agent.html` to copy the generated referral link and review earnings.
+Referral links work for Starter and Growth package checkouts.
+
+Agents earn 20% of each confirmed package payment in the currency collected
+for up to 12 months after the first verified payment from that referral.
+Crypto earnings accrue only after an administrator approves the payment;
+PayPal earnings accrue only after a verified completed-sale webhook. Duplicate
+payment events do not create duplicate commissions. PayPal webhook
+subscriptions must include `PAYMENT.SALE.COMPLETED` for recurring commissions.
+Dispatch Pro records earnings but does not transfer funds automatically;
+administrators should reconcile refunds and chargebacks before recording payout.
+
+#### `GET /api/sales-agent/earnings`
+Authenticated sales-agent account only. Returns the referral code and link,
+commission term, currency-separated pending/paid totals, and commission history.
+
+#### `GET /api/admin/sales-agents/commissions`
+Owner/admin only. Lists sales agents and commission entries.
+
+#### `POST /api/admin/sales-agents/commissions/:id/payout`
+Owner/admin only. Record an external/manual payout for one pending commission:
+`{ "payoutReference": "bank transfer or wallet receipt reference" }`.
+The reference is required; this endpoint does not initiate a transfer.
+
 #### `POST /api/billing/crypto/order`
 Create a BTC or ETH subscription order. The request accepts `plan` (`starter`
 or `growth`), `method` (`bitcoin` or `ethereum`), and optional buyer `name` and
 `email`. An optional `referral` identifies the referring AI agent or partner
 using 2-64 lowercase letters, numbers, `_`, or `-`. The response includes the
-wallet address, estimated exact display amount, and a unique reference.
+wallet address, estimated exact display amount, and a unique reference. A
+registered sales-agent referral requires a valid buyer email.
 
 #### `POST /api/billing/crypto/confirm`
 Submit the order `reference`, `txHash`, `method`, and `plan` after sending the

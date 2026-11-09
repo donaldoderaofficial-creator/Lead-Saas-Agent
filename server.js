@@ -35,7 +35,7 @@ const mpesaClient = require('./mpesa-client');
 const { initiateSTKPush, normalizePhoneNumber } = mpesaClient;
 const { processLead } = require('./lead-pipeline');
 const { trainFromLeads, learningStatus } = require('./adaptive-learning');
-const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, workItems, directory, users, subscription, emailThreads, checkDatabase, businessMetrics, createSessionStore } = require('./store');
+const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, workItems, directory, users, salesAgents, subscription, emailThreads, checkDatabase, businessMetrics, createSessionStore } = require('./store');
 const { DEPARTMENTS, PRIORITY_SLA_HOURS, transitionsFor, isBillable, validateItem, buildOverview, buildStrategyBrief } = require('./operations');
 const { hasActiveSubscription, paidThrough } = require('./subscription-policy');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateEmailOtp, hashEmailOtp } = require('./auth');
@@ -50,6 +50,7 @@ const { createObservabilityService } = require('./services/observability-service
 const { createItDirectoryRouter } = require('./routes/it-directory');
 const { createItDirectoryService } = require('./services/it-directory-service');
 const { createSingleFlight } = require('./services/payment-finalization');
+const { COMMISSION_RATE, addCommissionTerm, isWithinCommissionTerm } = require('./sales-commission');
 
 const app = express();
 const DISPATCH_PRO = config.company;
@@ -288,6 +289,36 @@ function normalizeReferral(referral) {
   return /^[a-z0-9_-]{2,64}$/.test(normalized) ? normalized : null;
 }
 
+function salesAgentCustomerKey(email) {
+  return crypto.createHmac('sha256', config.sessionSecret).update(email.trim().toLowerCase()).digest('hex');
+}
+
+function accruePayPalCommissions(subscriptionId) {
+  let attribution = salesAgents.findPayPalSubscription(subscriptionId);
+  if (!attribution) return;
+  const confirmedPayments = salesAgents.listConfirmedPayPalPayments(subscriptionId);
+  if (!attribution.eligibleUntil && confirmedPayments.length) {
+    const firstPaidAt = confirmedPayments
+      .map((payment) => payment.raw?.create_time || payment.createdAt)
+      .sort((left, right) => Date.parse(left) - Date.parse(right))[0];
+    attribution = salesAgents.setPayPalCommissionTerm(subscriptionId, addCommissionTerm(firstPaidAt));
+  }
+  if (!attribution.eligibleUntil) return;
+  for (const payment of confirmedPayments) {
+    const paidAt = payment.raw?.resource?.create_time || payment.raw?.create_time || payment.createdAt;
+    if (!isWithinCommissionTerm(paidAt, attribution.eligibleUntil)) continue;
+    salesAgents.recordCommission({
+      salesAgentUserId: attribution.salesAgentUserId,
+      provider: 'paypal-subscription',
+      transactionId: payment.transactionId,
+      reference: subscriptionId,
+      amount: payment.amount,
+      currency: payment.currency,
+      rate: COMMISSION_RATE,
+    });
+  }
+}
+
 app.buildEbookCheckoutPayload = buildEbookCheckoutPayload;
 app.buildSubscriptionCheckoutPayload = buildSubscriptionCheckoutPayload;
 
@@ -397,9 +428,13 @@ app.post('/api/billing/crypto/order', (req, res) => {
   const reference = crypto.randomUUID();
   const checkout = buildSubscriptionCheckoutPayload({ plan, method, name, email, reference });
   const referralSource = normalizeReferral(referral);
+  const normalizedBuyerEmail = validateEmail(email);
+  if (salesAgents.findByCode(referralSource) && !normalizedBuyerEmail) {
+    return res.status(400).json({ error: 'A valid email is required for a sales-agent referral.' });
+  }
   pendingLeads.set(reference, {
     name: checkout.buyerName,
-    email: checkout.buyerEmail,
+    email: normalizedBuyerEmail || checkout.buyerEmail,
     product: 'subscription',
     paymentMethod: method,
     plan,
@@ -796,8 +831,8 @@ app.post('/payments/capture-order/:orderId', async (req, res) => {
 
 // ---- PayPal: webhook path (more reliable — fires even if the buyer never returns to your site) ----
 // Register this URL under your app's webhooks in the PayPal developer dashboard,
-// subscribed to the PAYMENT.CAPTURE.COMPLETED event, and set PAYPAL_WEBHOOK_ID
-// to the ID it gives you. Every event is verified against PayPal before being trusted.
+// including PAYMENT.CAPTURE.COMPLETED and PAYMENT.SALE.COMPLETED, and set
+// PAYPAL_WEBHOOK_ID to the ID it gives you. Every event is verified before use.
 app.post('/payments/paypal/webhook', async (req, res) => {
   try {
     const isValid = await verifyWebhookSignature(req.headers, req.body);
@@ -829,6 +864,13 @@ app.post('/payments/paypal/webhook', async (req, res) => {
     if (plan) {
       const subscriptionId = event.resource.id;
       const lastPayment = event.resource.billing_info?.last_payment;
+      const referralCode = normalizeReferral(event.resource.custom_id);
+      const agent = salesAgents.findByCode(referralCode);
+      if (agent && subscriptionId) {
+        const eligibleUntil = lastPayment?.time ? addCommissionTerm(lastPayment.time) : null;
+        salesAgents.attributePayPalSubscription(subscriptionId, agent.id, eligibleUntil);
+        accruePayPalCommissions(subscriptionId);
+      }
       const paid = Number(lastPayment?.amount?.value) > 0
         || payments.findByReference(subscriptionId, 'paypal-subscription')?.status === 'confirmed';
       subscription.set({
@@ -852,6 +894,7 @@ app.post('/payments/paypal/webhook', async (req, res) => {
       currency: event.resource.amount?.currency || 'USD',
       raw: event,
     });
+    accruePayPalCommissions(event.resource.billing_agreement_id);
     const current = subscription.get();
     if (current.paypalSubscriptionId === subscriptionId) {
       // Anchor to the sale time so duplicate or out-of-order events never add unpaid months.
@@ -999,6 +1042,58 @@ app.use('/api/it', createItDirectoryRouter({
   requireAdmin,
 }));
 
+function requireSalesAgent(req, res, next) {
+  const user = users.findById(req.session.userId);
+  if (!user || user.role !== 'sales_agent') {
+    return res.status(403).json({ error: 'Sales-agent access required' });
+  }
+  next();
+}
+
+app.get('/api/sales-agent/earnings', requireAuth, requireSalesAgent, (req, res) => {
+  const agent = salesAgents.findById(req.session.userId);
+  if (!agent) return res.status(404).json({ error: 'Sales-agent account not found' });
+  const commissions = salesAgents.listCommissions(agent.id);
+  const totals = {};
+  for (const commission of commissions) {
+    const currency = commission.currency;
+    totals[currency] ||= { pending: 0, paid: 0 };
+    totals[currency][commission.status] += commission.commissionAmount;
+  }
+  const referralUrl = new URL('/billing.html', config.publicAppUrl || `http://localhost:${config.port}`);
+  referralUrl.searchParams.set('ref', agent.referralCode);
+  res.json({
+    referralCode: agent.referralCode,
+    referralUrl: referralUrl.toString(),
+    commissionRate: COMMISSION_RATE,
+    commissionTermMonths: 12,
+    totals,
+    commissions,
+  });
+});
+
+app.get('/api/admin/sales-agents/commissions', requireAuth, requireAdmin, (req, res) => {
+  res.json({
+    agents: salesAgents.list(),
+    commissions: salesAgents.listAllCommissions(),
+  });
+});
+
+app.post('/api/admin/sales-agents/commissions/:id/payout', requireAuth, requireAdmin, (req, res) => {
+  const commissionId = Number(req.params.id);
+  const payoutReference = req.body?.payoutReference;
+  if (!Number.isSafeInteger(commissionId) || commissionId < 1) {
+    return res.status(400).json({ error: 'A valid commission id is required.' });
+  }
+  if (typeof payoutReference !== 'string' || !payoutReference.trim() || payoutReference.trim().length > 200) {
+    return res.status(400).json({ error: 'payoutReference is required and must be 200 characters or fewer.' });
+  }
+  if (!salesAgents.markCommissionPaid(commissionId, payoutReference.trim(), req.session.userId)) {
+    return res.status(404).json({ error: 'Pending commission not found.' });
+  }
+  res.json({ status: 'paid', commissionId, payoutReference: payoutReference.trim() });
+});
+
 app.post('/api/safety/incidents', requireAuth, requireAdmin, (req, res) => {
   try {
     const observation = validateObservation(req.body || {});
@@ -1074,7 +1169,10 @@ function requireActiveSubscription(req, res, next) {
 }
 
 app.post('/auth/register', async (req, res) => {
-  const { email, password } = req.body || {};
+  const { email, password, accountType = 'customer' } = req.body || {};
+  if (!['customer', 'sales_agent'].includes(accountType)) {
+    return res.status(400).json({ error: 'accountType must be customer or sales_agent' });
+  }
   
   if (!validateEmail(email)) {
     return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Enter a valid email address' });
@@ -1094,7 +1192,8 @@ app.post('/auth/register', async (req, res) => {
     const passwordHash = await hashPassword(password);
     const totpSecret = generateTotpSecret();
     const normalizedEmail = email.trim().toLowerCase();
-    const userId = users.create(normalizedEmail, passwordHash, totpSecret);
+    const role = accountType === 'sales_agent' ? 'sales_agent' : 'user';
+    const userId = users.create(normalizedEmail, passwordHash, totpSecret, role);
     const otp = generateEmailOtp();
     users.setEmailOtp(userId, hashEmailOtp(otp), new Date(Date.now() + 10 * 60 * 1000).toISOString());
     const delivery = await sendReply({
@@ -1110,6 +1209,7 @@ app.post('/auth/register', async (req, res) => {
       userId,
       username: normalizedEmail,
       email: normalizedEmail,
+      accountType,
       verificationRequired: true,
       ...(delivery.sent ? {} : { developmentOtp: otp }),
       companyProfile: DISPATCH_PRO,
@@ -1172,9 +1272,11 @@ app.post('/auth/logout', (req, res) => {
 
 app.get('/auth/me', (req, res) => {
   if (!req.session?.userId) return res.status(401).json({ error: 'Not logged in' });
+  const user = users.findById(req.session.userId);
   req.session.companyProfile = req.session.companyProfile || DISPATCH_PRO;
   res.json({
     username: req.session.username,
+    role: user?.role || 'user',
     companyProfile: req.session.companyProfile,
     founder: DISPATCH_PRO.founder,
     founderTitle: DISPATCH_PRO.title,
@@ -1541,9 +1643,35 @@ app.post('/api/billing/crypto/review/:reference', requireAuth, requireAdmin, (re
   const payment = payments.findByReference(req.params.reference, 'bitcoin-subscription')
     || payments.findByReference(req.params.reference, 'ethereum-subscription');
   if (!payment || payment.status !== 'pending_review') return res.status(404).json({ error: 'No pending crypto subscription payment found' });
+  const order = pendingLeads.get(req.params.reference);
   payments.updateStatus(payment.id, approved ? 'confirmed' : 'rejected');
   if (!approved) return res.json({ status: 'rejected', reference: req.params.reference });
   const details = payment.raw || {};
+  const buyerEmail = validateEmail(order?.email);
+  if (buyerEmail) {
+    const paidAt = new Date().toISOString();
+    const customerKey = salesAgentCustomerKey(buyerEmail);
+    let attribution = salesAgents.findCryptoCustomer(customerKey);
+    const referringAgent = salesAgents.findByCode(normalizeReferral(details.referralSource));
+    if (!attribution && referringAgent && referringAgent.username !== buyerEmail) {
+      attribution = salesAgents.attributeCryptoCustomer(
+        customerKey,
+        referringAgent.id,
+        addCommissionTerm(paidAt),
+      );
+    }
+    if (attribution && isWithinCommissionTerm(paidAt, attribution.eligibleUntil)) {
+      salesAgents.recordCommission({
+        salesAgentUserId: attribution.salesAgentUserId,
+        provider: payment.raw?.method === 'ethereum' ? 'ethereum-subscription' : 'bitcoin-subscription',
+        transactionId: payment.transactionId,
+        reference: req.params.reference,
+        amount: payment.amount,
+        currency: payment.currency,
+        rate: COMMISSION_RATE,
+      });
+    }
+  }
   const current = subscription.get();
   const renewFrom = hasActiveSubscription(current) ? Date.parse(current.currentPeriodEnd) : Date.now();
   subscription.set({
