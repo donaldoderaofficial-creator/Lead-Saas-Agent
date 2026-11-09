@@ -21,8 +21,10 @@ test('landing pages expose an accessible QR linking to the live Dispatch Pro app
     assert.match(html, new RegExp(`<img[^>]+src=["']/?dispatch-pro-qr\\.png["']`), `${directory} page should load its QR image`);
     assert.match(html, /alt=["'][^"']*QR code[^"']*["']/i, `${directory} QR image should have descriptive alt text`);
     assert.match(html, new RegExp(`href=["']${target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']`), `${directory} page should link to the live app`);
-    const footer = html.match(/<footer\b[^>]*>[\s\S]*?<\/footer>/i);
-    assert.ok(footer, `${directory} page should have a footer`);
-    assert.match(footer[0], /class=["']footer-qr["']/, `${directory} QR should blend into the existing footer`);
+    const platform = html.match(/<section\b[^>]*id=["']platform["'][^>]*>[\s\S]*?<\/section>/i);
+    assert.ok(platform, `${directory} page should have a platform features section`);
+    assert.match(platform[0], /class=["']feature-qr["']/, `${directory} QR should appear below the feature cards`);
+    assert.match(platform[0], /Scan this QR code to access Dispatch Pro via phone\./, `${directory} section should show the requested prompt`);
+    assert.match(platform[0], /alt=["']QR code to access Dispatch Pro via phone["']/, `${directory} QR should have descriptive alt text`);
   }
 });
