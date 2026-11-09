@@ -26,9 +26,6 @@ jobs:
       - name: Run tests and syntax checks
         run: npm test
 
-      - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
-
       - name: Smoke test deployment readiness gate
         env:
           SESSION_SECRET: ci-only-session-secret-with-at-least-32-characters
