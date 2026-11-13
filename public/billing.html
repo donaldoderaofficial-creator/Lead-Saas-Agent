@@ -9,7 +9,8 @@
 <body>
   <main class="wrap"><div class="panel">
     <h1>Lead SaaS subscription</h1>
-    <p>Sales agent? <a href="/dashboard-v2.html" style="color:#b9c7ff">Create an account</a> and choose the sales-agent option to earn 20% on verified referred package payments for 12 months.</p>
+    <p>Sales agent? <a href="/dashboard-v2.html" style="color:#b9c7ff">Create an account</a> and choose the sales-agent option to earn 20% on directly referred BTC and ETH sales after payment approval.</p>
+    <p>Customer loyalty: earn 1 point per complete $5 paid on approved BTC or ETH subscriptions. Redeem 100 points for $5 off a future Lead SaaS subscription. <a href="/dashboard-v2.html" style="color:#b9c7ff">Sign in</a> with the same email to use points. Points have no cash value; PayPal is not eligible.</p>
     <p>Send BTC or ETH anytime to the permanent addresses below — no form required.</p>
     <div id="walletList" class="wallet-list" aria-live="polite"></div>
     <p class="hint">Want a tracked order reference instead? Fill this in and create a payment:</p>
@@ -18,6 +19,7 @@
       <div><label for="email">Email</label><input id="email" type="email"></div>
       <div><label for="plan">Plan</label><select id="plan"><option value="starter">Starter</option><option value="growth">Growth</option></select></div>
       <div><label for="method">Payment method</label><select id="method"><option value="bitcoin">Bitcoin (BTC)</option><option value="ethereum">Ethereum (ETH)</option></select></div>
+      <div><label for="loyaltyPoints">Points to redeem (100 points = $5)</label><input id="loyaltyPoints" type="number" min="0" step="100" value="0"></div>
     </div>
     <button id="order">Create payment</button>
     <div id="wallet" class="wallet" hidden></div>
@@ -116,11 +118,11 @@
         renderWallets();
       } catch {}
     }
-    function showOrder({ amountCrypto: amount, currency, walletAddress, reference: ref }) {
+    function showOrder({ amountCrypto: amount, currency, walletAddress, reference: ref, loyaltyPointsToRedeem = 0, discountUsd = 0 }) {
       reference = ref;
       amountCrypto = amount;
       $('wallet').hidden = false;
-      $('wallet').innerHTML = 'Send exactly <strong id="walletAmount"></strong> to:<br><code id="walletAddr" style="user-select:all;word-break:break-all;"></code> <button type="button" id="copyAddr" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">Copy</button><br>Reference: <span id="walletRef"></span>';
+      $('wallet').innerHTML = `Send exactly <strong id="walletAmount"></strong> to:<br><code id="walletAddr" style="user-select:all;word-break:break-all;"></code> <button type="button" id="copyAddr" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">Copy</button><br>Reference: <span id="walletRef"></span>${loyaltyPointsToRedeem ? '<br><span id="loyaltyOrderInfo"></span><br><button type="button" id="cancelLoyaltyOrder">Cancel order and release points</button>' : ''}`;
       $('walletAmount').textContent = `${amount} ${currency}`;
       $('walletAddr').textContent = walletAddress;
       $('walletRef').textContent = ref;
@@ -132,7 +134,36 @@
       $('hashLabel').hidden = false;
       $('hash').hidden = false;
       $('confirm').hidden = false;
-      status('Send the amount, then submit the transaction hash.');
+      if (loyaltyPointsToRedeem) {
+        $('loyaltyOrderInfo').textContent = `${loyaltyPointsToRedeem} points reserved for $${discountUsd} subscription credit.`;
+        $('cancelLoyaltyOrder').onclick = cancelLoyaltyOrder;
+        status('Send the discounted amount, then submit the transaction hash.');
+      } else {
+        status('Send the amount, then submit the transaction hash.');
+      }
+    }
+    async function cancelLoyaltyOrder() {
+      const button = $('cancelLoyaltyOrder');
+      button.disabled = true;
+      try {
+        const response = await fetchWithTimeout(window.DispatchAPI.url(`/api/billing/crypto/order/${encodeURIComponent(reference)}/cancel`), {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const data = await response.json();
+        if (!response.ok) return status(data.error || 'Could not cancel this order.', true);
+        $('wallet').hidden = true;
+        $('hashLabel').hidden = true;
+        $('hash').hidden = true;
+        $('confirm').hidden = true;
+        $('loyaltyPoints').value = '0';
+        status(`${data.pointsReleased} loyalty points released.`);
+      } catch {
+        status('Could not reach the server to cancel this order. Your points were not confirmed as released.', true);
+      } finally {
+        button.disabled = false;
+      }
     }
     function showEmailProof(txHash) {
       const subject = `Crypto payment proof ${reference}`;
@@ -175,16 +206,19 @@
     $('order').onclick = async () => {
       const method = $('method').value;
       const plan = $('plan').value;
+      const loyaltyPointsToRedeem = Number($('loyaltyPoints').value || 0);
       status('Creating wallet payment...');
       try {
-        const response = await fetchWithTimeout(window.DispatchAPI.url('/api/billing/crypto/order'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('name').value, email: $('email').value, plan, method, referral }) });
+        const response = await fetchWithTimeout(window.DispatchAPI.url('/api/billing/crypto/order'), { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: $('name').value, email: $('email').value, plan, method, referral, loyaltyPointsToRedeem }) });
         const data = await response.json();
         if (response.ok) {
           offlineOrder = false;
           return showOrder(data);
         }
         if (response.status < 500) return status(data.error || 'Could not create payment.', true);
-      } catch {}
+      } catch {
+        if (loyaltyPointsToRedeem > 0) return status('Could not securely reserve your loyalty points. Please try again; no offline discounted order was created.', true);
+      }
       offlineOrder = true;
       const wallet = wallets[method];
       showOrder({ amountCrypto: wallet.amounts[plan], currency: wallet.currency, walletAddress: wallet.address, reference: crypto.randomUUID() });
@@ -196,7 +230,10 @@
       try {
         const response = await fetchWithTimeout(window.DispatchAPI.url('/api/billing/crypto/confirm'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference, txHash, amount: amountCrypto, plan: $('plan').value, method: $('method').value }) });
         const data = await response.json();
-        if (response.ok) return status('Payment submitted. Access starts after verification.');
+        if (response.ok) {
+          $('cancelLoyaltyOrder')?.setAttribute('hidden', '');
+          return status('Payment submitted. Any points credit is consumed and new points are awarded only after payment verification.');
+        }
         if (response.status < 500) return status(data.error || 'Could not submit payment.', true);
       } catch {}
       showEmailProof(txHash);

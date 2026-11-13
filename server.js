@@ -35,7 +35,7 @@ const mpesaClient = require('./mpesa-client');
 const { initiateSTKPush, normalizePhoneNumber } = mpesaClient;
 const { processLead } = require('./lead-pipeline');
 const { trainFromLeads, learningStatus } = require('./adaptive-learning');
-const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, workItems, directory, users, salesAgents, subscription, emailThreads, checkDatabase, businessMetrics, createSessionStore } = require('./store');
+const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, workItems, directory, users, customerLoyalty, salesAgents, subscription, emailThreads, checkDatabase, businessMetrics, createSessionStore } = require('./store');
 const { DEPARTMENTS, PRIORITY_SLA_HOURS, transitionsFor, isBillable, validateItem, buildOverview, buildStrategyBrief } = require('./operations');
 const { hasActiveSubscription, paidThrough } = require('./subscription-policy');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateEmailOtp, hashEmailOtp } = require('./auth');
@@ -50,7 +50,8 @@ const { createObservabilityService } = require('./services/observability-service
 const { createItDirectoryRouter } = require('./routes/it-directory');
 const { createItDirectoryService } = require('./services/it-directory-service');
 const { createSingleFlight } = require('./services/payment-finalization');
-const { COMMISSION_RATE, addCommissionTerm, isWithinCommissionTerm } = require('./sales-commission');
+const { COMMISSION_RATE } = require('./sales-commission');
+const loyaltyRules = require('./loyalty');
 
 const app = express();
 const DISPATCH_PRO = config.company;
@@ -263,10 +264,16 @@ function getCryptoAmount(amountUsd, method, plan = 'starter') {
   return (Number(amountUsd) / price).toFixed(method === 'bitcoin' ? 8 : 6);
 }
 
-function buildSubscriptionCheckoutPayload({ plan = 'starter', method = 'bitcoin', name, email, reference } = {}) {
+function buildSubscriptionCheckoutPayload({ plan = 'starter', method = 'bitcoin', name, email, reference, discountUsd = 0, loyaltyPoints = 0 } = {}) {
   const walletType = method === 'bitcoin' ? 'bitcoin' : 'ethereum';
-  const amountUsd = Number(PRICING.usd[plan]?.price);
-  const amountCrypto = getCryptoAmount(amountUsd, method, plan);
+  const listAmountUsd = Number(PRICING.usd[plan]?.price);
+  const amountUsd = listAmountUsd - discountUsd;
+  const listAmountCrypto = getCryptoAmount(listAmountUsd, method, plan);
+  const amountCrypto = discountUsd > 0
+    ? Number.isFinite(Number(listAmountCrypto)) && Number(listAmountCrypto) > 0
+      ? (Number(listAmountCrypto) * amountUsd / listAmountUsd).toFixed(method === 'bitcoin' ? 8 : 6)
+      : null
+    : getCryptoAmount(amountUsd, method, plan);
   const walletAddress = config.wallets[walletType].address;
   const orderReference = reference || crypto.randomUUID();
   return {
@@ -277,6 +284,11 @@ function buildSubscriptionCheckoutPayload({ plan = 'starter', method = 'bitcoin'
     buyerEmail: email || 'wallet-customer@not-provided.local',
     amountUsd,
     amountCrypto,
+    ...(discountUsd > 0 ? {
+      listAmountUsd,
+      discountUsd,
+      loyaltyPointsToRedeem: loyaltyPoints,
+    } : {}),
     walletAddress,
     currency: config.wallets[walletType].currency,
     instructions: `Copy this wallet address: ${walletAddress}. Send exactly ${amountCrypto} ${config.wallets[walletType].currency} (about $${amountUsd.toFixed(2)} USD) to it, then paste the transaction hash here for manual verification.`,
@@ -287,36 +299,6 @@ function normalizeReferral(referral) {
   if (!referral || typeof referral !== 'string') return null;
   const normalized = referral.trim().toLowerCase();
   return /^[a-z0-9_-]{2,64}$/.test(normalized) ? normalized : null;
-}
-
-function salesAgentCustomerKey(email) {
-  return crypto.createHmac('sha256', config.sessionSecret).update(email.trim().toLowerCase()).digest('hex');
-}
-
-function accruePayPalCommissions(subscriptionId) {
-  let attribution = salesAgents.findPayPalSubscription(subscriptionId);
-  if (!attribution) return;
-  const confirmedPayments = salesAgents.listConfirmedPayPalPayments(subscriptionId);
-  if (!attribution.eligibleUntil && confirmedPayments.length) {
-    const firstPaidAt = confirmedPayments
-      .map((payment) => payment.raw?.create_time || payment.createdAt)
-      .sort((left, right) => Date.parse(left) - Date.parse(right))[0];
-    attribution = salesAgents.setPayPalCommissionTerm(subscriptionId, addCommissionTerm(firstPaidAt));
-  }
-  if (!attribution.eligibleUntil) return;
-  for (const payment of confirmedPayments) {
-    const paidAt = payment.raw?.resource?.create_time || payment.raw?.create_time || payment.createdAt;
-    if (!isWithinCommissionTerm(paidAt, attribution.eligibleUntil)) continue;
-    salesAgents.recordCommission({
-      salesAgentUserId: attribution.salesAgentUserId,
-      provider: 'paypal-subscription',
-      transactionId: payment.transactionId,
-      reference: subscriptionId,
-      amount: payment.amount,
-      currency: payment.currency,
-      rate: COMMISSION_RATE,
-    });
-  }
 }
 
 app.buildEbookCheckoutPayload = buildEbookCheckoutPayload;
@@ -420,17 +402,52 @@ app.get('/api/billing/status', (req, res) => {
 });
 
 app.post('/api/billing/crypto/order', (req, res) => {
-  const { plan = 'starter', method = 'bitcoin', name, email, referral } = req.body || {};
+  const { plan = 'starter', method = 'bitcoin', name, email, referral, loyaltyPointsToRedeem = 0 } = req.body || {};
   if (!['starter', 'growth'].includes(plan)) return res.status(400).json({ error: 'plan must be starter or growth' });
   if (!['bitcoin', 'ethereum'].includes(method)) return res.status(400).json({ error: 'method must be bitcoin or ethereum' });
+  if (!Number.isSafeInteger(loyaltyPointsToRedeem) || loyaltyPointsToRedeem < 0
+    || loyaltyPointsToRedeem % loyaltyRules.SUBSCRIPTION_CREDIT.points !== 0) {
+    return res.status(400).json({ error: `loyaltyPointsToRedeem must be a non-negative multiple of ${loyaltyRules.SUBSCRIPTION_CREDIT.points}` });
+  }
   const walletType = method === 'bitcoin' ? 'bitcoin' : 'ethereum';
   if (!config.wallets[walletType].address) return res.status(400).json({ error: `${config.wallets[walletType].label} payments are not configured.` });
-  const reference = crypto.randomUUID();
-  const checkout = buildSubscriptionCheckoutPayload({ plan, method, name, email, reference });
   const referralSource = normalizeReferral(referral);
   const normalizedBuyerEmail = validateEmail(email);
   if (salesAgents.findByCode(referralSource) && !normalizedBuyerEmail) {
     return res.status(400).json({ error: 'A valid email is required for a sales-agent referral.' });
+  }
+
+  const customer = normalizedBuyerEmail ? users.findByUsername(normalizedBuyerEmail) : undefined;
+  let loyaltyUser = customer?.role === 'user' ? customer : undefined;
+  if (loyaltyPointsToRedeem > 0) {
+    if (!req.session?.userId) return res.status(401).json({ error: 'Sign in with your customer account to redeem loyalty points.' });
+    const signedInUser = users.findById(req.session.userId);
+    if (!signedInUser || signedInUser.role !== 'user') {
+      return res.status(403).json({ error: 'Loyalty points are available to customer accounts only.' });
+    }
+    if (!normalizedBuyerEmail || signedInUser.username !== normalizedBuyerEmail) {
+      return res.status(403).json({ error: 'The checkout email must match your signed-in customer account.' });
+    }
+    loyaltyUser = signedInUser;
+  }
+
+  const discountUsd = loyaltyRules.creditForPoints(loyaltyPointsToRedeem);
+  const listAmountUsd = Number(PRICING.usd[plan].price);
+  if (discountUsd >= listAmountUsd) {
+    return res.status(400).json({ error: 'The loyalty credit must be less than the subscription price.' });
+  }
+  const reference = crypto.randomUUID();
+  const checkout = buildSubscriptionCheckoutPayload({
+    plan,
+    method,
+    name,
+    email: normalizedBuyerEmail || email,
+    reference,
+    discountUsd,
+    loyaltyPoints: loyaltyPointsToRedeem,
+  });
+  if (!checkout.amountCrypto || !Number.isFinite(Number(checkout.amountCrypto)) || Number(checkout.amountCrypto) <= 0) {
+    return res.status(503).json({ error: 'Unable to calculate a valid cryptocurrency amount for this checkout.' });
   }
   pendingLeads.set(reference, {
     name: checkout.buyerName,
@@ -440,7 +457,22 @@ app.post('/api/billing/crypto/order', (req, res) => {
     plan,
     amountCrypto: checkout.amountCrypto,
     referralSource,
+    loyaltyUserId: loyaltyUser?.id,
+    loyaltyPoints: loyaltyPointsToRedeem,
+    amountUsd: checkout.amountUsd,
   });
+  if (loyaltyPointsToRedeem > 0) {
+    try {
+      const reservation = customerLoyalty.reservePoints(loyaltyUser.id, reference, loyaltyPointsToRedeem);
+      if (!reservation.ok) {
+        pendingLeads.delete(reference);
+        return res.status(409).json({ error: `Not enough available loyalty points. Current balance: ${reservation.balance}.` });
+      }
+    } catch (error) {
+      pendingLeads.delete(reference);
+      throw error;
+    }
+  }
   res.json(checkout);
 });
 
@@ -471,6 +503,11 @@ app.post('/api/billing/crypto/confirm', (req, res) => {
       plan: order.plan,
       amount: submittedAmount,
       amountCrypto: order.amountCrypto,
+      amountUsd: order.amountUsd || null,
+      loyaltyPointsToRedeem: order.loyaltyPoints || 0,
+      loyaltyDiscountUsd: order.loyaltyPoints
+        ? Number(PRICING.usd[order.plan]?.price) - Number(order.amountUsd)
+        : 0,
       referralSource: order.referralSource || null,
     },
   });
@@ -864,13 +901,6 @@ app.post('/payments/paypal/webhook', async (req, res) => {
     if (plan) {
       const subscriptionId = event.resource.id;
       const lastPayment = event.resource.billing_info?.last_payment;
-      const referralCode = normalizeReferral(event.resource.custom_id);
-      const agent = salesAgents.findByCode(referralCode);
-      if (agent && subscriptionId) {
-        const eligibleUntil = lastPayment?.time ? addCommissionTerm(lastPayment.time) : null;
-        salesAgents.attributePayPalSubscription(subscriptionId, agent.id, eligibleUntil);
-        accruePayPalCommissions(subscriptionId);
-      }
       const paid = Number(lastPayment?.amount?.value) > 0
         || payments.findByReference(subscriptionId, 'paypal-subscription')?.status === 'confirmed';
       subscription.set({
@@ -894,7 +924,6 @@ app.post('/payments/paypal/webhook', async (req, res) => {
       currency: event.resource.amount?.currency || 'USD',
       raw: event,
     });
-    accruePayPalCommissions(event.resource.billing_agreement_id);
     const current = subscription.get();
     if (current.paypalSubscriptionId === subscriptionId) {
       // Anchor to the sale time so duplicate or out-of-order events never add unpaid months.
@@ -1050,6 +1079,39 @@ function requireSalesAgent(req, res, next) {
   next();
 }
 
+function requireCustomerAccount(req, res, next) {
+  const user = users.findById(req.session.userId);
+  if (!user || user.role !== 'user') {
+    return res.status(403).json({ error: 'Customer account access required' });
+  }
+  next();
+}
+
+app.get('/api/loyalty/me', requireAuth, requireCustomerAccount, (req, res) => {
+  const account = customerLoyalty.getAccount(req.session.userId);
+  const pointsUntilCredit = Math.max(0, loyaltyRules.SUBSCRIPTION_CREDIT.points
+    - (account.balance % loyaltyRules.SUBSCRIPTION_CREDIT.points));
+  res.json({
+    ...account,
+    earningRule: `Earn 1 point per complete $${loyaltyRules.USD_PER_POINT} paid on approved BTC or ETH subscriptions.`,
+    redemptionRule: `${loyaltyRules.SUBSCRIPTION_CREDIT.points} points = $${loyaltyRules.SUBSCRIPTION_CREDIT.usd} off a future subscription.`,
+    pointsUntilCredit,
+  });
+});
+
+app.post('/api/billing/crypto/order/:reference/cancel', requireAuth, requireCustomerAccount, (req, res) => {
+  const result = customerLoyalty.cancelUnpaidOrder(req.session.userId, req.params.reference);
+  if (!result.ok) {
+    const status = result.reason === 'payment-already-submitted' ? 409 : 404;
+    return res.status(status).json({
+      error: result.reason === 'payment-already-submitted'
+        ? 'This order has payment proof under review and cannot be cancelled here.'
+        : 'No loyalty-credit order was found for this account.',
+    });
+  }
+  res.json({ status: 'cancelled', pointsReleased: result.pointsReleased });
+});
+
 app.get('/api/sales-agent/earnings', requireAuth, requireSalesAgent, (req, res) => {
   const agent = salesAgents.findById(req.session.userId);
   if (!agent) return res.status(404).json({ error: 'Sales-agent account not found' });
@@ -1066,7 +1128,6 @@ app.get('/api/sales-agent/earnings', requireAuth, requireSalesAgent, (req, res) 
     referralCode: agent.referralCode,
     referralUrl: referralUrl.toString(),
     commissionRate: COMMISSION_RATE,
-    commissionTermMonths: 12,
     totals,
     commissions,
   });
@@ -1644,33 +1705,48 @@ app.post('/api/billing/crypto/review/:reference', requireAuth, requireAdmin, (re
     || payments.findByReference(req.params.reference, 'ethereum-subscription');
   if (!payment || payment.status !== 'pending_review') return res.status(404).json({ error: 'No pending crypto subscription payment found' });
   const order = pendingLeads.get(req.params.reference);
-  payments.updateStatus(payment.id, approved ? 'confirmed' : 'rejected');
-  if (!approved) return res.json({ status: 'rejected', reference: req.params.reference });
+  if (!approved) {
+    const rejected = customerLoyalty.rejectCryptoSubscriptionPayment(payment.id, req.params.reference);
+    if (!rejected.ok) return res.status(409).json({ error: 'Payment review state changed; refresh and try again.' });
+    if (order?.loyaltyPoints) pendingLeads.delete(req.params.reference);
+    return res.json({ status: 'rejected', reference: req.params.reference });
+  }
+
   const details = payment.raw || {};
   const buyerEmail = validateEmail(order?.email);
-  if (buyerEmail) {
-    const paidAt = new Date().toISOString();
-    const customerKey = salesAgentCustomerKey(buyerEmail);
-    let attribution = salesAgents.findCryptoCustomer(customerKey);
-    const referringAgent = salesAgents.findByCode(normalizeReferral(details.referralSource));
-    if (!attribution && referringAgent && referringAgent.username !== buyerEmail) {
-      attribution = salesAgents.attributeCryptoCustomer(
-        customerKey,
-        referringAgent.id,
-        addCommissionTerm(paidAt),
-      );
-    }
-    if (attribution && isWithinCommissionTerm(paidAt, attribution.eligibleUntil)) {
-      salesAgents.recordCommission({
-        salesAgentUserId: attribution.salesAgentUserId,
-        provider: payment.raw?.method === 'ethereum' ? 'ethereum-subscription' : 'bitcoin-subscription',
-        transactionId: payment.transactionId,
-        reference: req.params.reference,
-        amount: payment.amount,
-        currency: payment.currency,
-        rate: COMMISSION_RATE,
-      });
-    }
+  const account = order?.loyaltyUserId
+    ? users.findById(order.loyaltyUserId)
+    : buyerEmail ? users.findByUsername(buyerEmail) : undefined;
+  const loyaltyUser = account?.role === 'user' ? account : undefined;
+  const loyaltyUserId = loyaltyUser?.id || (order?.loyaltyPoints ? order.loyaltyUserId : null);
+  const plan = ['starter', 'growth'].includes(order?.plan) ? order.plan : details.plan;
+  const amountUsd = Number(order?.amountUsd || PRICING.usd[plan]?.price);
+  const pointsEarned = loyaltyUser && Number.isFinite(amountUsd) && amountUsd > 0
+    ? loyaltyRules.pointsForSubscription(amountUsd)
+    : 0;
+  const approval = customerLoyalty.approveCryptoSubscriptionPayment({
+    paymentId: payment.id,
+    userId: loyaltyUserId || null,
+    reference: req.params.reference,
+    provider: payment.provider,
+    transactionId: payment.transactionId,
+    plan,
+    pointsEarned,
+    pointsToRedeem: order?.loyaltyPoints || 0,
+  });
+  if (!approval.ok) return res.status(409).json({ error: 'Payment or loyalty reservation state changed; refresh and try again.' });
+
+  const referringAgent = salesAgents.findByCode(normalizeReferral(details.referralSource));
+  if (buyerEmail && referringAgent && referringAgent.username !== buyerEmail) {
+    salesAgents.recordCommission({
+      salesAgentUserId: referringAgent.id,
+      provider: payment.provider,
+      transactionId: payment.transactionId,
+      reference: req.params.reference,
+      amount: payment.amount,
+      currency: payment.currency,
+      rate: COMMISSION_RATE,
+    });
   }
   const current = subscription.get();
   const renewFrom = hasActiveSubscription(current) ? Date.parse(current.currentPeriodEnd) : Date.now();
@@ -1683,7 +1759,13 @@ app.post('/api/billing/crypto/review/:reference', requireAuth, requireAdmin, (re
     currentPeriodEnd: paidThrough(null, renewFrom),
   });
   pendingLeads.delete(req.params.reference);
-  res.json({ status: 'confirmed', reference: req.params.reference, plan: details.plan || 'starter' });
+  res.json({
+    status: 'confirmed',
+    reference: req.params.reference,
+    plan: plan || 'starter',
+    loyaltyPointsEarned: approval.pointsAdded,
+    loyaltyPointsRedeemed: approval.pointsRedeemed,
+  });
 });
 
 // ---- Prospecting: company/prospect data via Explorium, costs real credits per call ----

@@ -230,12 +230,11 @@ sales-agent account. After email verification and login, use
 `/sales-agent.html` to copy the generated referral link and review earnings.
 Referral links work for Starter and Growth package checkouts.
 
-Agents earn 20% of each confirmed package payment in the currency collected
-for up to 12 months after the first verified payment from that referral.
-Crypto earnings accrue only after an administrator approves the payment;
-PayPal earnings accrue only after a verified completed-sale webhook. Duplicate
-payment events do not create duplicate commissions. PayPal webhook
-subscriptions must include `PAYMENT.SALE.COMPLETED` for recurring commissions.
+Agents earn 20% of each directly referred BTC or ETH subscription sale. A
+commission is created only after an administrator approves that specific
+crypto payment; unrelated future payments do not inherit referral attribution.
+PayPal and M-Pesa payments do not generate sales-agent commissions. Duplicate
+crypto payment submissions do not create duplicate commissions.
 Dispatch Pro records earnings but does not transfer funds automatically;
 administrators should reconcile refunds and chargebacks before recording payout.
 
@@ -244,12 +243,30 @@ Authenticated sales-agent account only. Returns the referral code and link,
 commission term, currency-separated pending/paid totals, and commission history.
 
 #### `GET /api/admin/sales-agents/commissions`
-Owner/admin only. Lists sales agents and commission entries.
+Owner/admin only. Lists sales agents and BTC/ETH subscription commission entries.
 
 #### `POST /api/admin/sales-agents/commissions/:id/payout`
 Owner/admin only. Record an external/manual payout for one pending commission:
 `{ "payoutReference": "bank transfer or wallet receipt reference" }`.
 The reference is required; this endpoint does not initiate a transfer.
+
+### Customer loyalty
+
+Customer accounts earn 1 point per complete $5 paid on a verified BTC or ETH
+Starter/Growth subscription. Points are separate from sales-agent commissions,
+do not expire, and have no cash value. Every 100 points can be used as $5
+credit toward a future BTC or ETH subscription; PayPal and M-Pesa are not
+eligible in this release.
+
+#### `GET /api/loyalty/me`
+Authenticated customer account only. Returns the available points balance,
+earning/redemption rules, and recent ledger entries. Points held for an
+unfinished discounted order are excluded from the available balance.
+
+#### `POST /api/billing/crypto/order/:reference/cancel`
+Authenticated customer account only. Cancels an unpaid discounted order and
+releases its reserved points. An order with submitted payment proof cannot be
+cancelled here; an administrator must review it.
 
 #### `POST /api/billing/crypto/order`
 Create a BTC or ETH subscription order. The request accepts `plan` (`starter`
@@ -257,7 +274,12 @@ or `growth`), `method` (`bitcoin` or `ethereum`), and optional buyer `name` and
 `email`. An optional `referral` identifies the referring AI agent or partner
 using 2-64 lowercase letters, numbers, `_`, or `-`. The response includes the
 wallet address, estimated exact display amount, and a unique reference. A
-registered sales-agent referral requires a valid buyer email.
+registered sales-agent referral requires a valid buyer email. The request may
+also include `loyaltyPointsToRedeem`, a non-negative multiple of 100. To redeem,
+the customer must be signed in and the checkout email must match their account.
+The response includes the discounted USD and crypto amounts. Points are
+reserved on order creation, consumed only after administrator approval, and
+released when payment is rejected.
 
 #### `POST /api/billing/crypto/confirm`
 Submit the order `reference`, `txHash`, `method`, and `plan` after sending the

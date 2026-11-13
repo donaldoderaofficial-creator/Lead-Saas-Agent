@@ -37,7 +37,8 @@
     <div class="card">
       <h1>Plans & Billing</h1>
       <p class="muted">Send BTC or ETH anytime to the permanent addresses below, or create a tracked payment request and submit the transaction hash for review.</p>
-      <p class="muted">Are you a sales agent? <a href="https://lead-saas-agent.netlify.app/dashboard-v2.html" style="color:var(--signal)">Create a sales-agent account</a> to earn 20% on verified referred package payments for 12 months.</p>
+      <p class="muted">Are you a sales agent? <a href="https://lead-saas-agent.netlify.app/dashboard-v2.html" style="color:var(--signal)">Create a sales-agent account</a> to earn 20% on directly referred BTC and ETH sales after payment approval.</p>
+      <p class="muted">Customer loyalty: earn 1 point per complete $5 paid on approved BTC or ETH subscriptions. Redeem 100 points for $5 off a future Lead SaaS subscription. <a href="https://lead-saas-agent.netlify.app/dashboard-v2.html" style="color:var(--signal)">Sign in</a> with the same email to use points. Points have no cash value; PayPal is not eligible.</p>
       <div id="walletList" class="wallet-list" aria-live="polite"></div>
 
       <div class="grid">
@@ -62,6 +63,10 @@
             <option value="bitcoin">Bitcoin</option>
             <option value="ethereum">Ethereum</option>
           </select>
+        </div>
+        <div>
+          <label for="loyaltyPoints">Points to redeem (100 points = $5)</label>
+          <input id="loyaltyPoints" type="number" min="0" step="100" value="0" />
         </div>
       </div>
 
@@ -128,6 +133,7 @@
       const email = document.getElementById('email').value.trim() || 'noreply@example.com';
       const selectedPlan = document.getElementById('plan').value;
       const method = document.getElementById('method').value;
+      const loyaltyPointsToRedeem = Number(document.getElementById('loyaltyPoints').value || 0);
       const walletBox = document.getElementById('wallet');
       orderButton.disabled = true;
       setStatus('Creating wallet payment...');
@@ -135,8 +141,9 @@
       try {
         const response = await window.DispatchAPI.fetch('/api/billing/crypto/order', {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, plan: selectedPlan, method, referral }),
+          body: JSON.stringify({ name, email, plan: selectedPlan, method, referral, loyaltyPointsToRedeem }),
         });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || 'Unable to create wallet payment.');
@@ -147,6 +154,7 @@
           <code id="walletAddr" style="user-select:all;word-break:break-all;"></code>
           <button type="button" id="copyAddr" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">Copy</button><br>
           Reference: <strong></strong>
+          ${payload.loyaltyPointsToRedeem ? `<br><span>${payload.loyaltyPointsToRedeem} points reserved for $${payload.discountUsd} subscription credit.</span><br><button type="button" id="cancelLoyaltyOrder">Cancel order and release points</button>` : ''}
         `;
         document.getElementById('walletAddr').textContent = payload.walletAddress;
         walletBox.querySelector('strong:last-child').textContent = payload.reference;
@@ -164,7 +172,34 @@
           }
           setTimeout(() => { button.textContent = 'Copy'; }, 2000);
         });
-        setStatus('Send the amount, then submit the transaction hash for review.');
+        const cancelButton = document.getElementById('cancelLoyaltyOrder');
+        if (cancelButton) {
+          cancelButton.addEventListener('click', async () => {
+            cancelButton.disabled = true;
+            try {
+              const cancelResponse = await fetch(window.DispatchAPI.url(`/api/billing/crypto/order/${encodeURIComponent(payload.reference)}/cancel`), {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+              });
+              const cancelResult = await cancelResponse.json();
+              if (!cancelResponse.ok) throw new Error(cancelResult.error || 'Could not cancel this order.');
+              walletBox.style.display = 'none';
+              document.getElementById('txHashLabel').hidden = true;
+              txHashInput.hidden = true;
+              confirmButton.hidden = true;
+              document.getElementById('loyaltyPoints').value = '0';
+              setStatus(`${cancelResult.pointsReleased} loyalty points released.`);
+            } catch (error) {
+              setStatus(error.message || 'Could not cancel this order.', true);
+            } finally {
+              cancelButton.disabled = false;
+            }
+          });
+        }
+        setStatus(payload.loyaltyPointsToRedeem
+          ? 'Send the discounted amount, then submit the transaction hash for review.'
+          : 'Send the amount, then submit the transaction hash for review.');
       } catch (error) {
         setStatus(error.message || 'Unable to create wallet payment.', true);
       } finally {
@@ -192,6 +227,7 @@
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || 'Unable to submit payment.');
         setStatus(payload.message || 'Payment submitted. Access starts after verification.');
+        document.getElementById('cancelLoyaltyOrder')?.setAttribute('hidden', '');
         confirmButton.hidden = true;
       } catch (error) {
         setStatus(error.message || 'Unable to submit payment.', true);

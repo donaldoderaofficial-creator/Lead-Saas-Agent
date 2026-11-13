@@ -18,7 +18,7 @@
   <main>
     <section class="panel">
       <h1>Sales-agent earnings</h1>
-      <p>Earn 20% of confirmed package payments referred through your link for the customer's first 12 months. Commissions are shown in the currency collected and paid manually by Dispatch Pro.</p>
+      <p>Earn 20% on each directly referred BTC or ETH subscription sale after payment approval. Commissions are shown in cryptocurrency and paid manually by Dispatch Pro.</p>
       <p id="status" role="status">Loading your sales-agent account…</p>
       <div id="account" hidden>
         <h2>Your referral link</h2>
@@ -66,7 +66,7 @@
         const response = await fetch('/api/sales-agent/earnings', { credentials: 'include' });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Could not load sales-agent earnings.');
-        $('status').textContent = `Commission rate: ${data.commissionRate * 100}% for ${data.commissionTermMonths} months after the first verified referral payment.`;
+        $('status').textContent = `Commission rate: ${data.commissionRate * 100}% on each directly referred BTC or ETH sale after payment approval.`;
         $('account').hidden = false;
         $('earnings').hidden = false;
         $('history').hidden = false;
