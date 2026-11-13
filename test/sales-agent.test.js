@@ -5,7 +5,7 @@ const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 
-const { addCommissionTerm, calculateCommission, isWithinCommissionTerm } = require('../sales-commission');
+const { calculateCommission } = require('../sales-commission');
 const dbPath = path.join(os.tmpdir(), `lead-agent-sales-agents-${process.pid}.db`);
 for (const suffix of ['', '-wal', '-shm']) {
   try { fs.unlinkSync(dbPath + suffix); } catch (_) {}
@@ -42,9 +42,7 @@ function createAgent(email) {
   return { id, ...salesAgents.findById(id) };
 }
 
-test('calculates 20% commission in the payment currency precision', () => {
-  assert.equal(calculateCommission(79, 'USD'), 15.8);
-  assert.equal(calculateCommission(1000, 'KES'), 200);
+test('calculates 20% commission in BTC and ETH precision', () => {
   assert.equal(calculateCommission(0.00123456, 'BTC'), 0.00024691);
   assert.equal(calculateCommission(0.01234567, 'ETH'), 0.00246913);
 });
@@ -53,14 +51,30 @@ test('rejects invalid commission amounts, currencies, and rates', () => {
   assert.throws(() => calculateCommission(0, 'USD'));
   assert.throws(() => calculateCommission(-1, 'USD'));
   assert.throws(() => calculateCommission(1, ''));
+  assert.throws(() => calculateCommission(1, 'USD'), /currency must be BTC or ETH/);
   assert.throws(() => calculateCommission(1, 'USD', 2));
 });
 
-test('caps the commission term at 12 calendar months, including leap-day dates', () => {
-  assert.equal(addCommissionTerm('2024-02-29T12:00:00.000Z'), '2025-02-28T12:00:00.000Z');
-  assert.equal(isWithinCommissionTerm('2025-02-28T12:00:00.000Z', '2025-02-28T12:00:00.000Z'), true);
-  assert.equal(isWithinCommissionTerm('2025-03-01T00:00:00.000Z', '2025-02-28T12:00:00.000Z'), false);
-  assert.throws(() => addCommissionTerm('not a date'));
+test('only records matching Bitcoin and Ethereum subscription commissions', () => {
+  const agent = createAgent('crypto-only-commission@example.com');
+  assert.throws(() => salesAgents.recordCommission({
+    salesAgentUserId: agent.id,
+    provider: 'paypal-subscription',
+    transactionId: 'PAYPAL-NO-COMMISSION',
+    reference: 'PAYPAL-ORDER',
+    amount: 79,
+    currency: 'BTC',
+    rate: 0.2,
+  }), /only supported for matching BTC or ETH/);
+  assert.throws(() => salesAgents.recordCommission({
+    salesAgentUserId: agent.id,
+    provider: 'bitcoin-subscription',
+    transactionId: 'BTC-WRONG-CURRENCY',
+    reference: 'BTC-ORDER',
+    amount: 1,
+    currency: 'USD',
+    rate: 0.2,
+  }), /only supported for matching BTC or ETH/);
 });
 
 test('creates agent referral orders only for valid buyer email addresses', () => {
@@ -83,7 +97,7 @@ test('creates agent referral orders only for valid buyer email addresses', () =>
   assert.equal(rejected.statusCode, 400);
 });
 
-test('credits referred crypto payments only after approval and preserves first-touch attribution', () => {
+test('credits only directly referred BTC and ETH sales after approval', () => {
   const firstAgent = createAgent('first-agent@example.com');
   const secondAgent = createAgent('second-agent@example.com');
   const adminId = users.create('commission-admin@example.com', 'test-hash', 'test-totp-secret', 'admin');
@@ -91,11 +105,11 @@ test('credits referred crypto payments only after approval and preserves first-t
   const confirmPayment = routeHandler('/api/billing/crypto/confirm');
   const reviewPayment = routeHandler('/api/billing/crypto/review/:reference');
 
-  const submitOrder = (referral, transactionId) => {
+  const submitOrder = (referral, transactionId, method = 'bitcoin') => {
     const orderResponse = response();
     createOrder({ body: {
       plan: 'starter',
-      method: 'bitcoin',
+      method,
       name: 'Referred customer',
       email: 'referred-customer@example.com',
       referral,
@@ -106,7 +120,7 @@ test('credits referred crypto payments only after approval and preserves first-t
     confirmPayment({ body: {
       reference: orderResponse.body.reference,
       txHash: transactionId,
-      method: 'bitcoin',
+      method,
       plan: 'starter',
       amount: order.amountCrypto,
     } }, confirmResponse);
@@ -124,11 +138,18 @@ test('credits referred crypto payments only after approval and preserves first-t
   assert.equal(firstCommissions[0].commissionAmount, calculateCommission(first.amount, 'BTC'));
   assert.equal(firstCommissions[0].status, 'pending');
 
-  const second = submitOrder(secondAgent.referralCode, 'CRYPTO-COMMISSION-2');
+  const second = submitOrder(secondAgent.referralCode, 'CRYPTO-COMMISSION-2', 'ethereum');
   const secondReview = response();
   reviewPayment({ params: { reference: second.reference }, body: { approved: true }, session: { userId: adminId, username: 'admin' } }, secondReview);
-  assert.equal(salesAgents.listCommissions(firstAgent.id).length, 2);
-  assert.equal(salesAgents.listCommissions(secondAgent.id).length, 0);
+  assert.equal(salesAgents.listCommissions(firstAgent.id).length, 1);
+  assert.equal(salesAgents.listCommissions(secondAgent.id).length, 1);
+  assert.equal(salesAgents.listCommissions(secondAgent.id)[0].currency, 'ETH');
+
+  const renewal = submitOrder(null, 'CRYPTO-UNATTRIBUTED-RENEWAL');
+  const renewalReview = response();
+  reviewPayment({ params: { reference: renewal.reference }, body: { approved: true }, session: { userId: adminId, username: 'admin' } }, renewalReview);
+  assert.equal(salesAgents.listCommissions(firstAgent.id).length, 1);
+  assert.equal(salesAgents.listCommissions(secondAgent.id).length, 1);
 
   const payout = routeHandler('/api/admin/sales-agents/commissions/:id/payout');
   const payoutResponse = response();
@@ -138,11 +159,11 @@ test('credits referred crypto payments only after approval and preserves first-t
     session: { userId: adminId },
   }, payoutResponse);
   assert.equal(payoutResponse.body.status, 'paid');
-  assert.equal(salesAgents.listCommissions(firstAgent.id)[1].status, 'paid');
+  assert.equal(salesAgents.listCommissions(firstAgent.id)[0].status, 'paid');
   assert.equal(salesAgents.markCommissionPaid(firstCommissions[0].id, 'duplicate', adminId), false);
 });
 
-test('handles PayPal charge events arriving before agent attribution and ignores duplicate charges', async () => {
+test('never credits PayPal payments with sales-agent commissions', async () => {
   const agent = createAgent('paypal-agent@example.com');
   const webhook = routeHandler('/payments/paypal/webhook');
   const subscriptionId = 'I-AGENT-TEST-1';
@@ -170,15 +191,13 @@ test('handles PayPal charge events arriving before agent attribution and ignores
     },
   } }, response());
 
-  const first = salesAgents.listCommissions(agent.id);
-  assert.equal(first.length, 1);
-  assert.equal(first[0].commissionAmount, 15.8);
+  assert.equal(salesAgents.listCommissions(agent.id).length, 0);
 
   await webhook({ headers: {}, body: saleEvent('PAYPAL-SALE-1', '2026-03-01T10:00:00.000Z') }, response());
   await webhook({ headers: {}, body: saleEvent('PAYPAL-SALE-2', '2026-04-01T10:00:00.000Z') }, response());
   await webhook({ headers: {}, body: saleEvent('PAYPAL-SALE-3', '2027-03-02T10:00:00.000Z') }, response());
 
-  assert.equal(salesAgents.listCommissions(agent.id).length, 2);
+  assert.equal(salesAgents.listCommissions(agent.id).length, 0);
 });
 
 test('returns an agent-only referral link and currency-separated earnings', () => {

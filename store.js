@@ -8,6 +8,7 @@
 const { checkTransition } = require('./operations');
 const crypto = require('node:crypto');
 const { calculateCommission } = require('./sales-commission');
+const { SUBSCRIPTION_CREDIT } = require('./loyalty');
 
 function loadDatabaseClass() {
   try {
@@ -179,22 +180,6 @@ db.exec(`
     UNIQUE(provider, transaction_id)
   );
 
-  CREATE TABLE IF NOT EXISTS sales_agent_referrals (
-    customer_key TEXT PRIMARY KEY,
-    sales_agent_user_id INTEGER NOT NULL,
-    eligible_until TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (sales_agent_user_id) REFERENCES users(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS sales_agent_paypal_subscriptions (
-    paypal_subscription_id TEXT PRIMARY KEY,
-    sales_agent_user_id INTEGER NOT NULL,
-    eligible_until TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (sales_agent_user_id) REFERENCES users(id)
-  );
-
   CREATE TABLE IF NOT EXISTS sales_agent_commissions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     sales_agent_user_id INTEGER NOT NULL,
@@ -214,6 +199,18 @@ db.exec(`
     FOREIGN KEY (sales_agent_user_id) REFERENCES users(id)
   );
   CREATE INDEX IF NOT EXISTS idx_sales_agent_commissions_agent ON sales_agent_commissions(sales_agent_user_id, created_at);
+
+  CREATE TABLE IF NOT EXISTS loyalty_transactions (
+    event_key TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('earned', 'redeemed', 'reserved', 'released')),
+    points INTEGER NOT NULL CHECK (points > 0),
+    reference TEXT NOT NULL,
+    details_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_loyalty_transactions_user ON loyalty_transactions(user_id, created_at);
 
   CREATE TABLE IF NOT EXISTS edrms_records (
     id TEXT PRIMARY KEY,
@@ -290,17 +287,46 @@ db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_sales_agent_code ON users(s
 for (const column of ['crypto_payment_reference', 'crypto_transaction_id']) {
   try { db.exec(`ALTER TABLE subscription ADD COLUMN ${column} TEXT`); } catch (_) {}
 }
-for (const column of ['product', 'payment_method', 'plan', 'amount_crypto', 'referral_source']) {
-  try { db.exec(`ALTER TABLE pending_leads ADD COLUMN ${column} TEXT`); } catch (_) {}
+for (const column of [
+  'product TEXT',
+  'payment_method TEXT',
+  'plan TEXT',
+  'amount_crypto TEXT',
+  'referral_source TEXT',
+  'loyalty_user_id INTEGER',
+  'loyalty_points INTEGER NOT NULL DEFAULT 0',
+  'amount_usd REAL',
+]) {
+  try { db.exec(`ALTER TABLE pending_leads ADD COLUMN ${column}`); } catch (_) {}
 }
 
 const pendingLeads = {
   set(ref, lead) {
-    db.prepare('INSERT OR REPLACE INTO pending_leads (ref, name, email, phone, product, payment_method, plan, amount_crypto, referral_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(ref, lead.name, lead.email, lead.phone || null, lead.product || null, lead.paymentMethod || null, lead.plan || null, lead.amountCrypto || null, lead.referralSource || null);
+    db.prepare(`
+      INSERT OR REPLACE INTO pending_leads
+        (ref, name, email, phone, product, payment_method, plan, amount_crypto, referral_source, loyalty_user_id, loyalty_points, amount_usd)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      ref,
+      lead.name,
+      lead.email,
+      lead.phone || null,
+      lead.product || null,
+      lead.paymentMethod || null,
+      lead.plan || null,
+      lead.amountCrypto || null,
+      lead.referralSource || null,
+      lead.loyaltyUserId || null,
+      lead.loyaltyPoints || 0,
+      lead.amountUsd || null,
+    );
   },
   get(ref) {
-    const row = db.prepare('SELECT name, email, phone, product, payment_method, plan, amount_crypto, referral_source FROM pending_leads WHERE ref = ?').get(ref);
+    const row = db.prepare(`
+      SELECT name, email, phone, product, payment_method, plan, amount_crypto, referral_source,
+        loyalty_user_id, loyalty_points, amount_usd
+      FROM pending_leads WHERE ref = ?
+    `).get(ref);
     if (!row) return undefined;
     return {
       name: row.name,
@@ -311,6 +337,9 @@ const pendingLeads = {
       ...(row.plan ? { plan: row.plan } : {}),
       ...(row.amount_crypto ? { amountCrypto: row.amount_crypto } : {}),
       ...(row.referral_source ? { referralSource: row.referral_source } : {}),
+      ...(row.loyalty_user_id ? { loyaltyUserId: row.loyalty_user_id } : {}),
+      ...(row.loyalty_points ? { loyaltyPoints: row.loyalty_points } : {}),
+      ...(row.amount_usd ? { amountUsd: row.amount_usd } : {}),
     };
   },
   has(ref) {
@@ -354,7 +383,7 @@ const payments = {
   },
   findByReference(reference, provider = 'bitcoin-ebook') {
     const row = db.prepare(`
-      SELECT id, status, transaction_id, amount, currency, raw_json
+      SELECT id, provider, status, transaction_id, amount, currency, raw_json
       FROM payment_transactions
       WHERE provider = ? AND reference = ?
       ORDER BY id DESC
@@ -363,6 +392,7 @@ const payments = {
     if (!row) return undefined;
     return {
       id: row.id,
+      provider: row.provider,
       status: row.status,
       transactionId: row.transaction_id,
       amount: row.amount,
@@ -605,6 +635,193 @@ const users = {
   },
 };
 
+const customerLoyalty = {
+  getAccount(userId) {
+    const balance = Number(db.prepare(`
+      SELECT COALESCE(SUM(CASE
+        WHEN kind IN ('earned', 'released') THEN points
+        ELSE -points
+      END), 0) AS balance
+      FROM loyalty_transactions
+      WHERE user_id = ?
+    `).get(userId).balance);
+    const transactions = db.prepare(`
+      SELECT kind, points, reference, details_json AS detailsJson, created_at AS createdAt
+      FROM loyalty_transactions
+      WHERE user_id = ?
+      ORDER BY created_at DESC, rowid DESC
+      LIMIT 50
+    `).all(userId).map((row) => ({
+      kind: row.kind,
+      points: row.points,
+      reference: row.reference,
+      details: JSON.parse(row.detailsJson),
+      createdAt: row.createdAt,
+    }));
+    return { balance, transactions };
+  },
+  reservePoints(userId, reference, points) {
+    if (!Number.isSafeInteger(points) || points <= 0 || points % SUBSCRIPTION_CREDIT.points !== 0) {
+      throw new Error(`Loyalty points must be a positive multiple of ${SUBSCRIPTION_CREDIT.points}`);
+    }
+
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const current = this.getAccount(userId).balance;
+      if (current < points) {
+        db.exec('ROLLBACK');
+        return { ok: false, balance: current };
+      }
+      db.prepare(`
+        INSERT INTO loyalty_transactions
+          (event_key, user_id, kind, points, reference)
+        VALUES (?, ?, 'reserved', ?, ?)
+      `).run(`reserved:${reference}`, userId, points, reference);
+      db.exec('COMMIT');
+      return { ok: true, balance: current - points };
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+  },
+  approveCryptoSubscriptionPayment({ paymentId, userId, reference, provider, transactionId, plan, pointsEarned, pointsToRedeem }) {
+    if (!Number.isSafeInteger(pointsEarned) || pointsEarned < 0
+      || !Number.isSafeInteger(pointsToRedeem) || pointsToRedeem < 0) {
+      throw new Error('Loyalty points must be a non-negative safe integer');
+    }
+
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const update = db.prepare(`
+        UPDATE payment_transactions
+        SET status = 'confirmed'
+        WHERE id = ? AND status = 'pending_review'
+      `).run(paymentId);
+      if (Number(update.changes) !== 1) {
+        db.exec('ROLLBACK');
+        return { ok: false, pointsAdded: 0 };
+      }
+
+      const reservation = db.prepare(`
+        SELECT user_id, points
+        FROM loyalty_transactions
+        WHERE event_key = ? AND kind = 'reserved'
+      `).get(`reserved:${reference}`);
+      if (pointsToRedeem > 0 && (!reservation
+        || Number(reservation.user_id) !== Number(userId)
+        || Number(reservation.points) !== pointsToRedeem)) {
+        db.exec('ROLLBACK');
+        return { ok: false, pointsAdded: 0, reason: 'loyalty-reservation-missing' };
+      }
+      if (reservation) {
+        db.prepare(`
+          INSERT INTO loyalty_transactions
+            (event_key, user_id, kind, points, reference, details_json)
+          VALUES (?, ?, 'released', ?, ?, '{"reason":"payment-approved"}')
+        `).run(`released:${reference}`, reservation.user_id, reservation.points, reference);
+        db.prepare(`
+          INSERT INTO loyalty_transactions
+            (event_key, user_id, kind, points, reference, details_json)
+          VALUES (?, ?, 'redeemed', ?, ?, '{"reason":"subscription-credit"}')
+        `).run(`redeemed:${reference}`, reservation.user_id, reservation.points, reference);
+      }
+
+      let pointsAdded = 0;
+      if (userId && pointsEarned > 0) {
+        const earning = db.prepare(`
+          INSERT OR IGNORE INTO loyalty_transactions
+            (event_key, user_id, kind, points, reference, details_json)
+          VALUES (?, ?, 'earned', ?, ?, ?)
+        `).run(
+          `earned:${provider}:${transactionId}`,
+          userId,
+          pointsEarned,
+          reference,
+          JSON.stringify({ provider, plan }),
+        );
+        if (Number(earning.changes) === 1) pointsAdded = pointsEarned;
+      }
+
+      db.exec('COMMIT');
+      return { ok: true, pointsAdded, pointsRedeemed: pointsToRedeem };
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+  },
+  rejectCryptoSubscriptionPayment(paymentId, reference) {
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const update = db.prepare(`
+        UPDATE payment_transactions
+        SET status = 'rejected'
+        WHERE id = ? AND status = 'pending_review'
+      `).run(paymentId);
+      if (Number(update.changes) !== 1) {
+        db.exec('ROLLBACK');
+        return { ok: false };
+      }
+
+      const reservation = db.prepare(`
+        SELECT user_id, points
+        FROM loyalty_transactions
+        WHERE event_key = ? AND kind = 'reserved'
+      `).get(`reserved:${reference}`);
+      if (reservation) {
+        db.prepare(`
+          INSERT INTO loyalty_transactions
+            (event_key, user_id, kind, points, reference, details_json)
+          VALUES (?, ?, 'released', ?, ?, '{"reason":"payment-rejected"}')
+        `).run(`released:${reference}`, reservation.user_id, reservation.points, reference);
+      }
+      db.exec('COMMIT');
+      return { ok: true };
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+  },
+  cancelUnpaidOrder(userId, reference) {
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const order = db.prepare(`
+        SELECT loyalty_user_id, loyalty_points
+        FROM pending_leads
+        WHERE ref = ?
+      `).get(reference);
+      if (!order || Number(order.loyalty_user_id) !== Number(userId) || Number(order.loyalty_points) <= 0) {
+        db.exec('ROLLBACK');
+        return { ok: false, reason: 'order-not-found' };
+      }
+      const payment = db.prepare('SELECT 1 FROM payment_transactions WHERE reference = ? LIMIT 1').get(reference);
+      if (payment) {
+        db.exec('ROLLBACK');
+        return { ok: false, reason: 'payment-already-submitted' };
+      }
+      const reservation = db.prepare(`
+        SELECT points
+        FROM loyalty_transactions
+        WHERE event_key = ? AND kind = 'reserved'
+      `).get(`reserved:${reference}`);
+      if (!reservation || Number(reservation.points) !== Number(order.loyalty_points)) {
+        db.exec('ROLLBACK');
+        return { ok: false, reason: 'loyalty-reservation-missing' };
+      }
+      db.prepare('DELETE FROM pending_leads WHERE ref = ?').run(reference);
+      db.prepare(`
+        INSERT INTO loyalty_transactions
+          (event_key, user_id, kind, points, reference, details_json)
+        VALUES (?, ?, 'released', ?, ?, '{"reason":"order-cancelled"}')
+      `).run(`released:${reference}`, userId, reservation.points, reference);
+      db.exec('COMMIT');
+      return { ok: true, pointsReleased: Number(reservation.points) };
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+  },
+};
+
 const salesAgents = {
   findByCode(code) {
     if (!code) return undefined;
@@ -619,36 +836,21 @@ const salesAgents = {
     return db.prepare("SELECT id, username, sales_agent_code AS referralCode, created_at AS createdAt FROM users WHERE role = 'sales_agent' ORDER BY id")
       .all();
   },
-  attributeCryptoCustomer(customerKey, salesAgentUserId, eligibleUntil) {
-    db.prepare('INSERT OR IGNORE INTO sales_agent_referrals (customer_key, sales_agent_user_id, eligible_until) VALUES (?, ?, ?)')
-      .run(customerKey, salesAgentUserId, eligibleUntil);
-    return this.findCryptoCustomer(customerKey);
-  },
-  findCryptoCustomer(customerKey) {
-    return db.prepare('SELECT sales_agent_user_id AS salesAgentUserId, eligible_until AS eligibleUntil FROM sales_agent_referrals WHERE customer_key = ?')
-      .get(customerKey);
-  },
-  attributePayPalSubscription(subscriptionId, salesAgentUserId, eligibleUntil) {
-    db.prepare('INSERT OR IGNORE INTO sales_agent_paypal_subscriptions (paypal_subscription_id, sales_agent_user_id, eligible_until) VALUES (?, ?, ?)')
-      .run(subscriptionId, salesAgentUserId, eligibleUntil);
-    return this.findPayPalSubscription(subscriptionId);
-  },
-  setPayPalCommissionTerm(subscriptionId, eligibleUntil) {
-    db.prepare('UPDATE sales_agent_paypal_subscriptions SET eligible_until = COALESCE(eligible_until, ?) WHERE paypal_subscription_id = ?')
-      .run(eligibleUntil, subscriptionId);
-    return this.findPayPalSubscription(subscriptionId);
-  },
-  findPayPalSubscription(subscriptionId) {
-    return db.prepare('SELECT sales_agent_user_id AS salesAgentUserId, eligible_until AS eligibleUntil FROM sales_agent_paypal_subscriptions WHERE paypal_subscription_id = ?')
-      .get(subscriptionId);
-  },
   recordCommission({ salesAgentUserId, provider, transactionId, reference, amount, currency, rate }) {
-    const commissionAmount = calculateCommission(amount, currency, rate);
+    const expectedCurrency = {
+      'bitcoin-subscription': 'BTC',
+      'ethereum-subscription': 'ETH',
+    }[provider];
+    const normalizedCurrency = typeof currency === 'string' ? currency.toUpperCase() : '';
+    if (!expectedCurrency || normalizedCurrency !== expectedCurrency) {
+      throw new Error('Sales-agent commissions are only supported for matching BTC or ETH subscription payments');
+    }
+    const commissionAmount = calculateCommission(amount, normalizedCurrency, rate);
     const result = db.prepare(`
       INSERT OR IGNORE INTO sales_agent_commissions
         (sales_agent_user_id, provider, transaction_id, reference, amount, currency, commission_rate, commission_amount)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(salesAgentUserId, provider, transactionId, reference, Number(amount), currency.toUpperCase(), rate, commissionAmount);
+    `).run(salesAgentUserId, provider, transactionId, reference, Number(amount), normalizedCurrency, rate, commissionAmount);
     return Number(result.changes) === 1;
   },
   listCommissions(salesAgentUserId) {
@@ -658,6 +860,7 @@ const salesAgents = {
         status, payout_reference AS payoutReference, paid_at AS paidAt, created_at AS createdAt
       FROM sales_agent_commissions
       WHERE sales_agent_user_id = ?
+        AND provider IN ('bitcoin-subscription', 'ethereum-subscription')
       ORDER BY id DESC
     `).all(salesAgentUserId);
   },
@@ -669,6 +872,7 @@ const salesAgents = {
         c.status, c.payout_reference AS payoutReference, c.created_at AS createdAt
       FROM sales_agent_commissions c
       JOIN users u ON u.id = c.sales_agent_user_id
+      WHERE c.provider IN ('bitcoin-subscription', 'ethereum-subscription')
       ORDER BY c.id DESC
     `).all();
   },
@@ -677,20 +881,9 @@ const salesAgents = {
       UPDATE sales_agent_commissions
       SET status = 'paid', payout_reference = ?, paid_by = ?, paid_at = datetime('now')
       WHERE id = ? AND status = 'pending'
+        AND provider IN ('bitcoin-subscription', 'ethereum-subscription')
     `).run(payoutReference, paidBy, id);
     return Number(result.changes) === 1;
-  },
-  listConfirmedPayPalPayments(subscriptionId) {
-    return db.prepare(`
-      SELECT transaction_id AS transactionId, reference, amount, currency,
-        raw_json AS rawJson, created_at AS createdAt
-      FROM payment_transactions
-      WHERE provider = 'paypal-subscription' AND reference = ? AND status = 'confirmed'
-      ORDER BY id
-    `).all(subscriptionId).map((payment) => ({
-      ...payment,
-      raw: payment.rawJson ? JSON.parse(payment.rawJson) : null,
-    }));
   },
 };
 
@@ -1021,6 +1214,7 @@ module.exports = {
   safetyIncidents,
   workItems,
   users,
+  customerLoyalty,
   salesAgents,
   subscription,
   compliance,
