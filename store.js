@@ -240,6 +240,43 @@ db.exec(`
     FOREIGN KEY (actor_id) REFERENCES users(id)
   );
 
+  CREATE TABLE IF NOT EXISTS it_directory_objects (
+    id TEXT PRIMARY KEY,
+    object_class TEXT NOT NULL CHECK (object_class IN ('user', 'computer', 'group', 'printer')),
+    name TEXT NOT NULL,
+    department TEXT NOT NULL,
+    ou_dn TEXT NOT NULL,
+    ou_dn_key TEXT NOT NULL,
+    username TEXT,
+    email TEXT,
+    phone TEXT,
+    title TEXT,
+    hostname TEXT,
+    asset_tag TEXT,
+    operating_system TEXT,
+    serial_number TEXT,
+    location TEXT,
+    description TEXT,
+    members_json TEXT NOT NULL DEFAULT '[]',
+    created_by INTEGER,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (created_by) REFERENCES users(id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_it_directory_class_ou ON it_directory_objects (object_class, ou_dn_key COLLATE NOCASE);
+  CREATE INDEX IF NOT EXISTS idx_it_directory_department ON it_directory_objects (department);
+  CREATE INDEX IF NOT EXISTS idx_it_directory_ou ON it_directory_objects (ou_dn_key COLLATE NOCASE);
+  CREATE TABLE IF NOT EXISTS it_directory_audit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    object_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    actor_id INTEGER,
+    changed_fields_json TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (actor_id) REFERENCES users(id)
+  );
+
   CREATE TABLE IF NOT EXISTS ops_items (
     id TEXT PRIMARY KEY,
     department TEXT NOT NULL,
@@ -1205,6 +1242,129 @@ const workItems = {
   },
 };
 
+function mapDirectoryObject(row) {
+  if (!row) return undefined;
+  return {
+    id: row.id,
+    objectClass: row.object_class,
+    name: row.name,
+    department: row.department,
+    ouDn: row.ou_dn,
+    username: row.username,
+    email: row.email,
+    phone: row.phone,
+    title: row.title,
+    hostname: row.hostname,
+    assetTag: row.asset_tag,
+    operatingSystem: row.operating_system,
+    serialNumber: row.serial_number,
+    location: row.location,
+    description: row.description,
+    members: JSON.parse(row.members_json),
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function directoryParameters(object) {
+  return {
+    id: object.id,
+    objectClass: object.objectClass,
+    name: object.name,
+    department: object.department,
+    ouDn: object.ouDn,
+    ouDnKey: [...object.ouDn.toLowerCase()].reverse().join(''),
+    username: object.username,
+    email: object.email,
+    phone: object.phone,
+    title: object.title,
+    hostname: object.hostname,
+    assetTag: object.assetTag,
+    operatingSystem: object.operatingSystem,
+    serialNumber: object.serialNumber,
+    location: object.location,
+    description: object.description,
+    membersJson: JSON.stringify(object.members),
+  };
+}
+
+const directory = {
+  create(object, actorId) {
+    const now = new Date().toISOString();
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      db.prepare(`INSERT INTO it_directory_objects
+        (id, object_class, name, department, ou_dn, ou_dn_key, username, email, phone, title,
+         hostname, asset_tag, operating_system, serial_number, location, description,
+         members_json, created_by, created_at, updated_at)
+        VALUES (@id, @objectClass, @name, @department, @ouDn, @ouDnKey, @username, @email, @phone, @title,
+         @hostname, @assetTag, @operatingSystem, @serialNumber, @location, @description,
+         @membersJson, @actorId, @now, @now)`)
+        .run({
+          ...directoryParameters(object),
+          actorId: actorId || null,
+          now,
+        });
+      db.prepare('INSERT INTO it_directory_audit (object_id, action, actor_id, changed_fields_json) VALUES (?, ?, ?, ?)')
+        .run(object.id, 'created', actorId || null, JSON.stringify(Object.keys(object).filter((key) => key !== 'id')));
+      db.exec('COMMIT');
+      return this.get(object.id);
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+  },
+
+  get(id) {
+    return mapDirectoryObject(db.prepare('SELECT * FROM it_directory_objects WHERE id = ?').get(id));
+  },
+
+  search({ whereSql = '1 = 1', params = [], limit = 50 } = {}) {
+    return db.prepare(`SELECT * FROM it_directory_objects WHERE ${whereSql} ORDER BY name COLLATE NOCASE ASC, id ASC LIMIT ?`)
+      .all(...params, limit)
+      .map(mapDirectoryObject);
+  },
+
+  update(object, actorId, changedFields = []) {
+    const now = new Date().toISOString();
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const result = db.prepare(`UPDATE it_directory_objects SET
+        name = @name, department = @department, ou_dn = @ouDn, ou_dn_key = @ouDnKey, username = @username, email = @email,
+        phone = @phone, title = @title, hostname = @hostname, asset_tag = @assetTag,
+        operating_system = @operatingSystem, serial_number = @serialNumber, location = @location,
+        description = @description, members_json = @membersJson, updated_at = @now
+        WHERE id = @id AND object_class = @objectClass`)
+        .run({ ...directoryParameters(object), now });
+      if (result.changes !== 1) {
+        db.exec('ROLLBACK');
+        return undefined;
+      }
+      db.prepare('INSERT INTO it_directory_audit (object_id, action, actor_id, changed_fields_json) VALUES (?, ?, ?, ?)')
+        .run(object.id, 'updated', actorId || null, JSON.stringify(changedFields));
+      db.exec('COMMIT');
+      return this.get(object.id);
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+  },
+
+  listAudit(objectId) {
+    return db.prepare('SELECT id, object_id, action, actor_id, changed_fields_json, created_at FROM it_directory_audit WHERE object_id = ? ORDER BY id DESC')
+      .all(objectId)
+      .map((row) => ({
+        id: row.id,
+        objectId: row.object_id,
+        action: row.action,
+        actorId: row.actor_id,
+        changedFields: JSON.parse(row.changed_fields_json),
+        createdAt: row.created_at,
+      }));
+  },
+};
+
 module.exports = {
   pendingLeads,
   completedReports,
@@ -1213,6 +1373,7 @@ module.exports = {
   records,
   safetyIncidents,
   workItems,
+  directory,
   users,
   customerLoyalty,
   salesAgents,

@@ -328,6 +328,7 @@
   </div>
 </aside>
 
+<script src="/runtime-config.js"></script><script src="/api-base.js"></script>
 <script>
   document.querySelectorAll('[data-action]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -379,7 +380,7 @@
     addMiaMessage(question, false);
     miaInput.value = '';
     try {
-      const response = await fetch('/api/assistant/mia', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question }) });
+      const response = await window.DispatchAPI.fetch('/api/assistant/mia', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question }) });
       const data = await response.json();
       addMiaMessage(response.ok ? data.answer : 'I could not process that request. Please email hello@dispatchpro.ai.', true);
     } catch (_) {

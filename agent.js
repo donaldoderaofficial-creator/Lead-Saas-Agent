@@ -6,21 +6,18 @@ class Agent {
   }
 
   buildPlan(task) {
-    const normalized = String(task || '').trim();
-    const taskSummary = normalized || 'General project review';
-
     return [
       {
         title: 'Scope the request',
-        description: `Review the task and confirm the expected outcome for: ${taskSummary}`,
+        description: 'Define the outcome, constraints, and acceptance checks.',
       },
       {
         title: 'Inspect the project',
-        description: 'Review relevant files, config, and deployment setup to identify risks and dependencies.',
+        description: 'Inspect relevant code, dependencies, and trust boundaries.',
       },
       {
-        title: 'Validate the plan',
-        description: 'Check whether the proposed changes are safe, minimal, and ready to execute.',
+        title: 'Implement and verify',
+        description: 'Make the smallest safe change, run focused checks, and report blockers.',
       },
     ];
   }

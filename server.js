@@ -17,6 +17,7 @@ const crypto = require('crypto');
 const path = require('node:path');
 const express = require('express');
 const session = require('express-session');
+const lusca = require('lusca');
 const compression = require('compression');
 const helmet = require('helmet');
 
@@ -34,7 +35,7 @@ const mpesaClient = require('./mpesa-client');
 const { initiateSTKPush, normalizePhoneNumber } = mpesaClient;
 const { processLead } = require('./lead-pipeline');
 const { trainFromLeads, learningStatus } = require('./adaptive-learning');
-const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, workItems, users, customerLoyalty, salesAgents, subscription, emailThreads, checkDatabase, businessMetrics, createSessionStore } = require('./store');
+const { pendingLeads, completedReports, payments, leads, records, safetyIncidents, workItems, directory, users, customerLoyalty, salesAgents, subscription, emailThreads, checkDatabase, businessMetrics, createSessionStore } = require('./store');
 const { DEPARTMENTS, PRIORITY_SLA_HOURS, transitionsFor, isBillable, validateItem, buildOverview, buildStrategyBrief } = require('./operations');
 const { hasActiveSubscription, paidThrough } = require('./subscription-policy');
 const { hashPassword, verifyPassword, generateTotpSecret, verifyTotpCode, generateEmailOtp, hashEmailOtp } = require('./auth');
@@ -44,6 +45,11 @@ const { getBtcUsdRate, getCryptoUsdRate, startBtcUsdSync } = require('./crypto-r
 const { buildPaymentOptions, buildPublicConfig } = require('./payment-catalog');
 const { buildCustomReply, buildMiaReply, improveReplyWithAI, verifyWebhookSignature: verifyEmailWebhookSignature, sendReply } = require('./email-assistant');
 const newsletter = require('./newsletter');
+const { createObservabilityRouter } = require('./routes/observability');
+const { createObservabilityService } = require('./services/observability-service');
+const { createItDirectoryRouter } = require('./routes/it-directory');
+const { createItDirectoryService } = require('./services/it-directory-service');
+const { createSingleFlight } = require('./services/payment-finalization');
 const { COMMISSION_RATE } = require('./sales-commission');
 const loyaltyRules = require('./loyalty');
 
@@ -71,9 +77,10 @@ function isOriginAllowed(origin, path = '') {
     const isLocalDevelopmentHost = ['localhost', '127.0.0.1', '::1'].includes(hostname) || hostname.endsWith('.localhost');
     if (isLocalDevelopmentHost) return true;
     const isHostedPaymentPath = path === '/api/payments/options'
+      || path === '/api/csrf-token'
       || path.startsWith('/api/billing/crypto/');
     if (isHostedPaymentPath && hostname === 'lead-saas-agent.netlify.app') return true;
-    if (path.startsWith('/api/ebook/') || path.startsWith('/ebook/')) {
+    if (path === '/api/csrf-token' || path.startsWith('/api/ebook/') || path.startsWith('/ebook/')) {
       return hostname.endsWith('.netlify.app') || hostname.endsWith('.vercel.app') || hostname.endsWith('.pages.dev');
     }
   } catch (_) {
@@ -131,7 +138,7 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', requestOrigin);
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-CSRF-Token');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
@@ -150,10 +157,33 @@ app.use(session({
   cookie: {
     httpOnly: true,
     secure: config.isProd,
-    sameSite: 'lax',
+    sameSite: config.isProd ? 'none' : 'lax',
     maxAge: config.security.tokenExpiry,
   },
 }));
+
+const csrfExemptPaths = new Set([
+  '/api/email/inbound',
+  '/payments/paypal/webhook',
+  '/payments/mpesa/callback',
+  '/payments/mpesa/c2b/validation',
+  '/payments/mpesa/c2b/confirmation',
+]);
+
+app.use(lusca.csrf({
+  blocklist: [...csrfExemptPaths].map((path) => ({ path, type: 'exact' })),
+}));
+app.use((err, req, res, next) => {
+  if (err.message?.startsWith('CSRF token ')) {
+    return res.status(403).json({ error: err.message, requestId: req.id || 'unknown' });
+  }
+  next(err);
+});
+
+app.get('/api/csrf-token', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ csrfToken: req.csrfToken() });
+});
 
 // ---- Rate Limiting: Profitability & Security ----
 const rateLimiter = new RateLimiter();
@@ -274,60 +304,18 @@ function normalizeReferral(referral) {
 app.buildEbookCheckoutPayload = buildEbookCheckoutPayload;
 app.buildSubscriptionCheckoutPayload = buildSubscriptionCheckoutPayload;
 
-// ---- Health Check Endpoint ----
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    release: {
-      version: require('./package.json').version,
-      build: process.env.BUILD_SHA || process.env.RENDER_GIT_COMMIT || 'local',
-      attribution: DISPATCH_PRO.releaseAttribution,
-    },
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    prospecting: Boolean(process.env.EXPLORIUM_API_KEY),
-  });
+// ---- Observability Routes ----
+const observabilityService = createObservabilityService({
+  config,
+  releaseAttribution: DISPATCH_PRO.releaseAttribution,
+  checkDatabase,
+  buildProductionSmokeCheckStatus,
+  logger,
+  cache,
+  rateLimiter,
+  businessMetrics,
 });
-
-app.get('/ready', (req, res) => {
-  const database = checkDatabase();
-  const smokeCheck = buildProductionSmokeCheckStatus({
-    env: config.env,
-    sessionSecret: config.sessionSecret,
-    publicAppUrl: config.publicAppUrl,
-    corsOrigins: config.security.corsOrigins,
-    // Providers are always advertised; readiness only checks credentials for configured ones.
-    paypal: { ...config.payment.paypal, enabled: config.payment.paypal.configured },
-    mpesa: { ...config.payment.mpesa, enabled: config.payment.mpesa.configured, callbackUrl: process.env.MPESA_CALLBACK_URL },
-    wallets: config.wallets,
-  });
-  const ready = database.status === 'ok' && smokeCheck.status !== 'not_ready';
-  res.status(ready ? 200 : 503).json({
-    status: ready ? 'ready' : 'not_ready',
-    timestamp: new Date().toISOString(),
-    database,
-    deployment: smokeCheck,
-  });
-});
-
-app.get('/api/deploy/smoke', (req, res) => {
-  const smokeCheck = buildProductionSmokeCheckStatus({
-    env: config.env,
-    sessionSecret: config.sessionSecret,
-    publicAppUrl: config.publicAppUrl,
-    corsOrigins: config.security.corsOrigins,
-    paypal: { ...config.payment.paypal, enabled: config.payment.paypal.configured },
-    mpesa: { ...config.payment.mpesa, enabled: config.payment.mpesa.configured, callbackUrl: process.env.MPESA_CALLBACK_URL },
-    wallets: config.wallets,
-  });
-
-  res.status(smokeCheck.status === 'ready' ? 200 : 503).json({
-    status: smokeCheck.status,
-    timestamp: new Date().toISOString(),
-    missing: smokeCheck.missing,
-    checks: smokeCheck.checks,
-  });
-});
+app.use(createObservabilityRouter({ service: observabilityService, requireAuth }));
 
 app.get('/api/email/status', (req, res) => {
   const emailEnabled = process.env.EMAIL_AUTOREPLY_ENABLED === 'true';
@@ -733,43 +721,37 @@ app.get('/ebook/download.pdf', ebookReadLimiter.middleware(), (req, res) => {
   res.send(pdf);
 });
 
-// ---- Metrics & Monitoring Endpoint (Admin Only) ----
-app.get('/metrics', requireAuth, (req, res) => {
-  res.json({
-    logger: logger.getMetrics(),
-    cache: cache.stats(),
-    rateLimiter: rateLimiter.userLimits.size,
-    business: businessMetrics(),
-  });
-});
-
 function requiredLeadAmount(currency) {
   if (currency === 'KES') return Number(PRICING.kes.starter.price);
   if (currency === 'USD') return Number(PRICING.usd.starter.price);
   return Infinity;
 }
 
+const runPaymentFinalization = createSingleFlight();
+
 async function finalizeLead(ref, payment) {
-  const lead = pendingLeads.get(ref);
-  if (!lead || completedReports.has(ref)) return; // unknown ref, or already processed
-  if (!(Number(payment.amount) >= requiredLeadAmount(payment.currency))) {
-    payments.record({ ...payment, reference: ref, status: 'underpaid' });
-    logger.warn('Report withheld: payment below full price', { ref, amount: payment.amount, currency: payment.currency });
-    return;
-  }
-  payments.record({ ...payment, reference: ref });
-  const outcome = await processLead(lead);
-  completedReports.set(ref, {
-    ...outcome,
-    premium: {
-      recommendedNextStep:
-        outcome.result.path === 'priority-outreach'
-          ? 'Call within 24 hours — enterprise-tier lead'
-          : 'Enroll in 5-email nurture sequence',
-      confidence: outcome.result.score >= 70 ? 'high' : 'moderate',
-    },
+  return runPaymentFinalization(ref, async () => {
+    const lead = pendingLeads.get(ref);
+    if (!lead || completedReports.has(ref)) return; // unknown ref, or already processed
+    if (!(Number(payment.amount) >= requiredLeadAmount(payment.currency))) {
+      payments.record({ ...payment, reference: ref, status: 'underpaid' });
+      logger.warn('Report withheld: payment below full price', { ref, amount: payment.amount, currency: payment.currency });
+      return;
+    }
+    payments.record({ ...payment, reference: ref });
+    const outcome = await processLead(lead);
+    completedReports.set(ref, {
+      ...outcome,
+      premium: {
+        recommendedNextStep:
+          outcome.result.path === 'priority-outreach'
+            ? 'Call within 24 hours — enterprise-tier lead'
+            : 'Enroll in 5-email nurture sequence',
+        confidence: outcome.result.score >= 70 ? 'high' : 'moderate',
+      },
+    });
+    pendingLeads.delete(ref);
   });
-  pendingLeads.delete(ref);
 }
 // ---- Step 1: submit a lead, get a payment reference back ----
 app.post('/api/lead', requireActiveSubscription, async (req, res) => {
@@ -1082,6 +1064,12 @@ function requireAdmin(req, res, next) {
   }
   next();
 }
+
+app.use('/api/it', createItDirectoryRouter({
+  service: createItDirectoryService({ directory }),
+  requireAuth,
+  requireAdmin,
+}));
 
 function requireSalesAgent(req, res, next) {
   const user = users.findById(req.session.userId);

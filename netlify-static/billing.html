@@ -139,7 +139,7 @@
       setStatus('Creating wallet payment...');
 
       try {
-        const response = await fetch(window.DispatchAPI.url('/api/billing/crypto/order'), {
+        const response = await window.DispatchAPI.fetch('/api/billing/crypto/order', {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
@@ -213,7 +213,7 @@
       setStatus('Submitting payment for review...');
 
       try {
-        const response = await fetch(window.DispatchAPI.url('/api/billing/crypto/confirm'), {
+        const response = await window.DispatchAPI.fetch('/api/billing/crypto/confirm', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
